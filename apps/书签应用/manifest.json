@@ -1,7 +1,7 @@
 {
   "name": "分类书签九宫格",
   "short_name": "书签九宫格",
-  "start_url": ".",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007bff",
@@ -18,4 +18,5 @@
     }
   ]
 }
+
 
