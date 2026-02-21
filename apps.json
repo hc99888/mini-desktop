@@ -5,9 +5,15 @@
     "url": "apps/书签应用/"
   },
   {
+    "name": "存单管理",
+    "icon": "apps/存单管理/icon.png",
+    "url": "apps/存单管理/"
+  },
+  {
     "name": "示例记事本",
     "icon": "https://你的用户名.github.io/desktop-os/icons/notepad.png",
     "url": "https://example.com/notepad"
   }
 ]
+
 
