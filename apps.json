@@ -2,7 +2,7 @@
   {
     "name": "书签应用",
     "icon": "apps/书签应用/icon-192.png",
-    "url": "apps/书签应用/"
+    "url": "apps/书签应用/index.html"
   },
   {
     "name": "存单管理",
@@ -20,6 +20,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
