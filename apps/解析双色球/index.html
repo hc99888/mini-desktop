@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>双色球文本解析工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .container {
+            width: 100%;
+            margin: 0;
+            background: white;
+            overflow: hidden;
+        }
+        
+        .header {
+            background-color: #f0f0f0;
+            padding: 12px 15px;
+            border-bottom: 3px solid #000;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            min-width: max-content;
+        }
+        
+        .header-button {
+            color: #000000;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            white-space: nowrap;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 70px;
+            text-align: center;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        
+        .header-button:hover {
+            background: #e9ecef;
+        }
+        
+        .header-button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .header-button.orange {
+            color: #C55A11;
+            border-color: #C55A11;
+        }
+        
+        .header-button.blue {
+            color: #0000FF;
+            border-color: #0000FF;
+        }
+        
+        .content-section {
+            display: none;
+            width: 100%;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        /* 号码展示样式 */
+        .input-section {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: none;
+            margin-bottom: 15px;
+            background: white;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+        
+        .display-section {
+            padding: 20px;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .combined-group {
+            background: white;
+            border-radius: 15px;
+            padding: 0;
+            margin-bottom: 20px;
+            border: 2px solid #f1f2f6;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #2d3436;
+            font-weight: bold;
+            padding: 15px;
+            background: #74b9ff;
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .header-title {
+            text-align: left;
+            flex: 1;
+            font-size: 16px;
+        }
+        
+        .page-header-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .header-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .copy-all-btn {
+            background: #00b894;
+        }
+        
+        .copy-page-btn {
+            background: #ff9f43;
+        }
+        
+        .header-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+        
+        .number-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        
+        /* 号码展示球体调大 - 修复蓝球样式问题 */
+        .ball {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+            box-shadow: 
+                inset -3px -3px 6px rgba(0,0,0,0.3),
+                inset 3px 3px 6px rgba(255,255,255,0.3),
+                0 3px 6px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .red-ball {
+            background: radial-gradient(circle at 30% 30%, #ff8a8a, #ff5252, #e53935);
+        }
+        
+        /* 修复：为号码展示区的蓝球使用不同的类名，避免与走势图蓝球样式冲突 */
+        .display-blue-ball {
+            background: radial-gradient(circle at 30% 30%, #8ac6ff, #4dabf5, #2196f3);
+        }
+        
+        .bottom-section {
+            margin-top: 20px;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 12px;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid;
+        }
+        
+        .prev-btn {
+            background: #ff9f43;
+            border-color: #e67e22;
+        }
+        
+        .next-btn {
+            background: #00b894;
+            border-color: #16a085;
+        }
+        
+        .nav-btn:disabled {
+            background: #b2bec3;
+            border-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .page-info {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .page-indicator, .total-info {
+            flex: 1;
+            text-align: center;
+            color: #636e72;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #636e72;
+            font-size: 18px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .group-separator {
+            height: 1px;
+            background: #e9ecef;
+            margin: 0 15px;
+        }
+        
+        /* 基本走势样式 */
+        .trend-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px;
+        }
+        
+        .trend-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 1200px;
+        }
+        
+        .trend-table th, .trend-table td {
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+            height: 32px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            padding: 1px;
+        }
+        
+        .basic-area {
+            width: 40px;
+            font-size: 14px;
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .number-cell {
+            width: 30px;
+        }
+        
+        /* 走势图蓝球单元格样式 */
+        .trend-blue-cell {
+            width: 35px;
+            font-weight: bold;
+            background: white !important;
+        }
+        
+        .region-header {
+              font-weight: bold;
+              background-color: #fff3cd;
+              font-size: 20px;
+              color: #333;
+        }
+        
+        .red-border-left {
+            border-left: 4px solid #228B22 !important;
+        }
+        
+        .red-border-right {
+            border-right: 4px solid #228B22 !important;
+        }
+        
+        /* 区域无号码时的淡灰色背景 */
+        .empty-region {
+            background-color: #6F8FAF !important;
+        }
+        
+        .input-row {
+            background-color: #f9f9f9;
+        }
+        
+        .input-cell {
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .input-cell:hover {
+            background-color: #e6f7ff;
+        }
+        
+        /* 输入单元格 */
+        .input-placeholder {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 11px;
+            color: transparent;
+            background: #f0f0f0;
+            border: 1px dashed #ccc;
+            margin: 0 auto;
+            transition: all 0.3s;
+        }
+        
+        .input-placeholder:hover {
+            background: #e0e0e0;
+        }
+        
+        /* 输入行黄色球体 */
+        .input-ball {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 11px;
+            color: #000000;
+            background: radial-gradient(circle at 30% 30%, #ffeb3b, #fbc02d, #f57f17);
+            box-shadow: 
+                inset -2px -2px 4px rgba(0,0,0,0.3),
+                inset 2px 2px 4px rgba(255,255,255,0.3),
+                0 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 0.5px 0.5px 1px rgba(255,255,255,0.5);
+            margin: 0 auto;
+            cursor: pointer;
+        }
+        
+        /* 历史数据球体 */
+        .trend-ball {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            margin: 0 auto;
+            box-shadow: 
+                inset -1px -1px 2px rgba(0,0,0,0.3),
+                inset 1px 1px 2px rgba(255,255,255,0.2);
+        }
+        
+        .trend-red {
+            background: radial-gradient(circle at 30% 30%, #ff8a8a, #ff5252, #e53935);
+        }
+        
+        .trend-blue {
+            background: radial-gradient(circle at 30% 30%, #8ac6ff, #4dabf5, #2196f3);
+        }
+        
+        /* 高亮显示的黄色球体 */
+        .highlight-yellow {
+            background: radial-gradient(circle at 30% 30%, #ffeb3b, #fbc02d, #f57f17) !important;
+            color: #000000 !important;
+        }
+        
+        /* 对比号码区样式 */
+        .compare-container {
+            padding: 20px;
+            background: white;
+        }
+        
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .compare-column {
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            overflow: hidden;
+        }
+        
+        .compare-header {
+            background: #74b9ff;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .compare-content {
+            padding: 20px;
+            min-height: 300px;
+        }
+        
+        /* 对比号码的球体布局 */
+        .compare-numbers-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .compare-number-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .compare-ball {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            box-shadow: 
+                inset -2px -2px 4px rgba(0,0,0,0.3),
+                inset 2px 2px 4px rgba(255,255,255,0.3),
+                0 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .compare-red-ball {
+            background: radial-gradient(circle at 30% 30%, #ff8a8a, #ff5252, #e53935);
+        }
+        
+        .compare-blue-ball {
+            background: radial-gradient(circle at 30% 30%, #8ac6ff, #4dabf5, #2196f3);
+        }
+        
+        .compare-group-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            padding-left: 5px;
+        }
+
+        /* 筛选位数区样式 */
+        .digit-filter-container {
+            padding: 15px;
+            background: white;
+        }
+        
+        .filter-position-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .filter-position-label {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .filter-select-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        .filter-select-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        .filter-compact-select {
+            width: 100%;
+            padding: 8px 5px;
+            border: 2px solid;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            text-align: center;
+            appearance: none;
+        }
+        /* 每个选择框不同颜色 */
+        #filter-pos1 { border-color: #ff6b6b; }
+        #filter-pos2 { border-color: #4ecdc4; }
+        #filter-pos3 { border-color: #45b7d1; }
+        #filter-pos4 { border-color: #96ceb4; }
+        #filter-pos5 { border-color: #feca57; }
+        #filter-pos6 { border-color: #ff9ff3; }
+        
+        .filter-select-wrapper::after {
+            content: "▼";
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #999;
+            pointer-events: none;
+        }
+        
+        .filter-controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .filter-count-display {
+            padding: 8px 12px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #1976d2;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+        .filter-sort-controls {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        .filter-sort-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .filter-sort-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .filter-copy-btn {
+            padding: 8px 12px;
+            border: 1px solid #28a745;
+            border-radius: 6px;
+            background: #28a745;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        /* 筛选结果样式 */
+        .filter-results {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .filter-numbers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+        
+        .filter-number-row {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.2s ease;
+        }
+        
+        .filter-number-row:hover {
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .filter-red-balls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .filter-red-ball {
+            width: 36px;
+            height: 36px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .filter-red-ball.yellow {
+            background: #f39c12;
+        }
+        
+        .filter-blue-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+        
+        .filter-blue-label {
+            font-size: 12px;
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .filter-blue-ball {
+            width: 36px;
+            height: 36px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .filter-no-results {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 30px;
+            font-size: 13px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .header-button {
+                font-size: 12px;
+                padding: 6px 10px;
+                min-width: 50px;
+            }
+            
+            .ball {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
+            }
+            
+            .number-row {
+                gap: 10px;
+            }
+            
+            .trend-table th, .trend-table td {
+                height: 30px;
+                font-size: 14px;
+            }
+            
+            .trend-ball {
+                width: 20px;
+                height: 20px;
+                font-size: 9px;
+            }
+            
+            .input-placeholder, .input-ball {
+                width: 22px;
+                height: 22px;
+                font-size: 9px;
+            }
+            
+            /* 对比号码区移动端优化 - 水平排列 */
+            .compare-container {
+                    padding: 15px;
+            }
+    
+            .compare-grid {
+                    display: flex;
+                    flex-direction: row;
+                    gap: 15px;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    padding-bottom: 10px;
+            }
+    
+           .compare-column {
+                   min-width: 300px;
+                   flex-shrink: 0;
+            }   
+
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .compare-ball {
+                width: 35px;
+                height: 35px;
+                font-size: 12px;
+            }
+
+             .compare-number-row {
+                     gap: 6px;
+                     justify-content: flex-start;
+            }
+    
+             .compare-content {
+                     padding: 12px;
+                     min-height: 200px;
+            }
+    
+             .compare-header {
+                     padding: 10px;
+                     font-size: 16px;
+            }
+    
+             .compare-group-info {
+                     font-size: 11px;
+            }
+
+            /* 筛选器移动端适配 */
+            .filter-compact-select {
+                font-size: 11px;
+                padding: 6px 4px;
+            }
+            
+            .filter-sort-btn, .filter-copy-btn {
+                font-size: 11px;
+                padding: 6px 8px;
+            }
+            
+            .filter-number-row {
+                gap: 15px;
+                padding: 10px 12px;
+            }
+            
+            .filter-red-balls {
+                gap: 12px;
+            }
+            
+            .filter-red-ball, .filter-blue-ball {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+            }
+            
+            .filter-blue-section {
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 功能按键区域 -->
+        <div class="header">
+            <div class="header-buttons">
+                <a href="#" class="header-button active" id="numberDisplayBtn">号码展示区</a>
+                <a href="#" class="header-button" id="basicTrendBtn">基本走势区</a>
+                <a href="#" class="header-button" id="compareNumbersBtn">对比号码区</a>
+                <a href="#" class="header-button" id="digitFilterBtn">筛选位数区</a>
+                <a href="#" class="header-button orange" id="copySameBtn">复制相同</a>
+                <a href="#" class="header-button blue" id="copyInverseBtn">复制反选</a>
+                <a href="#" class="header-button" id="clearDataBtn">清空数据</a>
+            </div>
+        </div>
+        
+        <!-- 号码展示内容 -->
+        <div class="content-section active" id="numberDisplaySection">
+            <div class="input-section">
+                <textarea id="dataInput" placeholder="粘贴双色球数据（自动解析）
+
+示例：
+2 4 6 7 9 33 12
+5 8 11 15 19 25 3
+1 7 13 18 22 29 9"></textarea>
+            </div>
+            
+            <div class="display-section" id="displaySection">
+                <div class="empty-state">请粘贴数据</div>
+            </div>
+        </div>
+        
+        <!-- 基本走势内容 -->
+        <div class="content-section" id="basicTrendSection">
+            <div class="trend-container">
+                <table class="trend-table" id="trendTable">
+                    <!-- 走势表格将通过JavaScript动态生成 -->
+                </table>
+            </div>
+        </div>
+        
+        <!-- 对比号码内容 -->
+        <div class="content-section" id="compareNumbersSection">
+            <div class="compare-container">
+                <div class="compare-grid">
+                    <!-- 相同号码区 -->
+                    <div class="compare-column">
+                        <div class="compare-header">相同号码区</div>
+                        <div class="compare-content" id="sameNumbersContent">
+                            <div class="empty-state">请先在基本走势中输入号码</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 反选号码区 -->
+                    <div class="compare-column">
+                        <div class="compare-header">反选号码区</div>
+                        <div class="compare-content" id="inverseNumbersContent">
+                            <div class="empty-state">请先在基本走势中输入号码</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选位数区内容 - 已替换为新界面 -->
+        <div class="content-section" id="digitFilterSection">
+            <div class="digit-filter-container">
+                <div class="filter-position-labels">
+                    <div class="filter-position-label">位置①</div>
+                    <div class="filter-position-label">位置②</div>
+                    <div class="filter-position-label">位置③</div>
+                    <div class="filter-position-label">位置④</div>
+                    <div class="filter-position-label">位置⑤</div>
+                    <div class="filter-position-label">位置⑥</div>
+                </div>
+                
+                <div class="filter-select-row">
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos1">
+                            <option value="">选择</option>
+                            <option value="0">0字头</option>
+                            <option value="1">1字头</option>
+                            <option value="2">2字头</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos2">
+                            <option value="">选择</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos3">
+                            <option value="">选择</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos4">
+                            <option value="">选择</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos5">
+                            <option value="">选择</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-select-wrapper">
+                        <select class="filter-compact-select" id="filter-pos6">
+                            <option value="">选择</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-controls-row">
+                    <div class="filter-count-display" id="filterResultCount">共 0 组</div>
+                    <div class="filter-sort-controls">
+                        <button class="filter-sort-btn active" id="filter-sortByGroup">组号排</button>
+                        <button class="filter-sort-btn" id="filter-sortByNumbers">号码排</button>
+                        <button class="filter-sort-btn" id="filter-sortByBlue">蓝球排</button>
+                        <button class="filter-copy-btn" id="filter-copyCurrent">复制号码</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-results">
+                <div class="filter-numbers-list" id="filterNumbersList">
+                    <div class="filter-no-results">请在号码展示区粘贴数据后使用筛选功能</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取元素
+            const numberDisplayBtn = document.getElementById('numberDisplayBtn');
+            const basicTrendBtn = document.getElementById('basicTrendBtn');
+            const compareNumbersBtn = document.getElementById('compareNumbersBtn');
+            const digitFilterBtn = document.getElementById('digitFilterBtn');
+            const numberDisplaySection = document.getElementById('numberDisplaySection');
+            const basicTrendSection = document.getElementById('basicTrendSection');
+            const compareNumbersSection = document.getElementById('compareNumbersSection');
+            const digitFilterSection = document.getElementById('digitFilterSection');
+            const dataInput = document.getElementById('dataInput');
+            const displaySection = document.getElementById('displaySection');
+            const trendTable = document.getElementById('trendTable');
+            const copySameBtn = document.getElementById('copySameBtn');
+            const copyInverseBtn = document.getElementById('copyInverseBtn');
+            const sameNumbersContent = document.getElementById('sameNumbersContent');
+            const inverseNumbersContent = document.getElementById('inverseNumbersContent');
+            const filterResultCount = document.getElementById('filterResultCount');
+            const filterNumbersList = document.getElementById('filterNumbersList');
+            const clearDataBtn = document.getElementById('clearDataBtn');
+            
+            // 新增筛选位数区元素
+            const filterPos1 = document.getElementById('filter-pos1');
+            const filterPos2 = document.getElementById('filter-pos2');
+            const filterPos3 = document.getElementById('filter-pos3');
+            const filterPos4 = document.getElementById('filter-pos4');
+            const filterPos5 = document.getElementById('filter-pos5');
+            const filterPos6 = document.getElementById('filter-pos6');
+            const filterSortByGroup = document.getElementById('filter-sortByGroup');
+            const filterSortByNumbers = document.getElementById('filter-sortByNumbers');
+            const filterSortByBlue = document.getElementById('filter-sortByBlue');
+            const filterCopyCurrent = document.getElementById('filter-copyCurrent');
+
+            // 状态变量
+            let currentPage = 0;
+            let pages = [];
+            let totalGroups = 0;
+            let totalAmount = 0;
+            let groups = [];
+            let historyData = [];
+            let inputNumbers = { red: [], blue: null };
+            
+            // 新增筛选位数区状态变量
+            let filterSelects = {
+                pos1: filterPos1,
+                pos2: filterPos2,
+                pos3: filterPos3,
+                pos4: filterPos4,
+                pos5: filterPos5,
+                pos6: filterPos6
+            };
+
+            // 定义每个位置的完整可选范围
+            const fullOptions = {
+                pos1: ['0', '1', '2'],
+                pos2: ['0', '1', '2'],
+                pos3: ['0', '1', '2'],
+                pos4: ['0', '1', '2', '3'],
+                pos5: ['1', '2', '3'],
+                pos6: ['1', '2', '3']
+            };
+
+            let currentFilterSort = 'group';
+            let filteredResults = [];
+
+            // 初始化：从本地存储加载号码展示区数据
+            function loadFromLocalStorage() {
+                const savedData = localStorage.getItem('ssqNumberDisplayData');
+                if (savedData) {
+                    dataInput.value = savedData;
+                    parseData();
+                }
+            }
+
+            // 保存号码展示区数据到本地存储
+            function saveToLocalStorage() {
+                localStorage.setItem('ssqNumberDisplayData', dataInput.value);
+            }
+
+            // 清空本地存储
+            function clearLocalStorage() {
+                localStorage.removeItem('ssqNumberDisplayData');
+            }
+
+            // 按钮切换功能
+            numberDisplayBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchSection('numberDisplay');
+            });
+            
+            basicTrendBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchSection('basicTrend');
+                renderTrendTable();
+            });
+            
+            compareNumbersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchSection('compareNumbers');
+                renderCompareNumbers();
+            });
+            
+            digitFilterBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchSection('digitFilter');
+                renderDigitFilter();
+            });
+            
+            copySameBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                copySameNumbers();
+            });
+            
+            copyInverseBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                copyInverseNumbers();
+            });
+            
+            clearDataBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearAllData();
+            });
+            
+            function switchSection(section) {
+                // 更新按钮状态
+                document.querySelectorAll('.header-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 隐藏所有内容区域
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // 显示选中的内容区域
+                if (section === 'numberDisplay') {
+                    numberDisplayBtn.classList.add('active');
+                    numberDisplaySection.classList.add('active');
+                } else if (section === 'basicTrend') {
+                    basicTrendBtn.classList.add('active');
+                    basicTrendSection.classList.add('active');
+                } else if (section === 'compareNumbers') {
+                    compareNumbersBtn.classList.add('active');
+                    compareNumbersSection.classList.add('active');
+                } else if (section === 'digitFilter') {
+                    digitFilterBtn.classList.add('active');
+                    digitFilterSection.classList.add('active');
+                }
+            }
+            
+            // 号码展示功能
+            dataInput.addEventListener('input', function() {
+                clearTimeout(this._timer);
+                this._timer = setTimeout(() => {
+                    parseData();
+                    // 保存到本地存储
+                    saveToLocalStorage();
+                }, 300);
+            });
+            
+            dataInput.addEventListener('paste', function() {
+                setTimeout(() => {
+                    parseData();
+                    // 保存到本地存储
+                    saveToLocalStorage();
+                }, 50);
+            });
+            
+            function parseData() {
+                const inputText = dataInput.value.trim();
+                if (!inputText) {
+                    displaySection.innerHTML = '<div class="empty-state">请粘贴数据</div>';
+                    historyData = [];
+                    return;
+                }
+                
+                groups = parseInputData(inputText);
+                if (groups.length === 0) {
+                    displaySection.innerHTML = '<div class="empty-state">数据格式错误，请检查</div>';
+                    historyData = [];
+                    return;
+                }
+                
+                // 保存到历史数据用于走势图
+                historyData = groups;
+                
+                pages = [];
+                totalGroups = groups.length;
+                totalAmount = totalGroups * 2;
+                
+                for (let i = 0; i < groups.length; i += 5) {
+                    const pageGroups = groups.slice(i, i + 5);
+                    pages.push(pageGroups);
+                }
+                
+                currentPage = 0;
+                renderPages();
+                
+                // 初始化筛选位数区的选择框
+                initFilterSelects();
+            }
+            
+            function parseInputData(inputText) {
+                const lines = inputText.split('\n');
+                const numbers = [];
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const lineNumbers = line.split(/\s+/).map(num => {
+                        const cleanNum = num.replace(/\D/g, '');
+                        return parseInt(cleanNum);
+                    }).filter(num => !isNaN(num));
+                    
+                    numbers.push(...lineNumbers);
+                }
+                
+                const groups = [];
+                for (let i = 0; i < numbers.length; i += 7) {
+                    if (i + 7 <= numbers.length) {
+                        const groupNumbers = numbers.slice(i, i + 7);
+                        const redBalls = groupNumbers.slice(0, 6).sort((a, b) => a - b);
+                        const blueBall = groupNumbers[6];
+                        
+                        groups.push({
+                            redBalls: redBalls,
+                            blueBall: blueBall,
+                            period: groups.length + 1
+                        });
+                    }
+                }
+                
+                return groups;
+            }
+            
+            function renderPages() {
+                displaySection.innerHTML = '';
+                
+                if (pages.length === 0) {
+                    displaySection.innerHTML = '<div class="empty-state">请粘贴数据</div>';
+                    return;
+                }
+                
+                const pagesContainer = document.createElement('div');
+                
+                pages.forEach((pageGroups, pageIndex) => {
+                    const page = document.createElement('div');
+                    page.className = `page ${pageIndex === currentPage ? 'active' : ''}`;
+                    
+                    const combinedGroup = document.createElement('div');
+                    combinedGroup.className = 'combined-group';
+                    
+                    // 页面头部
+                    const pageHeader = document.createElement('div');
+                    pageHeader.className = 'page-header';
+                    
+                    const headerTitle = document.createElement('div');
+                    headerTitle.className = 'header-title';
+                    const endGroup = Math.min((pageIndex + 1) * 5, totalGroups);
+                    headerTitle.textContent = `第${pageIndex + 1}页     共${endGroup}组`;
+                    pageHeader.appendChild(headerTitle);
+                    
+                    const headerButtons = document.createElement('div');
+                    headerButtons.className = 'page-header-buttons';
+                    
+                    const copyAllBtn = document.createElement('button');
+                    copyAllBtn.className = 'header-btn copy-all-btn';
+                    copyAllBtn.title = '复制所有号码';
+                    copyAllBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                    `;
+                    copyAllBtn.addEventListener('click', function() {
+                        copyAllNumbers();
+                    });
+                    
+                    const copyCurrentBtn = document.createElement('button');
+                    copyCurrentBtn.className = 'header-btn copy-page-btn';
+                    copyCurrentBtn.title = '复制当前页';
+                    copyCurrentBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 21H8V7h11m0-2H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m-3-4H4c-1.1 0-2 .9-2 2v14h2V3h12V1z"/>
+                        </svg>
+                    `;
+                    copyCurrentBtn.addEventListener('click', function() {
+                        copyCurrentPage(pageIndex);
+                    });
+                    
+                    headerButtons.appendChild(copyAllBtn);
+                    headerButtons.appendChild(copyCurrentBtn);
+                    pageHeader.appendChild(headerButtons);
+                    combinedGroup.appendChild(pageHeader);
+                    
+                    // 号码行
+                    pageGroups.forEach((group, groupIndex) => {
+                        const numberRow = document.createElement('div');
+                        numberRow.className = 'number-row';
+                        
+                        group.redBalls.forEach(ball => {
+                            const ballElement = document.createElement('div');
+                            ballElement.className = 'ball red-ball';
+                            ballElement.textContent = ball.toString().padStart(2, '0');
+                            numberRow.appendChild(ballElement);
+                        });
+                        
+                        const blueBallElement = document.createElement('div');
+                        blueBallElement.className = 'ball display-blue-ball';
+                        blueBallElement.textContent = group.blueBall.toString().padStart(2, '0');
+                        numberRow.appendChild(blueBallElement);
+                        
+                        combinedGroup.appendChild(numberRow);
+                        
+                        if (groupIndex < pageGroups.length - 1) {
+                            const separator = document.createElement('div');
+                            separator.className = 'group-separator';
+                            combinedGroup.appendChild(separator);
+                        }
+                    });
+                    
+                    page.appendChild(combinedGroup);
+                    pagesContainer.appendChild(page);
+                });
+                
+                displaySection.appendChild(pagesContainer);
+                
+                // 底部导航
+                const bottomSection = document.createElement('div');
+                bottomSection.className = 'bottom-section';
+                
+                if (pages.length > 1) {
+                    const navigation = document.createElement('div');
+                    navigation.className = 'navigation';
+                    
+                    const prevBtn = document.createElement('button');
+                    prevBtn.className = 'nav-btn prev-btn';
+                    prevBtn.textContent = '上一页';
+                    prevBtn.disabled = currentPage === 0;
+                    prevBtn.addEventListener('click', function() {
+                        if (currentPage > 0) {
+                            currentPage--;
+                            renderPages();
+                        }
+                    });
+                    
+                    const nextBtn = document.createElement('button');
+                    nextBtn.className = 'nav-btn next-btn';
+                    nextBtn.textContent = '下一页';
+                    nextBtn.disabled = currentPage === pages.length - 1;
+                    nextBtn.addEventListener('click', function() {
+                        if (currentPage < pages.length - 1) {
+                            currentPage++;
+                            renderPages();
+                        }
+                    });
+                    
+                    navigation.appendChild(prevBtn);
+                    navigation.appendChild(nextBtn);
+                    bottomSection.appendChild(navigation);
+                }
+                
+                const pageInfo = document.createElement('div');
+                pageInfo.className = 'page-info';
+                
+                const pageIndicator = document.createElement('div');
+                pageIndicator.className = 'page-indicator';
+                pageIndicator.textContent = `当前第 ${currentPage + 1} 页，共 ${pages.length} 页`;
+                
+                const totalInfo = document.createElement('div');
+                totalInfo.className = 'total-info';
+                totalInfo.textContent = `总计：${totalGroups} 组  合：${totalAmount}元`;
+                
+                pageInfo.appendChild(pageIndicator);
+                pageInfo.appendChild(totalInfo);
+                bottomSection.appendChild(pageInfo);
+                
+                displaySection.appendChild(bottomSection);
+            }
+            
+            function copyAllNumbers() {
+                if (groups.length === 0) {
+                    alert('没有可复制的号码');
+                    return;
+                }
+                
+                let text = '';
+                groups.forEach((group, index) => {
+                    const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                    const blueBall = group.blueBall.toString().padStart(2, '0');
+                    text += `${index + 1}组: ${redBalls} + ${blueBall}\n`;
+                });
+                
+                copyToClipboard(text);
+                alert('已复制所有号码到剪贴板');
+            }
+            
+            function copyCurrentPage(pageIndex) {
+                if (pages.length === 0) {
+                    alert('没有可复制的号码');
+                    return;
+                }
+                
+                const pageGroups = pages[pageIndex];
+                let text = '';
+                pageGroups.forEach((group, index) => {
+                    const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                    const blueBall = group.blueBall.toString().padStart(2, '0');
+                    const groupNumber = pageIndex * 5 + index + 1;
+                    text += `${groupNumber}组: ${redBalls} + ${blueBall}\n`;
+                });
+                
+                copyToClipboard(text);
+                alert('已复制当前页号码到剪贴板');
+            }
+            
+            function copyToClipboard(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            
+            // 复制相同号码功能
+            function copySameNumbers() {
+                if (historyData.length === 0) {
+                    alert('请先在号码展示中粘贴数据');
+                    return;
+                }
+                
+                if (inputNumbers.red.length === 0 && inputNumbers.blue === null) {
+                    alert('请先在基本走势中输入要对比的号码');
+                    return;
+                }
+                
+                const sameGroups = historyData.filter(group => {
+                    const hasSameRed = group.redBalls.some(ball => inputNumbers.red.includes(ball));
+                    const hasSameBlue = inputNumbers.blue !== null && group.blueBall === inputNumbers.blue;
+                    return hasSameRed || hasSameBlue;
+                });
+                
+                if (sameGroups.length === 0) {
+                    alert('没有找到相同号码的组');
+                    return;
+                }
+                
+                let text = '';
+                sameGroups.forEach((group, index) => {
+                    const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                    const blueBall = group.blueBall.toString().padStart(2, '0');
+                    text += `${group.period}组: ${redBalls} + ${blueBall}\n`;
+                });
+                
+                copyToClipboard(text);
+                alert(`已复制${sameGroups.length}组相同号码到剪贴板`);
+            }
+            
+            // 复制反选号码功能
+            function copyInverseNumbers() {
+                if (historyData.length === 0) {
+                    alert('请先在号码展示中粘贴数据');
+                    return;
+                }
+                
+                const hasInputNumbers = inputNumbers.red.length > 0 || inputNumbers.blue !== null;
+                
+                if (!hasInputNumbers) {
+                    // 如果没有输入任何号码，复制所有历史数据
+                    const allGroups = [...historyData];
+                    
+                    let text = '';
+                    allGroups.forEach((group, index) => {
+                        const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                        const blueBall = group.blueBall.toString().padStart(2, '0');
+                        text += `${group.period}组: ${redBalls} + ${blueBall}\n`;
+                    });
+                    
+                    copyToClipboard(text);
+                    alert(`已复制${allGroups.length}组号码到剪贴板`);
+                    return;
+                }
+                
+                const inverseGroups = historyData.filter(group => {
+                    const hasSameRed = group.redBalls.some(ball => inputNumbers.red.includes(ball));
+                    const hasSameBlue = inputNumbers.blue !== null && group.blueBall === inputNumbers.blue;
+                    return !hasSameRed && !hasSameBlue;
+                });
+                
+                if (inverseGroups.length === 0) {
+                    alert('没有找到无相同号码的组');
+                    return;
+                }
+                
+                let text = '';
+                inverseGroups.forEach((group, index) => {
+                    const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                    const blueBall = group.blueBall.toString().padStart(2, '0');
+                    text += `${group.period}组: ${redBalls} + ${blueBall}\n`;
+                });
+                
+                copyToClipboard(text);
+                alert(`已复制${inverseGroups.length}组无相同号码到剪贴板`);
+            }
+            
+            function clearAllData() {
+                dataInput.value = '';
+                displaySection.innerHTML = '<div class="empty-state">请粘贴数据</div>';
+                pages = [];
+                groups = [];
+                historyData = [];
+                inputNumbers = { red: [], blue: null };
+                currentPage = 0;
+                totalGroups = 0;
+                totalAmount = 0;
+                
+                // 清空筛选位数区
+                Object.values(filterSelects).forEach(select => {
+                    select.innerHTML = '<option value="">选择</option>';
+                });
+                filterResultCount.textContent = '0组';
+                filterNumbersList.innerHTML = '<div class="filter-no-results">请在号码展示区粘贴数据后使用筛选功能</div>';
+                
+                // 清空本地存储
+                clearLocalStorage();
+                
+                alert('已清空所有数据');
+            }
+            
+            // 检查区域是否有号码
+            function checkRegionHasNumbers(redBalls, region) {
+                let start, end;
+                if (region === 1) {
+                    start = 1; end = 11;
+                } else if (region === 2) {
+                    start = 12; end = 22;
+                } else if (region === 3) {
+                    start = 23; end = 33;
+                }
+                
+                for (let i = start; i <= end; i++) {
+                    if (redBalls.includes(i)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // 基本走势功能
+            function renderTrendTable() {
+                if (historyData.length === 0) {
+                    trendTable.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="basic-area">区号</th>
+                                <th colspan="11" class="region-header red-border-right">一  区 红球</th>
+                                <th colspan="11" class="region-header red-border-right">二  区 红球</th>
+                                <th colspan="11" class="region-header red-border-right">三  区 红球</th>
+                                <th rowspan="2" class="trend-blue-cell">蓝球</th>
+                            </tr>
+                            <tr>
+                                ${Array.from({length: 33}, (_, i) => 
+                                    `<th class="number-cell ${i === 0 ? 'red-border-left' : ''} ${i === 10 || i === 21 || i === 32 ? 'red-border-right' : ''}">${i + 1}</th>`
+                                ).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="35" style="text-align: center; padding: 40px; color: #666;">
+                                    请在"号码展示"中粘贴数据后查看走势图
+                                </td>
+                            </tr>
+                        </tbody>
+                    `;
+                    return;
+                }
+                
+                // 生成表头
+                let tableHTML = `
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="basic-area">区号</th>
+                            <th colspan="11" class="region-header red-border-right">一  区 红球</th>
+                            <th colspan="11" class="region-header red-border-right">二  区 红球</th>
+                            <th colspan="11" class="region-header red-border-right">三  区 红球</th>
+                            <th rowspan="2" class="trend-blue-cell">蓝球</th>
+                        </tr>
+                        <tr>
+                `;
+                
+                // 号码表头
+                for (let i = 0; i < 33; i++) {
+                    const isFirst = i === 0;
+                    const isLastInRegion = i === 10 || i === 21 || i === 32;
+                    tableHTML += `<th class="number-cell ${isFirst ? 'red-border-left' : ''} ${isLastInRegion ? 'red-border-right' : ''}">${i + 1}</th>`;
+                }
+                
+                tableHTML += `
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+                
+                // 历史数据行 - 添加高亮显示和区域背景
+                historyData.forEach((data, index) => {
+                    // 检查每个区域是否有号码
+                    const region1HasNumbers = checkRegionHasNumbers(data.redBalls, 1);
+                    const region2HasNumbers = checkRegionHasNumbers(data.redBalls, 2);
+                    const region3HasNumbers = checkRegionHasNumbers(data.redBalls, 3);
+                    
+                    tableHTML += `<tr>`;
+                    tableHTML += `<td class="basic-area">${data.period}</td>`;
+                    
+                    // 红球数据 - 添加高亮逻辑和区域背景
+                    for (let i = 1; i <= 33; i++) {
+                        const isFirst = i === 1;
+                        const isLastInRegion = i === 11 || i === 22 || i === 33;
+                        const hasBall = data.redBalls.includes(i);
+                        const isHighlighted = inputNumbers.red.includes(i);
+                        
+                        // 确定区域背景
+                        let regionClass = '';
+                        if (i >= 1 && i <= 11 && !region1HasNumbers) {
+                            regionClass = 'empty-region';
+                        } else if (i >= 12 && i <= 22 && !region2HasNumbers) {
+                            regionClass = 'empty-region';
+                        } else if (i >= 23 && i <= 33 && !region3HasNumbers) {
+                            regionClass = 'empty-region';
+                        }
+                        
+                        tableHTML += `<td class="number-cell ${regionClass} ${isFirst ? 'red-border-left' : ''} ${isLastInRegion ? 'red-border-right' : ''}">`;
+                        if (hasBall) {
+                            const ballClass = isHighlighted ? 'trend-ball highlight-yellow' : 'trend-ball trend-red';
+                            tableHTML += `<div class="${ballClass}">${i.toString().padStart(2, '0')}</div>`;
+                        }
+                        tableHTML += `</td>`;
+                    }
+                    
+                    // 蓝球数据 - 添加高亮逻辑
+                    const isBlueHighlighted = inputNumbers.blue !== null && data.blueBall === inputNumbers.blue;
+                    const blueBallClass = isBlueHighlighted ? 'trend-ball highlight-yellow' : 'trend-ball trend-blue';
+                    tableHTML += `<td class="trend-blue-cell"><div class="${blueBallClass}">${data.blueBall.toString().padStart(2, '0')}</div></td>`;
+                    tableHTML += `</tr>`;
+                });
+                
+                // 输入行 - 修复：点击黄球可以消除
+                tableHTML += `
+                    <tr class="input-row">
+                        <td class="basic-area">输入</td>
+                `;
+                
+                for (let i = 1; i <= 33; i++) {
+                    const isFirst = i === 1;
+                    const isLastInRegion = i === 11 || i === 22 || i === 33;
+                    const isSelected = inputNumbers.red.includes(i);
+                    
+                    tableHTML += `<td class="number-cell ${isFirst ? 'red-border-left' : ''} ${isLastInRegion ? 'red-border-right' : ''}">`;
+                    tableHTML += `<div class="input-cell" data-number="${i}" data-type="red">`;
+                    if (isSelected) {
+                        tableHTML += `<div class="input-ball" data-number="${i}">${i.toString().padStart(2, '0')}</div>`;
+                    } else {
+                        tableHTML += `<div class="input-placeholder" data-number="${i}"></div>`;
+                    }
+                    tableHTML += `</div></td>`;
+                }
+                
+                // 蓝球输入
+                const isBlueSelected = inputNumbers.blue !== null;
+                tableHTML += `<td class="trend-blue-cell">`;
+                tableHTML += `<div class="input-cell" data-number="blue" data-type="blue">`;
+                if (isBlueSelected) {
+                    tableHTML += `<div class="input-ball" data-number="blue">${inputNumbers.blue.toString().padStart(2, '0')}</div>`;
+                } else {
+                    tableHTML += `<div class="input-placeholder" data-number="blue"></div>`;
+                }
+                tableHTML += `</div></td>`;
+                tableHTML += `</tr>`;
+                tableHTML += `</tbody>`;
+                
+                trendTable.innerHTML = tableHTML;
+                
+                // 添加点击事件 - 修复：点击黄球可以消除
+                trendTable.querySelectorAll('.input-cell').forEach(cell => {
+                    cell.addEventListener('click', function() {
+                        const number = this.getAttribute('data-number');
+                        const type = this.getAttribute('data-type');
+                        const placeholder = this.querySelector('.input-placeholder');
+                        const ball = this.querySelector('.input-ball');
+                        
+                        if (ball) {
+                            // 如果已经有黄球，点击则消除
+                            if (type === 'red') {
+                                inputNumbers.red = inputNumbers.red.filter(n => n !== parseInt(number));
+                            } else {
+                                inputNumbers.blue = null;
+                            }
+                            renderTrendTable(); // 重新渲染以更新高亮
+                            renderCompareNumbers(); // 更新对比号码区
+                        } else if (placeholder) {
+                            // 如果是占位符，点击则创建黄球
+                            if (type === 'blue') {
+                                const blueNum = prompt('请输入蓝球号码(1-16):');
+                                if (blueNum && blueNum >= 1 && blueNum <= 16) {
+                                    inputNumbers.blue = parseInt(blueNum);
+                                    renderTrendTable(); // 重新渲染以更新高亮
+                                    renderCompareNumbers(); // 更新对比号码区
+                                }
+                            } else {
+                                inputNumbers.red.push(parseInt(number));
+                                renderTrendTable(); // 重新渲染以更新高亮
+                                renderCompareNumbers(); // 更新对比号码区
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // 渲染对比号码区
+            function renderCompareNumbers() {
+                // 检查是否有历史数据
+                if (historyData.length === 0) {
+                    sameNumbersContent.innerHTML = '<div class="empty-state">请先在号码展示中粘贴数据</div>';
+                    inverseNumbersContent.innerHTML = '<div class="empty-state">请先在号码展示中粘贴数据</div>';
+                    return;
+                }
+
+                const hasInputNumbers = inputNumbers.red.length > 0 || inputNumbers.blue !== null;
+
+                if (!hasInputNumbers) {
+                    // 如果没有输入任何对比号码，反选号码区显示所有历史数据，相同号码区为空
+                    sameNumbersContent.innerHTML = '<div class="empty-state">请在基本走势中输入要对比的号码</div>';
+                    
+                    // 对反选号码组按字典序排序（这里反选号码就是所有历史数据）
+                    const allGroups = [...historyData].sort((a, b) => {
+                        // 比较红球数组
+                        for (let i = 0; i < Math.min(a.redBalls.length, b.redBalls.length); i++) {
+                            if (a.redBalls[i] !== b.redBalls[i]) {
+                                return a.redBalls[i] - b.redBalls[i];
+                            }
+                        }
+                        // 如果红球相同，比较蓝球
+                        return a.blueBall - b.blueBall;
+                    });
+
+                    inverseNumbersContent.innerHTML = '<div class="compare-numbers-grid"></div>';
+                    const inverseGrid = inverseNumbersContent.querySelector('.compare-numbers-grid');
+                    
+                    allGroups.forEach((group, index) => {
+                        const groupElement = document.createElement('div');
+                        groupElement.className = 'compare-group';
+                        
+                        const groupInfo = document.createElement('div');
+                        groupInfo.className = 'compare-group-info';
+                        groupInfo.textContent = `第${group.period}期`;
+                        groupElement.appendChild(groupInfo);
+                        
+                        const numberRow = document.createElement('div');
+                        numberRow.className = 'compare-number-row';
+                        
+                        // 红球
+                        group.redBalls.forEach(ball => {
+                            const ballElement = document.createElement('div');
+                            ballElement.className = 'compare-ball compare-red-ball';
+                            ballElement.textContent = ball.toString().padStart(2, '0');
+                            numberRow.appendChild(ballElement);
+                        });
+                        
+                        // 蓝球
+                        const blueBallElement = document.createElement('div');
+                        blueBallElement.className = 'compare-ball compare-blue-ball';
+                        blueBallElement.textContent = group.blueBall.toString().padStart(2, '0');
+                        numberRow.appendChild(blueBallElement);
+                        
+                        groupElement.appendChild(numberRow);
+                        inverseGrid.appendChild(groupElement);
+                    });
+                    
+                    return;
+                }
+
+                // 以下是原有的逻辑（当有输入号码时）
+                // 计算相同号码组
+                const sameGroups = historyData.filter(group => {
+                    const hasSameRed = group.redBalls.some(ball => inputNumbers.red.includes(ball));
+                    const hasSameBlue = inputNumbers.blue !== null && group.blueBall === inputNumbers.blue;
+                    return hasSameRed || hasSameBlue;
+                });
+                
+                // 计算反选号码组
+                const inverseGroups = historyData.filter(group => {
+                    const hasSameRed = group.redBalls.some(ball => inputNumbers.red.includes(ball));
+                    const hasSameBlue = inputNumbers.blue !== null && group.blueBall === inputNumbers.blue;
+                    return !hasSameRed && !hasSameBlue;
+                });
+                
+                // 对相同号码组按字典序排序
+                sameGroups.sort((a, b) => {
+                    // 比较红球数组
+                    for (let i = 0; i < Math.min(a.redBalls.length, b.redBalls.length); i++) {
+                        if (a.redBalls[i] !== b.redBalls[i]) {
+                            return a.redBalls[i] - b.redBalls[i];
+                        }
+                    }
+                    // 如果红球相同，比较蓝球
+                    return a.blueBall - b.blueBall;
+                });
+                
+                // 对反选号码组按字典序排序
+                inverseGroups.sort((a, b) => {
+                    // 比较红球数组
+                    for (let i = 0; i < Math.min(a.redBalls.length, b.redBalls.length); i++) {
+                        if (a.redBalls[i] !== b.redBalls[i]) {
+                            return a.redBalls[i] - b.redBalls[i];
+                        }
+                    }
+                    // 如果红球相同，比较蓝球
+                    return a.blueBall - b.blueBall;
+                });
+                
+                // 渲染相同号码区
+                if (sameGroups.length === 0) {
+                    sameNumbersContent.innerHTML = '<div class="empty-state">没有找到相同号码的组</div>';
+                } else {
+                    sameNumbersContent.innerHTML = '<div class="compare-numbers-grid"></div>';
+                    const sameGrid = sameNumbersContent.querySelector('.compare-numbers-grid');
+                    
+                    sameGroups.forEach((group, index) => {
+                        const groupElement = document.createElement('div');
+                        groupElement.className = 'compare-group';
+                        
+                        const groupInfo = document.createElement('div');
+                        groupInfo.className = 'compare-group-info';
+                        groupInfo.textContent = `第${group.period}期`;
+                        groupElement.appendChild(groupInfo);
+                        
+                        const numberRow = document.createElement('div');
+                        numberRow.className = 'compare-number-row';
+                        
+                        // 红球
+                        group.redBalls.forEach(ball => {
+                            const ballElement = document.createElement('div');
+                            ballElement.className = `compare-ball compare-red-ball ${inputNumbers.red.includes(ball) ? 'highlight-yellow' : ''}`;
+                            ballElement.textContent = ball.toString().padStart(2, '0');
+                            numberRow.appendChild(ballElement);
+                        });
+                        
+                        // 蓝球
+                        const blueBallElement = document.createElement('div');
+                        blueBallElement.className = `compare-ball compare-blue-ball ${inputNumbers.blue === group.blueBall ? 'highlight-yellow' : ''}`;
+                        blueBallElement.textContent = group.blueBall.toString().padStart(2, '0');
+                        numberRow.appendChild(blueBallElement);
+                        
+                        groupElement.appendChild(numberRow);
+                        sameGrid.appendChild(groupElement);
+                    });
+                }
+                
+                // 渲染反选号码区
+                if (inverseGroups.length === 0) {
+                    inverseNumbersContent.innerHTML = '<div class="empty-state">没有找到无相同号码的组</div>';
+                } else {
+                    inverseNumbersContent.innerHTML = '<div class="compare-numbers-grid"></div>';
+                    const inverseGrid = inverseNumbersContent.querySelector('.compare-numbers-grid');
+                    
+                    inverseGroups.forEach((group, index) => {
+                        const groupElement = document.createElement('div');
+                        groupElement.className = 'compare-group';
+                        
+                        const groupInfo = document.createElement('div');
+                        groupInfo.className = 'compare-group-info';
+                        groupInfo.textContent = `第${group.period}期`;
+                        groupElement.appendChild(groupInfo);
+                        
+                        const numberRow = document.createElement('div');
+                        numberRow.className = 'compare-number-row';
+                        
+                        // 红球
+                        group.redBalls.forEach(ball => {
+                            const ballElement = document.createElement('div');
+                            ballElement.className = 'compare-ball compare-red-ball';
+                            ballElement.textContent = ball.toString().padStart(2, '0');
+                            numberRow.appendChild(ballElement);
+                        });
+                        
+                        // 蓝球
+                        const blueBallElement = document.createElement('div');
+                        blueBallElement.className = 'compare-ball compare-blue-ball';
+                        blueBallElement.textContent = group.blueBall.toString().padStart(2, '0');
+                        numberRow.appendChild(blueBallElement);
+                        
+                        groupElement.appendChild(numberRow);
+                        inverseGrid.appendChild(groupElement);
+                    });
+                }
+            }
+
+            // 筛选位数区功能
+            function initFilterSelects() {
+                // 初始化位置①的选项
+                updateFilterSelectOptions(1);
+                // 初始化其他位置的选项（默认显示全部）
+                for (let i = 2; i <= 6; i++) {
+                    updateFilterSelectOptions(i);
+                }
+            }
+
+            // 监听所有位置的变化
+            Object.values(filterSelects).forEach(select => {
+                select.addEventListener('change', function() {
+                    const position = parseInt(this.id.replace('filter-pos', ''));
+                    if (position < 6) {
+                        updateFilterSelectsFromPosition(position + 1);
+                    }
+                    performFilter();
+                });
+            });
+
+            // 从指定位置开始更新后面的选择框
+            function updateFilterSelectsFromPosition(startPos) {
+                for (let i = startPos; i <= 6; i++) {
+                    updateFilterSelectOptions(i);
+                    // 清空后面位置的选择
+                    filterSelects[`pos${i}`].value = '';
+                }
+            }
+
+            // 更新指定位置的选项
+            function updateFilterSelectOptions(position) {
+                const select = filterSelects[`pos${position}`];
+                const allowedOptions = getAllowedFilterOptions(position);
+                
+                // 保存当前值
+                const currentValue = select.value;
+                
+                // 清空选项
+                select.innerHTML = '<option value="">选择</option>';
+                
+                // 添加允许的选项
+                allowedOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = getOptionText(option);
+                    select.appendChild(opt);
+                });
+                
+                // 恢复之前的选择（如果仍然有效）
+                if (allowedOptions.includes(currentValue)) {
+                    select.value = currentValue;
+                }
+            }
+
+            // 获取允许的选项
+            function getAllowedFilterOptions(position) {
+                const fullRange = fullOptions[`pos${position}`];
+                
+                // 找到前面所有位置中的最大选择值
+                let maxPreviousValue = -1;
+                for (let i = 1; i < position; i++) {
+                    const prevValue = filterSelects[`pos${i}`].value;
+                    if (prevValue) {
+                        const numValue = parseInt(prevValue);
+                        if (numValue > maxPreviousValue) {
+                            maxPreviousValue = numValue;
+                        }
+                    }
+                }
+                
+                // 如果没有前面的选择，返回完整范围
+                if (maxPreviousValue === -1) {
+                    return fullRange;
+                }
+                
+                // 根据最大选择值过滤选项
+                if (maxPreviousValue === 0) {
+                    return fullRange; // 显示所有
+                } else if (maxPreviousValue === 1) {
+                    return fullRange.filter(opt => opt !== '0'); // 去掉0字头
+                } else if (maxPreviousValue === 2) {
+                    return fullRange.filter(opt => opt === '2' || opt === '3'); // 只显示2,3字头
+                } else if (maxPreviousValue === 3) {
+                    return fullRange.filter(opt => opt === '3'); // 只显示3字头
+                }
+                
+                return fullRange;
+            }
+
+            // 获取选项显示文本
+            function getOptionText(value) {
+                const textMap = {
+                    '0': '0字头',
+                    '1': '1字头', 
+                    '2': '2字头',
+                    '3': '3字头'
+                };
+                return textMap[value] || value;
+            }
+
+            // 获取数字的字头
+            function getNumberPrefix(number) {
+                if (number < 10) return '0';
+                if (number < 20) return '1';
+                if (number < 30) return '2';
+                return '3';
+            }
+
+            // 执行筛选
+            function performFilter() {
+                if (historyData.length === 0) {
+                    filterNumbersList.innerHTML = '<div class="filter-no-results">请在号码展示区粘贴数据后使用筛选功能</div>';
+                    filterResultCount.textContent = '0组';
+                    return;
+                }
+
+                const values = [
+                    filterSelects.pos1.value,
+                    filterSelects.pos2.value,
+                    filterSelects.pos3.value,
+                    filterSelects.pos4.value,
+                    filterSelects.pos5.value,
+                    filterSelects.pos6.value
+                ];
+                
+                // 检查是否有选择
+                const hasSelection = values.some(val => val);
+                
+                if (!hasSelection) {
+                    filteredResults = [...historyData];
+                } else {
+                    // 筛选数据
+                    filteredResults = historyData.filter(ball => {
+                        const sortedNumbers = [...ball.redBalls].sort((a, b) => a - b);
+                        
+                        for (let i = 0; i < 6; i++) {
+                            const expectedPrefix = values[i];
+                            if (expectedPrefix) {
+                                const actualPrefix = getNumberPrefix(sortedNumbers[i]);
+                                if (actualPrefix !== expectedPrefix) {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    });
+                }
+                
+                // 排序结果
+                const sortedResults = sortFilterResults(filteredResults, currentFilterSort);
+                filteredResults = sortedResults;
+                
+                // 显示结果
+                filterResultCount.textContent = `${filteredResults.length}组`;
+                
+                if (filteredResults.length === 0) {
+                    filterNumbersList.innerHTML = '<div class="filter-no-results">🔍 没有找到符合条件的号码</div>';
+                } else {
+                    filterNumbersList.innerHTML = filteredResults.map(item => `
+                        <div class="filter-number-row">
+                            <div class="filter-red-balls">
+                                ${item.redBalls.map((num, index) => {
+                                    // 检查当前球是否在筛选的列中
+                                    const currentPrefix = getNumberPrefix(num);
+                                    const expectedPrefix = values[index];
+                                    const isFilteredColumn = expectedPrefix && currentPrefix === expectedPrefix;
+                                    
+                                    const ballClass = isFilteredColumn ? 'filter-red-ball yellow' : 'filter-red-ball';
+                                    
+                                    return `
+                                        <div class="${ballClass}">
+                                            ${num.toString().padStart(2, '0')}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <div class="filter-blue-section">
+                                <span class="filter-blue-label">蓝球</span>
+                                <div class="filter-blue-ball">${item.blueBall.toString().padStart(2, '0')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // 排序函数
+            function sortFilterResults(results, sortType) {
+                switch (sortType) {
+                    case 'group':
+                        return results.sort((a, b) => a.period - b.period);
+                    case 'numbers':
+                        return results.sort((a, b) => {
+                            const aStr = a.redBalls.map(n => n.toString().padStart(2, '0')).join('');
+                            const bStr = b.redBalls.map(n => n.toString().padStart(2, '0')).join('');
+                            return aStr.localeCompare(bStr);
+                        });
+                    case 'blue':
+                        return results.sort((a, b) => a.blueBall - b.blueBall);
+                    default:
+                        return results;
+                }
+            }
+
+            // 设置排序按钮事件
+            function setupFilterSortButtons() {
+                filterSortByGroup.addEventListener('click', () => {
+                    setActiveFilterSort('group');
+                    performFilter();
+                });
+                filterSortByNumbers.addEventListener('click', () => {
+                    setActiveFilterSort('numbers');
+                    performFilter();
+                });
+                filterSortByBlue.addEventListener('click', () => {
+                    setActiveFilterSort('blue');
+                    performFilter();
+                });
+
+                // 复制按钮事件
+                filterCopyCurrent.addEventListener('click', copyFilteredNumbers);
+            }
+
+            function setActiveFilterSort(sortType) {
+                currentFilterSort = sortType;
+                // 更新按钮状态
+                [filterSortByGroup, filterSortByNumbers, filterSortByBlue].forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`filter-sortBy${sortType.charAt(0).toUpperCase() + sortType.slice(1)}`).classList.add('active');
+            }
+
+            function copyFilteredNumbers() {
+                if (filteredResults.length === 0) {
+                    alert('没有可复制的号码');
+                    return;
+                }
+
+                let text = '';
+                filteredResults.forEach((group, index) => {
+                    const redBalls = group.redBalls.map(ball => ball.toString().padStart(2, '0')).join(' ');
+                    const blueBall = group.blueBall.toString().padStart(2, '0');
+                    text += `第${group.period}组: ${redBalls} + ${blueBall}\n`;
+                });
+
+                copyToClipboard(text);
+                alert(`已复制${filteredResults.length}组号码到剪贴板`);
+            }
+
+            // 初始化筛选排序按钮
+            setupFilterSortButtons();
+
+            // 筛选位数区渲染
+            function renderDigitFilter() {
+                if (historyData.length === 0) {
+                    filterNumbersList.innerHTML = '<div class="filter-no-results">请在号码展示区粘贴数据后使用筛选功能</div>';
+                    filterResultCount.textContent = '0组';
+                    return;
+                }
+                performFilter();
+            }
+
+            // 初始化：从本地存储加载数据
+            loadFromLocalStorage();
+
+            // 初始化显示号码展示
+            switchSection('numberDisplay');
+        });
+    </script>
+</body>
+</html>
