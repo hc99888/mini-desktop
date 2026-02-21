@@ -1,4 +1,9 @@
 [
+ {
+    "name": "代码预览",
+    "icon": "apps/代码预览/icon.png",
+    "url": "https://hc99888.github.io/cod"
+  },
   {
     "name": "书签应用",
     "icon": "apps/书签应用/icon-192.png",
@@ -20,6 +25,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
