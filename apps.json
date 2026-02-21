@@ -1,0 +1,12 @@
+[
+  {
+    "name": "书签应用",
+    "icon": "https://你的用户名.github.io/你的书签仓库/icon-192.png",
+    "url": "https://你的用户名.github.io/你的书签仓库/"
+  },
+  {
+    "name": "示例记事本",
+    "icon": "https://你的用户名.github.io/desktop-os/icons/notepad.png",
+    "url": "https://example.com/notepad"
+  }
+]

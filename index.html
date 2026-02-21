@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>迷你桌面系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111827">
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="desktop"></div>
+
+  <div id="dock">
+    <span class="dock-title">迷你桌面</span>
+  </div>
+
+  <div id="loading">正在加载应用列表...</div>
+  <div id="error" class="hidden">应用列表加载失败，请检查 apps.json</div>
+
+  <script src="main.js"></script>
+</body>
+</html>
