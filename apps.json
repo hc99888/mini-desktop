@@ -14,6 +14,12 @@
     "icon": "https://你的用户名.github.io/desktop-os/icons/notepad.png",
     "url": "https://example.com/notepad"
   }
+    {
+    "name": "双色球",
+    "icon": "apps/双色球/icon.png",
+    "url": "apps/双色球/"
+  },
 ]
+
 
 
