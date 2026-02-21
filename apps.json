@@ -1,8 +1,8 @@
 [
   {
     "name": "书签应用",
-    "icon": "https://你的用户名.github.io/你的书签仓库/icon-192.png",
-    "url": "https://你的用户名.github.io/你的书签仓库/"
+    "icon": "apps/书签应用/icon-192.png",
+    "url": "apps/书签应用/"
   },
   {
     "name": "示例记事本",
@@ -10,3 +10,4 @@
     "url": "https://example.com/notepad"
   }
 ]
+
