@@ -1,0 +1,15 @@
+{
+  "name": "双色球",
+  "short_name": "双色球",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "icon/png"
+    }
+  ]
+}

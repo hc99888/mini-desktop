@@ -1,0 +1,3033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双色球综合分析系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); color: #e0e0e0; line-height: 1.5; padding: 10px; font-size: 14px; min-height: 100vh; }
+        .container { max-width: 100%; margin: 0 auto; }
+        
+        /* 头部样式 */
+        .header { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 8px; padding: 15px 20px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 2px solid #8a2be2; }
+        .header-title { font-size: 20px; font-weight: bold; color: white; text-align: center; flex: 1; }
+        .excel-import-btn { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: none; border-radius: 6px; padding: 12px 20px; color: white; font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3); transition: all 0.3s ease; min-width: 140px; }
+        .excel-import-btn:hover { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4); }
+        .excel-import-btn.success { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3); }
+        .excel-import-btn.success:hover { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4); }
+        
+        /* 筛选区域样式 */
+        .filter-section { display: flex; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); gap: 12px; border: 2px solid #8a2be2; }
+        .filter-item { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+        .filter-label.vertical { writing-mode: vertical-lr; text-orientation: mixed; text-align: center; line-height: 1.2; min-height: 40px; color: #bdc3c7; }
+        .filter-item select { flex: 1; padding: 8px 10px; border: 1px solid #4a5f7a; border-radius: 4px; font-size: 14px; background: #1e2a3a; color: #ecf0f1; min-width: 0; }
+
+        /* 日期显示样式 */
+        .date-display { display: flex; justify-content: center; align-items: center; min-width: 120px; height: 20px; }
+        .current-date { color: #FFD700; font-weight: bold; font-size: 16px; text-align: center; line-height: 1; }
+
+        /* 数据区域样式 */
+        .data-section { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 12px; border: 2px solid #8a2be2; }
+        .section-title { padding: 10px 12px; font-size: 14px; font-weight: 600; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); display: flex; justify-content: space-between; align-items: center; color: white; cursor: pointer; }
+        .collapse-btn { background: none; border: none; font-size: 14px; color: #8a2be2; padding: 0; width: 24px; height: 20px; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease; }
+        .table-container { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; transition: max-height 0.3s ease; scrollbar-width: none; -ms-overflow-style: none; }
+        .table-container::-webkit-scrollbar { display: none; }
+        .table-container.collapsed { max-height: 0; overflow: hidden; }
+        
+        /* 表格通用样式 */
+        .data-table { width: 100%; border-collapse: collapse; position: relative; }
+        .data-table th, .data-table td { padding: 4px 3px; text-align: center; font-size: 11px; border: 1px solid #4a5f7a; white-space: nowrap; height: 24px; position: relative; }
+        .data-table thead th { position: -webkit-sticky; position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); font-weight: 600; color: #ecf0f1; border-bottom: 2px solid #4a5f7a; transform: translateZ(0); }
+        .group-header { position: -webkit-sticky; position: sticky; top: 0; z-index: 110; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); transform: translateZ(0); }
+        
+        /* 蓝球走势表格样式 */
+        #blueTable { min-width: 900px; }
+        #blueTable thead tr:nth-child(2) th { top: 28px; transform: translateZ(0); }
+        
+        /* 蓝球走势表格分割线 */
+        #blueTable thead tr:nth-child(2) th:nth-child(3),
+        #blueTable td:nth-child(3) { border-right: 2px solid #f39c12 !important; }
+        #blueTable thead tr:nth-child(2) th:nth-child(5),
+        #blueTable td:nth-child(5) { border-right: 2px solid #e74c3c !important; }
+        #blueTable thead tr:nth-child(2) th:nth-child(7),
+        #blueTable td:nth-child(7) { border-right: 2px solid #3498db !important; }
+        #blueTable thead tr:nth-child(2) th:nth-child(10),
+        #blueTable td:nth-child(10) { border-right: 2px solid #2ecc71 !important; }
+        #blueTable thead tr:nth-child(2) th:nth-child(13),
+        #blueTable td:nth-child(13) { border-right: 2px solid #9b59b6 !important; }
+        #blueTable thead tr:nth-child(2) th:nth-child(21),
+        #blueTable td:nth-child(21) { border-right: 2px solid #1abc9c !important; }
+        
+        /* 一二区蓝球走势连接线 */
+        .zone-trend-line {
+            position: absolute;
+            background: linear-gradient(135deg, #e74c3c, #f39c12);
+            height: 2px;
+            transform-origin: left center;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        /* 球体样式 */
+        .ball-3d { 
+            width: 20px; 
+            height: 20px; 
+            border-radius: 50%; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 10px; 
+            font-weight: bold; 
+            margin: 0 auto; 
+            position: relative; 
+            box-shadow: inset -2px -2px 6px rgba(0, 0, 0, 0.6), inset 2px 2px 6px rgba(255, 255, 255, 0.2), 0 3px 8px rgba(0, 0, 0, 0.4); 
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); 
+            z-index: 10;
+        }
+        .blue-ball-3d { 
+            background: linear-gradient(135deg, #3498db 0%, #1a5276 100%); 
+            color: white; 
+            border: 1px solid #2980b9; 
+        }
+        .red-ball-3d {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: 1px solid #c0392b;
+        }
+        .zone-1-ball, .zone-2-ball { 
+            width: 18px; 
+            height: 18px; 
+            color: white; 
+            border: 1px solid; 
+            z-index: 10;
+        }
+        .zone-1-ball { 
+            background: linear-gradient(135deg, #3498db 0%, #1a5276 100%); 
+            border-color: #2980b9; 
+        }
+        .zone-2-ball { 
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); 
+            border-color: #229954; 
+        }
+        
+        /* 一二区蓝球单元格容器 */
+        .zone-cell { position: relative; height: 24px; }
+        
+        /* 指定区域字体14px */
+        #blueTable td:nth-child(4),  /* 大 */
+        #blueTable td:nth-child(5),  /* 小 */
+        #blueTable td:nth-child(6),  /* 奇 */
+        #blueTable td:nth-child(7),  /* 偶 */
+        #blueTable td:nth-child(8),  /* 0路 */
+        #blueTable td:nth-child(9),  /* 1路 */
+        #blueTable td:nth-child(10), /* 2路 */
+        #blueTable td:nth-child(11), /* 0统计 */
+        #blueTable td:nth-child(12), /* 1统计 */
+        #blueTable td:nth-child(13)  /* 2统计 */
+        { 
+            font-size: 14px !important; 
+            font-weight: bold !important; 
+        }
+        
+        /* 文字样式 */
+        .size-big { color: #e74c3c; font-weight: 600; font-size: 14px !important; }
+        .size-small { color: #2ecc71; font-weight: 600; font-size: 14px !important; }
+        .odd { color: #3498db; font-weight: 600; font-size: 14px !important; }
+        .even { color: #9b59b6; font-weight: 600; font-size: 14px !important; }
+        .road-0 { color: #f39c12; font-weight: 600; font-size: 14px !important; }
+        .road-1 { color: #1abc9c; font-weight: 600; font-size: 14px !important; }
+        .road-2 { color: #e74c3c; font-weight: 600; font-size: 14px !important; }
+        .stat-cell { font-weight: bold; color: #ecf0f1; font-size: 14px !important; }
+        .stat-zero { color: #7f8c8d; font-weight: normal; font-size: 14px !important; }
+        .stat-one { color: #f1c40f; font-weight: bold; font-size: 14px !important; }
+        
+        /* 一区蓝球表头数字颜色 - 蓝色 */
+        #blueTable thead tr:nth-child(2) th:nth-child(n+14):nth-child(-n+21) {
+            color: #3498db; /* 蓝色 */
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* 二区蓝球表头数字颜色 - 绿色 */
+        #blueTable thead tr:nth-child(2) th:nth-child(n+22):nth-child(-n+29) {
+            color: #2ecc71; /* 绿色 */
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        /* 过滤分析区域 */
+        .filter-panel { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 2px solid #8a2be2; }
+        .filter-section-inner { margin-bottom: 25px; }
+        .filter-title { font-weight: bold; margin-bottom: 10px; color: white; font-size: 14px; }
+        .filter-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .road-options { display: flex; gap: 8px; margin-bottom: 12px; }
+        .road-options .filter-btn { flex: 1; }
+        
+        .filter-btn { 
+            position: relative; 
+            padding: 10px 8px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            font-size: 15px;
+            text-align: center; 
+            font-weight: bold; 
+            color: white; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3); 
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.3); 
+        }
+        .filter-btn.small { background: #2ecc71; }
+        .filter-btn.big { background: #6F4E37; }
+        .filter-btn.odd { background: #9b59b6; }
+        .filter-btn.even { background: #f39c12; }
+        .filter-btn.road0 { background: #d35400; }
+        .filter-btn.road1 { background: #004B8D; }
+        .filter-btn.road2 { background: #1abc9c; }
+
+        .filter-btn.active {
+            box-shadow: 0 8px 0 #ffffff, 0 8px 0 rgba(255, 255, 255, 0.9), 0 12px 25px rgba(255, 255, 255, 0.4);
+            transform: translateY(2px);
+        }
+
+        .filter-btn:active { transform: translateY(4px); }
+        .filter-btn.active:active { transform: translateY(8px); box-shadow: 0 0 0 #ffffff, 0 2px 5px rgba(255, 255, 255, 0.3); }
+        
+        .balls-grid { display: grid; grid-template-columns: repeat(8, 1fr); row-gap: 25px !important; column-gap: 8px; margin: 20px 0; }
+        .kill-ball { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; font-size: 14px; font-weight: bold; color: white; transition: all 0.3s ease; position: relative; box-shadow: inset -2px -2px 6px rgba(0, 0, 0, 0.6), inset 2px 2px 6px rgba(255, 255, 255, 0.2), 0 3px 8px rgba(0, 0, 0, 0.4); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); margin: 0 auto; }
+        .kill-ball.small-ball { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); border: 1px solid #229954; }
+        .kill-ball.big-ball { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: 1px solid #c0392b; }
+        .kill-ball:hover { transform: scale(1.05); }
+        .kill-ball.excluded { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important; transform: scale(0.85); opacity: 0.6; }
+        .kill-ball.excluded::after { content: "✕"; position: absolute; top: -3px; right: -3px; background: #e74c3c; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        
+        .filter-controls { display: flex; justify-content: space-between; margin-top: 20px; }
+        .kill-text { font-weight: bold; color: white; font-size: 14px; display: flex; align-items: center; }
+        .reset-btn { position: relative; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; font-size: 14px; background-color: #e74c3c; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.3); }
+        .reset-btn.active { box-shadow: 0 8px 0 #ffffff, 0 8px 0 rgba(255, 255, 255, 0.9), 0 12px 25px rgba(255, 255, 255, 0.4); }
+        .reset-btn:active { transform: translateY(4px); }
+        .reset-btn.active:active { transform: translateY(8px); box-shadow: 0 0 0 #ffffff, 0 2px 5px rgba(255, 255, 255, 0.3); }
+        
+        .filter-result { background: linear-gradient(135deg, #3498db, #2c3e50); color: white; padding: 20px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .result-title { font-weight: bold; margin-bottom: 15px; text-align: center; font-size: 18px; }
+        .result-numbers { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; min-height: 60px; margin-top: 20px; }
+        .result-number { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); font-weight: bold; font-size: 18px; animation: pulse 2s infinite; box-shadow: inset -2px -2px 6px rgba(0, 0, 0, 0.6), inset 2px 2px 6px rgba(255, 255, 255, 0.2), 0 3px 8px rgba(0, 0, 0, 0.4); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+        .no-result { color: #bdc3c7; font-style: italic; text-align: center; font-size: 14px; margin-top: 20px; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 筛选功能区表格样式 */
+        #roadTable { min-width: 1500px; border: 1px solid #4a5f7a; }
+        #roadTable th, #roadTable td { border-bottom: 1px solid #5a7a9a; border-right: 1px solid #5a7a9a; }
+        #roadTable thead tr:nth-child(2) th { top: 28px; }
+        .group-header { border-bottom: 2px solid #8a2be2; border-right: none !important; }
+
+        /* 分隔线样式 */
+        #roadTable thead tr:nth-child(2) th:nth-child(2),
+        #roadTable td:nth-child(2) { border-right: 2px solid #3498db !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(9),
+        #roadTable td:nth-child(9) { border-right: 2px solid #e74c3c !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(15),
+        #roadTable td:nth-child(15) { border-right: 2px solid #2ecc71 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(21),
+        #roadTable td:nth-child(21) { border-right: 2px solid #f39c12 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(27),
+        #roadTable td:nth-child(27) { border-right: 2px solid #9b59b6 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(33),
+        #roadTable td:nth-child(33) { border-right: 2px solid #1abc9c !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(36),
+        #roadTable td:nth-child(36) { border-right: 2px solid #d35400 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(39),
+        #roadTable td:nth-child(39) { border-right: 2px solid #F4D03F !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(41),
+        #roadTable td:nth-child(41) { border-right: 2px solid #FFB7C5 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(43),
+        #roadTable td:nth-child(43) { border-right: 2px solid #7CFC00 !important; }
+        #roadTable thead tr:nth-child(2) th:nth-child(45),
+        #roadTable td:nth-child(45) { border-right: 2px solid #FF69B4 !important; }
+
+        /* 底部表头样式 */
+        .bottom-header-row {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%) !important;
+            font-weight: bold !important;
+            color: #ecf0f1 !important;
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 90 !important;
+            border-top: 2px solid #8a2be2;
+        }
+
+        .table-footer {
+            padding: 2px;
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            display: flex;
+            justify-content: center;
+            min-height: 16px;
+            cursor: pointer;
+            border-top: 1px solid #4a5f7a;
+        }
+
+        .footer-collapse-btn {
+            background: none;
+            border: none;
+            font-size: 14px;
+            color: white;
+            padding: 0;
+            width: 18px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .footer-collapse-btn.collapsed { transform: rotate(180deg); }
+        
+        .road-number {
+            font-weight: 600;
+            color: #ecf0f1;
+            font-size: 10px;
+        }
+
+        .road-number.active { color: #7CFC00; font-weight: bold; }
+        
+        /* 位置统计样式 */
+        .position-digit-0 { color: #F0FFFF; font-weight: bold; font-size: 10px; }
+        .position-digit-1 { color: #FF00FF; font-weight: bold; font-size: 10px; }
+        .position-digit-2 { color: #00FFFF; font-weight: bold; font-size: 10px; }
+        .position-digit-3 { color: #f39c12; font-weight: bold; font-size: 10px; }
+        
+        /* 统计数字样式 */
+        .digit-1 { color: #FFD700; font-weight: bold; font-size: 10px; }
+        .digit-2 { color: #e74c3c; font-weight: bold; font-size: 10px; }
+        
+        .stat-value { font-weight: bold; font-size: 10px; color: #ecf0f1; }
+        
+        /* 尾号012路比颜色样式 */
+        .tail-road-0 { color: #3498db; font-weight: bold; }
+        .tail-road-1 { color: #e74c3c; font-weight: bold; }
+        .tail-road-2 { color: #2ecc71; font-weight: bold; }
+
+        /* 尾号奇偶统计颜色样式 */
+        .tail-odd { color: #f39c12; font-weight: bold; }
+        .tail-even { color: #9b59b6; font-weight: bold; }
+
+        /* 空数据行样式 */
+        .empty-row { background-color: rgba(255, 255, 255, 0.1) !important; }
+        .empty-row td { color: #bdc3c7; font-style: italic; padding: 2px; }
+
+        /* 筛选按钮样式 */
+        .filter-input {
+            width: 100%;
+            padding: 2px;
+            border: 1px solid #4a5f7a;
+            border-radius: 3px;
+            font-size: 12px;
+            background: #1e2a3a;
+            color: #7CFC00;
+            text-align: center;
+            height: 20px;
+        }
+
+        .filter-input::placeholder { color: #7f8c8d; font-size: 9px; }
+
+        /* 完全隐藏数字输入框的上下箭头 */
+        .filter-input[type="number"]::-webkit-outer-spin-button,
+        .filter-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .filter-input[type="number"] { -moz-appearance: textfield; padding: 2px; }
+
+        /* 筛选操作按钮区域 */
+        .filter-buttons {
+            display: flex;
+            gap: 12px;
+            margin: 12px 0;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+        }
+        
+        .filter-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            font-weight: 500;
+            min-width: 80px;
+            flex: 1;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .filter-btn:active { transform: scale(0.98); }
+        .reset-btn { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); }
+        .generate-btn { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        .calculate-btn { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
+
+        /* 复制按钮下拉菜单 */
+        .copy-dropdown { position: relative; display: flex; flex: 1; }
+        .copy-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            font-weight: 500;
+            min-width: 80px;
+            width: 100%;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #2c3e50;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            margin-top: 4px;
+            overflow: hidden;
+            border: 1px solid #4a5f7a;
+        }
+
+        .copy-dropdown:hover .copy-dropdown-content { display: block; }
+        .copy-option {
+            padding: 10px 12px;
+            color: #ecf0f1;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #4a5f7a;
+        }
+        .copy-option:last-child { border-bottom: none; }
+        .copy-option:hover { background: #3498db; }
+        .copy-option .hint { font-size: 10px; color: #bdc3c7; margin-top: 2px; }
+
+        /* 筛选结果区域 */
+        .filter-results {
+            background: transparent;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 2px solid #8a2be2;
+        }
+
+        .filter-results h3 { font-size: 14px; margin-bottom: 8px; color: #ecf0f1; font-weight: 600; }
+
+        /* 筛选选择区域 */
+        .blue-ball-selection {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(30, 42, 58, 0.8);
+            border-radius: 6px;
+            border: 1px solid #4a5f7a;
+        }
+
+        .blue-ball-title { font-size: 12px; margin-bottom: 8px; color: #bdc3c7; text-align: center; }
+        .blue-balls { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .blue-ball {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #3498db 0%, #1a5276 100%);
+            color: white;
+        }
+
+         /* 蓝球灰色状态 */
+       .blue-ball.excluded {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
+            border-color: #7f8c8d;
+            transform: scale(0.85);
+            opacity: 0.6;
+       }
+        .blue-ball.selected {
+            border-color: #FFD700;
+            box-shadow: 0 0 8px #FFD700;
+            transform: scale(1.1);
+        }
+
+        .blue-ball:hover { transform: scale(1.05); }
+
+        /* 新增红球选择区域样式 */
+        .red-ball-selection {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(30, 42, 58, 0.8);
+            border-radius: 6px;
+            border: 1px solid #4a5f7a;
+        }
+
+        .red-ball-title { 
+            font-size: 12px; 
+            margin-bottom: 8px; 
+            color: #bdc3c7; 
+            text-align: center; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .red-ball-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .red-ball-control-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .red-ball-control-btn.clear {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .red-ball-control-btn:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+        }
+
+        .red-ball-control-btn.clear:hover {
+            background: linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%);
+        }
+
+        .red-balls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .red-ball-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .red-ball {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            box-shadow: inset -2px -2px 6px rgba(0, 0, 0, 0.6), inset 2px 2px 6px rgba(255, 255, 255, 0.2), 0 3px 8px rgba(0, 0, 0, 0.4);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        /* 选中的红球 - 高亮效果 */
+        .red-ball.selected {
+            border-color: #FFD700;
+            transform: scale(1.1);
+        }
+
+        /* 排除的红球 - 灰色效果 */
+        .red-ball.excluded {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
+            border-color: #7f8c8d;
+            transform: scale(0.85);
+            opacity: 0.6;
+        }
+
+        .red-ball.excluded::after {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            background: #e74c3c;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .red-ball:hover { transform: scale(1.05); }
+
+        .number-sets-container { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; }
+        .number-sets {
+            flex: 1;
+            overflow-y: auto;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            background: transparent;
+            max-height: none;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-content: flex-start;
+        }
+        
+        /* 号码组布局 */
+        .number-set {
+            display: flex;
+            padding: 8px;
+            background-color: #2c3e50;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            width: 100%;
+            margin-bottom: 0;
+            flex-shrink: 0;
+            min-height: 50px;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 6px;
+            box-sizing: border-box;
+        }
+        
+        .number {
+            display: inline-flex;
+            width: 26px;
+            height: 26px;
+            line-height: 26px;
+            text-align: center;
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 12px;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+         /* 修改生成结果号码字体大小 */
+         #numberSets .number {
+                   font-size: 12px !important;
+       }
+
+        .number.small { background-color: #3498db; }
+        .number.large { background-color: #e74c3c; }
+        .number.even { background-color: #2ecc71; }
+        .number.odd { background-color: #f39c12; }
+        .number.blue {
+            background: linear-gradient(135deg, #3498db 0%, #1a5276 100%);
+            margin-left: 8px;
+            border: 2px solid #FFD700;
+        }
+
+        .calculation-result {
+            margin-top: 10px;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 12px;
+            width: 100%;
+        }
+        
+        .calculation-result.safe { background-color: rgba(46, 204, 113, 0.2); border-left: 3px solid #2ecc71; }
+        .calculation-result.warning { background-color: rgba(243, 156, 18, 0.2); border-left: 3px solid #f39c12; }
+        .calculation-result.danger { background-color: rgba(231, 76, 60, 0.2); border-left: 3px solid #e74c3c; }
+        .calculation-details { margin-top: 4px; font-size: 10px; color: #bdc3c7; }
+        .loading { text-align: center; padding: 16px; color: #bdc3c7; font-size: 12px; }
+        
+        /* 表格行样式 */
+#roadTable tbody tr {
+    transition: background-color 0.2s ease; /* 添加过渡效果 */
+}
+
+#roadTable tbody tr:nth-child(even) { 
+    background-color: rgba(255, 255, 255, 0.05); 
+}
+
+#roadTable tbody tr:nth-child(odd) { 
+    background-color: rgba(255, 255, 255, 0.02); 
+}
+
+#roadTable tbody tr:hover { 
+    background-color: rgba(52, 152, 219, 0.1); 
+}
+
+/* 行悬停效果 */
+        tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        /* 十字架高亮效果 */
+        .cross-highlight {
+            background-color: rgba(70, 130, 180, 0.6) !important;
+        }
+        
+        .row-highlight {
+            background-color: rgba(70, 130, 180, 0.6) !important;
+        }
+        
+        .col-highlight {
+            background-color: rgba(70, 130, 180, 0.6) !important;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .number-sets { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .number-set { padding: 6px; min-height: 45px; gap: 4px; }
+            .number { width: 24px; height: 24px; font-size: 11px; }
+            .header { padding: 12px 15px; }
+            .header-title { font-size: 18px; }
+            .excel-import-btn { padding: 10px 16px; font-size: 12px; min-width: 120px; }
+            .ball-3d { width: 18px; height: 18px; font-size: 9px; }
+            #blueTable th, #blueTable td { font-size: 11px !important; }
+            #roadTable th, #roadTable td { font-size: 14px !important; }
+            .ball-3d { font-size: 10px !important; }
+            #blueTable thead tr:nth-child(2) th { top: 24px; }
+            #roadTable thead tr:nth-child(2) th { top: 24px; }
+            .filter-input { font-size: 14px; height: 18px; }
+            .filter-btn { padding: 6px 12px; font-size: 16px; min-width: 70px; }
+            .blue-ball { width: 24px; height: 24px; font-size: 10px; }
+            .filter-buttons { gap: 8px; }
+            .filter-btn, .copy-btn { padding: 10px 12px; font-size: 14px; min-width: 70px; height: 40px; }
+            .date-display { min-width: 100px; }
+            .current-date { font-size: 14px; padding: 6px 0; }
+            .balls-grid { row-gap: 20px !important; column-gap: 6px; }
+            .kill-ball { width: 28px; height: 28px; font-size: 12px; }
+            .result-number { width: 40px; height: 40px; font-size: 16px; }
+            .filter-controls { margin-top: 15px; }
+            .reset-btn { padding: 8px 16px; font-size: 13px; }
+            .kill-text { font-size: 12px; }
+            .filter-btn { padding: 8px 6px; font-size: 15px; }
+            
+            /* 移动端红球选择区域适配 */
+            .red-balls-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .red-ball-row {
+                justify-content: space-around;
+            }
+            
+            .red-ball {
+                width: 26px;
+                height: 26px;
+                font-size: 11px;
+            }
+        }
+
+        /* 超小屏幕适配 */
+        @media (max-width: 480px) {
+            .number-sets { grid-template-columns: 1fr 1fr; gap: 6px; }
+            .number-set { padding: 4px; min-height: 40px; gap: 3px; }
+            .number { width: 22px; height: 22px; font-size: 10px; }
+            
+            /* 超小屏幕红球选择区域适配 */
+            .red-ball {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            
+            .red-ball-control-btn {
+                padding: 3px 6px;
+                font-size: 9px;
+            }
+        }
+
+        /* 记录列特殊样式 */
+        .record-cell {
+            background-color: rgba(255, 215, 0, 0.2);
+            font-weight: bold;
+            color: #FFD700;
+            border: 1px solid #FFD700 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 第一部分：抬头+导入excel功能 -->
+        <div class="header">
+            <div class="header-title">双色球综合分析系统</div>
+            <button class="excel-import-btn" id="excelImportBtn">导入Excel</button>
+        </div>
+        
+        <!-- 第二部分：年份+期数+星期功能 -->
+        <div class="filter-section">
+            <div class="filter-item">
+                <div class="filter-label vertical">年份</div>
+                <select id="year"><option value="all">全部</option></select>
+            </div>
+            <div class="filter-item">
+                <div class="filter-label vertical">期数</div>
+                <select id="period">
+                    <option selected>10期</option>
+                    <option>30期</option>
+                    <option>50期</option>
+                    <option>100期</option>
+                    <option>200期</option>
+                    <option>全部数据</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <div class="filter-label vertical">星期</div>
+                <select id="weekday">
+                    <option value="all" selected>全部</option>
+                    <option value="二">二</option>
+                    <option value="四">四</option>
+                    <option value="日">日</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 第三部分：蓝球走势分析区 -->
+        <div class="data-section">
+            <div class="section-title" id="blueTitle">
+                <span>蓝球 > 走势分析区</span>
+                <div class="collapse-btn">▶</div>
+            </div>
+            <div class="table-container collapsed" id="blueTableContainer">
+                <table id="blueTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th colspan="3" class="group-header">基础信息</th>
+                            <th colspan="2" class="group-header">大小区</th>
+                            <th colspan="2" class="group-header">奇偶区</th>
+                            <th colspan="3" class="group-header">012路区</th>
+                            <th colspan="3" class="group-header">012统计</th>
+                            <th colspan="8" class="group-header">一区蓝球</th>
+                            <th colspan="8" class="group-header">二区蓝球</th>
+                        </tr>
+                        <tr>
+                            <th>期号</th>
+                            <th>星期</th>
+                            <th class="col-group-1">蓝球</th>
+                            <th>大</th>
+                            <th class="col-group-2">小</th>
+                            <th>奇</th>
+                            <th class="col-group-3">偶</th>
+                            <th>0</th>
+                            <th>1</th>
+                            <th class="col-group-4">2</th>
+                            <th>0</th>
+                            <th>1</th>
+                            <th class="col-group-5">2</th>
+                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+                            <th class="col-group-6">8</th>
+                            <th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blueTableBody"></tbody>
+                </table>
+                <div id="zoneTrendLinesContainer"></div>
+            </div>
+            <div class="table-footer" id="blueFooter">
+                <div class="footer-collapse-btn collapsed">︽</div>
+            </div>
+        </div>
+
+        <!-- 第四部分：蓝球过滤分析区 -->
+        <div class="data-section">
+            <div class="section-title" id="filterTitle">
+                <span>蓝球 > 过滤分析区</span>
+                <div class="collapse-btn">▶</div>
+            </div>
+            <div class="table-container collapsed" id="filterTableContainer">
+                <div class="filter-panel" id="blueFilterPanel">
+                    <div class="filter-section-inner">
+                        <div class="filter-options">
+                            <div class="filter-btn small" data-filter="small">小数 (1-8)</div>
+                            <div class="filter-btn big" data-filter="big">大数 (9-16)</div>
+                        </div>
+                    </div>
+                    <div class="filter-section-inner">
+                        <div class="filter-options">
+                            <div class="filter-btn odd" data-filter="odd">奇 数</div>
+                            <div class="filter-btn even" data-filter="even">偶 数</div>
+                        </div>
+                    </div>
+                    <div class="filter-section-inner">
+                        <div class="road-options">
+                            <div class="filter-btn road0" data-filter="road0">0 路</div>
+                            <div class="filter-btn road1" data-filter="road1">1 路</div>
+                            <div class="filter-btn road2" data-filter="road2">2 路</div>
+                        </div>
+                    </div>
+                    <div class="filter-section-inner">
+                        <div class="filter-title">杀码排除 点击球体排除号码</div>
+                        <div class="balls-grid" id="kill-balls"></div>
+                    </div>
+                    <div class="filter-controls">
+                        <div class="kill-text"></div>
+                        <button class="reset-btn" id="reset-filter-btn">重置条件</button>
+                    </div>
+                </div>
+
+                <div class="filter-result" id="filterResult">
+                    <div class="result-title">🎯 推算结果</div>
+                    <div class="result-numbers" id="result-numbers">
+                        <div class="no-result">请选择筛选条件</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-footer" id="filterFooter">
+                <div class="footer-collapse-btn collapsed">︽</div>
+            </div>
+        </div>
+
+        <!-- 第五部分：红球筛选功能区 -->
+        <div class="data-section">
+            <div class="section-title" id="roadTitle">
+                <span>红球 > 筛选分析区</span>
+                <div class="filter-item date-display">
+                    <div class="current-date" id="currentDate"></div>
+                </div>  
+                <div class="collapse-btn">▶</div>
+            </div>
+            <div class="table-container collapsed" id="roadTableContainer">
+                <table id="roadTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2" class="group-header">基础信息</th>
+                            <th colspan="7" class="group-header">红球1-6+蓝球</th>
+                            <th colspan="6" class="group-header">统计红球位数</th>
+                            <th colspan="6" class="group-header">位置统计红球</th>
+                            <th colspan="6" class="group-header">尾号012路比</th>
+                            <th colspan="6" class="group-header">尾号奇偶统计</th>
+                            <th colspan="3" class="group-header">012路除3</th>
+                            <th colspan="3" class="group-header">区间统计</th>
+                            <th colspan="2" class="group-header">奇偶比</th>
+                            <th colspan="2" class="group-header">质合比</th>
+                            <th colspan="2" class="group-header">大小比</th>
+                            <th colspan="4" class="group-header">参数信息</th>
+                        </tr>
+                        <tr>
+                            <!-- 基础信息 -->
+                            <th>期号</th>
+                            <th>星期</th>
+                            
+                            <!-- 红球1-6+蓝球 -->
+                            <th>红1</th>
+                            <th>红2</th>
+                            <th>红3</th>
+                            <th>红4</th>
+                            <th>红5</th>
+                            <th>红6</th>
+                            <th>蓝球</th>
+                            
+                            <!-- 统计红球位数 -->
+                            <th>1位</th>
+                            <th>2位</th>
+                            <th>3位</th>
+                            <th>4位</th>
+                            <th>5位</th>
+                            <th>6位</th>
+                            
+                            <!-- 位置统计红球 -->
+                            <th>置1</th>
+                            <th>置2</th>
+                            <th>置3</th>
+                            <th>置4</th>
+                            <th>置5</th>
+                            <th>置6</th>
+                            
+                            <!-- 尾号012路比 -->
+                            <th>尾1</th>
+                            <th>尾2</th>
+                            <th>尾3</th>
+                            <th>尾4</th>
+                            <th>尾5</th>
+                            <th>尾6</th>
+                            
+                            <!-- 尾号奇偶统计 -->
+                            <th>计1</th>
+                            <th>计2</th>
+                            <th>计3</th>
+                            <th>计4</th>
+                            <th>计5</th>
+                            <th>计6</th>
+
+                            <!-- 012路比 -->
+                            <th>0路</th>
+                            <th>1路</th>
+                            <th>2路</th>
+                            
+                            <!-- 区间统计 -->
+                            <th>一区</th>
+                            <th>二区</th>
+                            <th>三区</th>
+                            
+                            <!-- 奇偶比 -->
+                            <th>奇数</th>
+                            <th>偶数</th>
+                            
+                            <!-- 质合比 -->
+                            <th>质数</th>
+                            <th>合数</th>
+                            
+                            <!-- 大小比 -->
+                            <th>小数</th>
+                            <th>大数</th>
+                            
+                            <!-- 参数信息 -->
+                            <th>和值</th>
+                            <th>跨度</th>
+                            <th>AC值</th>
+                            <th>记录</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roadTableBody"></tbody>
+                </table>
+            </div>
+            <div class="table-footer" id="roadFooter">
+                <div class="footer-collapse-btn collapsed">︽</div>
+            </div>
+        </div>
+
+        <!-- 筛选操作按钮区域 -->
+        <div class="filter-buttons">
+            <button type="button" id="calculateButton" class="filter-btn calculate-btn">计算组数</button>
+            <button type="button" id="generateButton" class="filter-btn generate-btn">生成号码</button>
+            <button type="button" id="resetButton" class="filter-btn reset-btn">重置</button>
+            <div class="copy-dropdown">
+                <button class="copy-btn">复制 ▼</button>
+                <div class="copy-dropdown-content">
+                    <div class="copy-option" onclick="copyFormatted()">格式复制</div>
+                    <div class="copy-option" onclick="copyWithNumbers()">数量复制</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增红球选择区域 -->
+        <div class="red-ball-selection">
+            <div class="red-ball-title">
+                <span>红球杀号排除 点击球体排除号码</span>
+                <div class="red-ball-controls">
+                    <button class="red-ball-control-btn" id="selectAllRed">全选</button>
+                    <button class="red-ball-control-btn clear" id="clearAllRed">清空</button>
+                </div>
+            </div>
+            <div class="red-balls-grid" id="redBallsGrid">
+                <!-- 三行排列的红球 -->
+                <div class="red-ball-row" id="redRow1"></div>
+                <div class="red-ball-row" id="redRow2"></div>
+                <div class="red-ball-row" id="redRow3"></div>
+            </div>
+        </div>
+
+        <!-- 蓝球选择区域 -->
+        <div class="blue-ball-selection">
+            <div class="blue-ball-title">蓝球杀号排除 点击球体排除号码</div>
+            <div class="blue-balls" id="blueBalls"></div>
+        </div>
+
+        <div id="calculationResult" class="calculation-result" style="display: none;"></div>
+        <div class="number-sets-container">
+            <div class="number-sets" id="numberSets">
+                <p style="text-align: center; color: #bdc3c7; grid-column: 1 / -1;">请先设置条件并计算组数</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 性能优化配置
+        const PERFORMANCE_CONFIG = {
+            MAX_ROWS: 500,
+            DEBOUNCE_DELAY: 50,
+            ANIMATION_DURATION: 300
+        };
+
+        // 数据存储
+        const allLotteryData = [];
+        const allRoadData = [];
+        let selectedBlueBalls = [];
+        let excludedBlueBalls = [];
+        let selectedRedBalls = []; // 选中的红球（参与分析）
+        let excludedRedBalls = []; // 排除的红球（杀号）
+        let calculatedCount = 0;
+
+        // LocalStorage 键名
+        const STORAGE_KEYS = {
+            LOTTERY_DATA: 'lotteryData',
+            ROAD_DATA: 'roadData',
+            SELECTED_BLUE_BALLS: 'selectedBlueBalls',
+            EXCLUDED_BLUE_BALLS: 'excludedBlueBalls',
+            SELECTED_RED_BALLS: 'selectedRedBalls',
+            EXCLUDED_RED_BALLS: 'excludedRedBalls',
+            FILTER_CONDITIONS: 'filterConditions',
+            ACTIVE_CONDITIONS: 'activeConditions'
+        };
+
+        // 过滤分析相关变量
+        let activeConditions = [];
+
+        // 初始化红球选择
+        function initializeRedBalls() {
+            const redRow1 = document.getElementById('redRow1');
+            const redRow2 = document.getElementById('redRow2');
+            const redRow3 = document.getElementById('redRow3');
+            
+            redRow1.innerHTML = '';
+            redRow2.innerHTML = '';
+            redRow3.innerHTML = '';
+            
+            // 按照个位数除3余数分组排列
+    const row1Numbers = [1, 4, 7, 11, 14, 17, 21, 24, 27, 31, 33]; // 个位除3余1
+    const row2Numbers = [2, 5, 8, 12, 15, 18, 22, 25, 28, 32, 30]; // 个位除3余2
+    const row3Numbers = [3, 6, 9, 10, 13, 16, 19, 20, 23, 26, 29]; // 个位除3余0
+    
+    // 创建第一行红球（余1）
+    row1Numbers.forEach(number => {
+        createRedBallElement(number, redRow1);
+    });
+    
+    // 创建第二行红球（余2）
+    row2Numbers.forEach(number => {
+        createRedBallElement(number, redRow2);
+    });
+    
+    // 创建第三行红球（余0）
+    row3Numbers.forEach(number => {
+        createRedBallElement(number, redRow3);
+    });
+    
+    // 从本地存储加载红球状态
+    loadRedBallState();
+    
+    // 绑定全选和清空按钮事件
+    document.getElementById('selectAllRed').addEventListener('click', selectAllRedBalls);
+    document.getElementById('clearAllRed').addEventListener('click', clearAllRedBalls);
+}
+
+        // 创建红球元素
+function createRedBallElement(number, container) {
+    const redBall = document.createElement('div');
+    redBall.className = 'red-ball';
+    redBall.textContent = number;
+    redBall.dataset.number = number;
+    
+    redBall.addEventListener('click', function() {
+        const number = parseInt(this.dataset.number);
+        
+        if (this.classList.contains('excluded')) {
+            // 排除状态 → 点击 → 高亮状态
+            this.classList.remove('excluded');
+            this.classList.add('selected');
+            excludedRedBalls = excludedRedBalls.filter(n => n !== number);
+            selectedRedBalls.push(number);
+        } else {
+            // 高亮状态 → 点击 → 排除状态
+            this.classList.remove('selected');
+            this.classList.add('excluded');
+            selectedRedBalls = selectedRedBalls.filter(n => n !== number);
+            excludedRedBalls.push(number);
+        }
+        
+        saveRedBallState();
+    });
+    
+    container.appendChild(redBall);
+}
+
+        // 加载红球状态
+        function loadRedBallState() {
+            const savedSelected = localStorage.getItem(STORAGE_KEYS.SELECTED_RED_BALLS);
+            const savedExcluded = localStorage.getItem(STORAGE_KEYS.EXCLUDED_RED_BALLS);
+            
+            if (savedSelected) {
+                selectedRedBalls = JSON.parse(savedSelected);
+            }
+            if (savedExcluded) {
+                excludedRedBalls = JSON.parse(savedExcluded);
+            }
+            
+            // 关键修改：如果没有保存的状态，使用补全号码逻辑
+            if (!savedSelected && !savedExcluded) {
+                resetRedBallsToTailCompletion();
+                return;
+            }
+            
+            // 应用保存的状态
+            updateRedBallUI();
+        }
+
+        // 新增函数：重置红球为补全号码
+        function resetRedBallsToTailCompletion() {
+            // 获取最新一期数据
+            if (allRoadData.length > 0) {
+                const latestData = allRoadData[allRoadData.length - 1];
+                const currentRedBalls = latestData.redBalls;
+                
+                // 计算尾号补全号码
+                const tailCompletionNumbers = calculateTailCompletionNumbers(currentRedBalls);
+                
+                // 设置红球状态
+                selectedRedBalls = [...tailCompletionNumbers];
+                excludedRedBalls = Array.from({length: 33}, (_, i) => i + 1)
+                    .filter(num => !tailCompletionNumbers.includes(num));
+                
+                console.log(`重置红球 - 当前期号码: ${currentRedBalls.join(',')}`);
+                console.log(`重置红球 - 补全号码: ${tailCompletionNumbers.join(',')}`);
+                console.log(`重置红球 - 选中数量: ${selectedRedBalls.length}, 排除数量: ${excludedRedBalls.length}`);
+                
+                // 更新UI
+                updateRedBallUI();
+                saveRedBallState();
+            } else {
+                // 如果没有数据，默认全选
+                selectAllRedBalls();
+            }
+        }
+
+        // 更新红球UI显示
+        function updateRedBallUI() {
+            document.querySelectorAll('.red-ball').forEach(ball => {
+                const number = parseInt(ball.dataset.number);
+                ball.classList.remove('selected', 'excluded');
+                
+                if (excludedRedBalls.includes(number)) {
+                    ball.classList.add('excluded');
+                } else {
+                    ball.classList.add('selected');
+                }
+            });
+        }
+
+        // 保存红球状态
+        function saveRedBallState() {
+            localStorage.setItem(STORAGE_KEYS.SELECTED_RED_BALLS, JSON.stringify(selectedRedBalls));
+            localStorage.setItem(STORAGE_KEYS.EXCLUDED_RED_BALLS, JSON.stringify(excludedRedBalls));
+        }
+
+        // 全选红球
+        function selectAllRedBalls() {
+            selectedRedBalls = Array.from({length: 33}, (_, i) => i + 1);
+            excludedRedBalls = [];
+            
+            document.querySelectorAll('.red-ball').forEach(ball => {
+                ball.classList.remove('excluded');
+                ball.classList.add('selected');
+            });
+            
+            saveRedBallState();
+        }
+
+        // 清空红球（全部排除）
+        function clearAllRedBalls() {
+            selectedRedBalls = [];
+            excludedRedBalls = Array.from({length: 33}, (_, i) => i + 1);
+            
+            document.querySelectorAll('.red-ball').forEach(ball => {
+                ball.classList.remove('selected');
+                ball.classList.add('excluded');
+            });
+            
+            saveRedBallState();
+        }
+
+        // 初始化蓝球选择
+function initializeBlueBalls() {
+    const blueBallsContainer = document.getElementById('blueBalls');
+    blueBallsContainer.innerHTML = '';
+    
+    for (let i = 1; i <= 16; i++) {
+        const blueBall = document.createElement('div');
+        blueBall.className = 'blue-ball excluded'; // 默认添加excluded类
+        blueBall.textContent = i;
+        blueBall.dataset.number = i;
+        
+        blueBall.addEventListener('click', function() {
+            const number = parseInt(this.dataset.number);
+            
+            if (this.classList.contains('excluded')) {
+                // 灰色状态 → 点击 → 黄圈状态（参与）
+                this.classList.remove('excluded');
+                this.classList.add('selected');
+                if (!selectedBlueBalls.includes(number)) {
+                    selectedBlueBalls.push(number);
+                }
+            } else {
+                // 黄圈状态 → 点击 → 灰色状态（不参与）
+                this.classList.remove('selected');
+                this.classList.add('excluded');
+                selectedBlueBalls = selectedBlueBalls.filter(n => n !== number);
+            }
+            
+            localStorage.setItem(STORAGE_KEYS.SELECTED_BLUE_BALLS, JSON.stringify(selectedBlueBalls));
+        });
+        
+        blueBallsContainer.appendChild(blueBall);
+    }
+    
+    // 从本地存储加载已选中的蓝球
+    const savedBlueBalls = localStorage.getItem(STORAGE_KEYS.SELECTED_BLUE_BALLS);
+    if (savedBlueBalls) {
+        selectedBlueBalls = JSON.parse(savedBlueBalls);
+        selectedBlueBalls.forEach(number => {
+            const ballElement = blueBallsContainer.querySelector(`[data-number="${number}"]`);
+            if (ballElement) {
+                ballElement.classList.remove('excluded');
+                ballElement.classList.add('selected');
+            }
+        });
+    }
+    // 默认所有蓝球都是灰色不参与状态
+}
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 保存数据到LocalStorage
+        function saveDataToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.LOTTERY_DATA, JSON.stringify(allLotteryData));
+                localStorage.setItem(STORAGE_KEYS.ROAD_DATA, JSON.stringify(allRoadData));
+            } catch (e) {
+                console.warn('本地存储保存失败:', e);
+            }
+        }
+
+        // 从LocalStorage加载数据
+        function loadDataFromLocalStorage() {
+            try {
+                const savedLotteryData = localStorage.getItem(STORAGE_KEYS.LOTTERY_DATA);
+                const savedRoadData = localStorage.getItem(STORAGE_KEYS.ROAD_DATA);
+                
+                if (savedLotteryData) {
+                    const parsedData = JSON.parse(savedLotteryData);
+                    allLotteryData.length = 0;
+                    allLotteryData.push(...parsedData);
+                }
+                
+                if (savedRoadData) {
+                    const parsedData = JSON.parse(savedRoadData);
+                    allRoadData.length = 0;
+                    allRoadData.push(...parsedData);
+                }
+                
+                return allLotteryData.length > 0;
+            } catch (e) {
+                console.warn('本地存储读取失败:', e);
+                return false;
+            }
+        }
+
+        // 保存筛选条件到LocalStorage
+        function saveFilterConditions() {
+            try {
+                const conditions = getFilterConditions();
+                localStorage.setItem(STORAGE_KEYS.FILTER_CONDITIONS, JSON.stringify(conditions));
+            } catch (e) {
+                console.warn('筛选条件保存失败:', e);
+            }
+        }
+
+        // 从LocalStorage加载筛选条件
+        function loadFilterConditions() {
+            try {
+                const savedConditions = localStorage.getItem(STORAGE_KEYS.FILTER_CONDITIONS);
+                if (savedConditions) {
+                    const conditions = JSON.parse(savedConditions);
+                    setFilterConditions(conditions);
+                }
+            } catch (e) {
+                console.warn('筛选条件加载失败:', e);
+            }
+        }
+
+        // 设置筛选条件到输入框
+        function setFilterConditions(conditions) {
+            // 参数信息
+            document.getElementById('sumValue').value = conditions.sumValue || '';
+            document.getElementById('spanValue').value = conditions.spanValue || '';
+            document.getElementById('acValue').value = conditions.acValue || '';
+            
+            // 区间统计
+            document.getElementById('zone1').value = conditions.zone1 || '';
+            document.getElementById('zone2').value = conditions.zone2 || '';
+            document.getElementById('zone3').value = conditions.zone3 || '';
+            
+            // 奇偶比
+            document.getElementById('oddCount').value = conditions.oddCount || '';
+            document.getElementById('evenCount').value = conditions.evenCount || '';
+            
+            // 大小比
+            document.getElementById('smallCount').value = conditions.smallCount || '';
+            document.getElementById('largeCount').value = conditions.largeCount || '';
+            
+            // 质合比
+            document.getElementById('primeCount').value = conditions.primeCount || '';
+            document.getElementById('compositeCount').value = conditions.compositeCount || '';
+            
+            // 012路比
+            document.getElementById('road0').value = conditions.road0 || '';
+            document.getElementById('road1').value = conditions.road1 || '';
+            document.getElementById('road2').value = conditions.road2 || '';
+            
+            // 位数统计条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`digit${i}`).value = conditions[`digit${i}`] || '';
+            }
+            
+            // 位置统计条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`position${i}`).value = conditions[`position${i}`] || '';
+            }
+            
+            // 尾号012路条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`tailRoad${i}`).value = conditions[`tailRoad${i}`] || '';
+            }
+            
+            // 尾号奇偶条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`tailOddEven${i}`).value = conditions[`tailOddEven${i}`] || '';
+            }
+        }
+
+        // 更新导入按钮状态
+        function updateImportButton() {
+            const importBtn = document.getElementById('excelImportBtn');
+            const totalCount = allLotteryData.length;
+            
+            if (totalCount > 0) {
+                importBtn.textContent = `更新 ${totalCount} 条`;
+                importBtn.classList.add('success');
+            } else {
+                importBtn.textContent = '导入Excel';
+                importBtn.classList.remove('success');
+            }
+        }
+
+        // 获取位数（1位或2位）
+        function getDigitCount(number) {
+            return number < 10 ? 1 : 2;
+        }
+
+        // 获取位置统计数字（开头数字）
+        function getPositionDigit(ballNumber) {
+            if (ballNumber >= 1 && ballNumber <= 9) return 0;
+            if (ballNumber >= 10 && ballNumber <= 19) return 1;
+            if (ballNumber >= 20 && ballNumber <= 29) return 2;
+            if (ballNumber >= 30 && ballNumber <= 33) return 3;
+            return 0;
+        }
+
+        // 计算尾号补全号码
+        function calculateTailCompletionNumbers(redBalls) {
+            const tailCompletionSet = new Set();
+            
+            redBalls.forEach(ball => {
+                const tailDigit = ball % 10; // 获取尾号
+                // 补全所有可能的号码
+                for (let i = tailDigit; i <= 33; i += 10) {
+                    if (i >= 1 && i <= 33) {
+                        tailCompletionSet.add(i);
+                    }
+                }
+            });
+            
+            return Array.from(tailCompletionSet);
+        }
+
+        // 计算记录数字
+        function calculateRecordNumber(currentRedBalls, previousRedBalls) {
+            if (!previousRedBalls || previousRedBalls.length === 0) {
+                return 0;
+            }
+            
+            const previousTailCompletion = calculateTailCompletionNumbers(previousRedBalls);
+            const intersection = currentRedBalls.filter(ball => previousTailCompletion.includes(ball));
+            
+            return intersection.length;
+        }
+
+        // 计算统计参数
+        function calculateStatistics(redBalls) {
+            const sum = redBalls.reduce((a, b) => a + b, 0);
+            const span = Math.max(...redBalls) - Math.min(...redBalls);
+            const acValue = calculateACValue(redBalls);
+            
+            // 原有的除3路计算
+            const road0 = redBalls.filter(n => n % 3 === 0).length;
+            const road1 = redBalls.filter(n => n % 3 === 1).length;
+            const road2 = redBalls.filter(n => n % 3 === 2).length;
+            
+            const zone1 = redBalls.filter(n => n >= 1 && n <= 11).length;
+            const zone2 = redBalls.filter(n => n >= 12 && n <= 22).length;
+            const zone3 = redBalls.filter(n => n >= 23 && n <= 33).length;
+            const odd = redBalls.filter(n => n % 2 === 1).length;
+            const even = redBalls.filter(n => n % 2 === 0).length;
+            const prime = redBalls.filter(isPrime).length;
+            const composite = 6 - prime;
+            const small = redBalls.filter(n => n <= 16).length;
+            const big = redBalls.filter(n => n >= 17).length;
+            
+            // 新增：尾号012路比（每个红球的尾号除3余数）
+            const tail012Roads = redBalls.map(ball => (ball % 10) % 3);
+            
+            // 新增：尾号奇偶统计（每个红球尾号的奇偶性）
+            const tailOddEven = redBalls.map(ball => (ball % 10) % 2 === 1 ? '奇' : '偶');
+            
+            return {
+                sum, span, acValue,
+                road0, road1, road2,
+                zone1, zone2, zone3,
+                odd, even,
+                prime, composite,
+                small, big,
+                tail012Roads,    // 尾号012路比
+                tailOddEven      // 尾号奇偶统计
+            };
+        }
+
+        // 判断质数
+        function isPrime(num) {
+            if (num <= 1) return false;
+            if (num === 2) return true;
+            if (num % 2 === 0) return false;
+            for (let i = 3; i <= Math.sqrt(num); i += 2) {
+                if (num % i === 0) return false;
+            }
+            return true;
+        }
+
+        // 计算AC值
+        function calculateACValue(redBalls) {
+            const diffs = new Set();
+            for (let i = 0; i < redBalls.length; i++) {
+                for (let j = i + 1; j < redBalls.length; j++) {
+                    diffs.add(Math.abs(redBalls[i] - redBalls[j]));
+                }
+            }
+            return diffs.size - (6 - 1);
+        }
+
+        // 创建空数据行（带筛选输入框）
+        function createEmptyRow() {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'empty-row';
+            
+            let html = `
+                <td>--</td>
+                <td>--</td>
+            `;
+            
+            // 红球和蓝球 - 空单元格
+            for (let i = 0; i < 7; i++) {
+                html += `<td>--</td>`;
+            }
+            
+            // 统计红球位数 - 筛选输入框
+            for (let i = 1; i <= 6; i++) {
+                html += `<td><input type="number" class="filter-input" id="digit${i}" placeholder="位${i}" min="1" max="2"></td>`;
+            }
+            
+            // 位置统计红球 - 筛选输入框
+            for (let i = 1; i <= 6; i++) {
+                html += `<td><input type="number" class="filter-input" id="position${i}" placeholder="置${i}" min="0" max="3"></td>`;
+            }
+            
+            // 尾号012路比 - 筛选输入框
+            for (let i = 1; i <= 6; i++) {
+                html += `<td><input type="number" class="filter-input" id="tailRoad${i}" placeholder="尾${i}" min="0" max="2"></td>`;
+            }
+            
+            // 尾号奇偶统计 - 筛选输入框
+            for (let i = 1; i <= 6; i++) {
+                html += `<td><input type="text" class="filter-input" id="tailOddEven${i}" placeholder="计${i}" maxlength="1"></td>`;
+            }
+            
+            // 012路比 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="road0" placeholder="0路" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="road1" placeholder="1路" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="road2" placeholder="2路" min="0" max="6"></td>
+            `;
+            
+            // 区间统计 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="zone1" placeholder="一区" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="zone2" placeholder="二区" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="zone3" placeholder="三区" min="0" max="6"></td>
+            `;
+            
+            // 奇偶比 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="oddCount" placeholder="奇数" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="evenCount" placeholder="偶数" min="0" max="6"></td>
+            `;
+            
+            // 质合比 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="primeCount" placeholder="质数" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="compositeCount" placeholder="合数" min="0" max="6"></td>
+            `;
+            
+            // 大小比 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="smallCount" placeholder="小数" min="0" max="6"></td>
+                <td><input type="number" class="filter-input" id="largeCount" placeholder="大数" min="0" max="6"></td>
+            `;            
+            
+            // 参数信息 - 筛选输入框
+            html += `
+                <td><input type="number" class="filter-input" id="sumValue" placeholder="和值" min="21" max="183"></td>
+                <td><input type="number" class="filter-input" id="spanValue" placeholder="跨度" min="5" max="32"></td>
+                <td><input type="number" class="filter-input" id="acValue" placeholder="AC值" min="0" max="10"></td>
+                <td>--</td>
+            `;
+
+            emptyRow.innerHTML = html;
+            
+            // 为所有输入框添加输入监听事件
+            setTimeout(() => {
+                const inputs = emptyRow.querySelectorAll('.filter-input');
+                inputs.forEach(input => {
+                    input.addEventListener('input', debounce(saveFilterConditions, 500));
+                });
+            }, 0);
+            
+            return emptyRow;
+        }
+
+        // 渲染筛选功能区表格
+        function renderRoadTable(data) {
+            const tableBody = document.getElementById('roadTableBody');
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="49" style="text-align: center; color: #bdc3c7; padding: 20px;">暂无数据，请导入Excel文件</td></tr>';
+                return;
+            }
+            
+            const displayData = data.slice(-PERFORMANCE_CONFIG.MAX_ROWS);
+            const fragment = document.createDocumentFragment();
+            
+            // 计算记录数字并自动点亮红球
+            let autoExcludedNumbers = new Set();
+            
+            displayData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                const stats = calculateStatistics(item.redBalls);
+                
+                // 计算记录数字
+let recordNumber = 0;
+if (index > 0) {
+    const previousItem = displayData[index - 1];
+    recordNumber = calculateRecordNumber(item.redBalls, previousItem.redBalls);
+}
+
+// 如果是当前期（最后一条数据），计算应该参与的号码
+if (index === displayData.length - 1) {
+    // 根据当前期号码计算尾号补全
+    const currentTailCompletion = calculateTailCompletionNumbers(item.redBalls);
+    
+    // 清空当前选择状态
+    selectedRedBalls = [];
+    excludedRedBalls = [];
+    
+    // 将补全号码设为选中状态（参与），其他号码排除
+    for (let num = 1; num <= 33; num++) {
+        if (currentTailCompletion.includes(num)) {
+            // 补全号码 → 参与选择（选中状态）
+            selectedRedBalls.push(num);
+        } else {
+            // 非补全号码 → 排除（灰色状态）
+            excludedRedBalls.push(num);
+        }
+    }
+    
+    // 保存状态
+    saveRedBallState();
+    
+    console.log(`当前期号码: ${item.redBalls.join(',')}`);
+    console.log(`参与选择号码: ${currentTailCompletion.join(',')}`);
+    console.log(`选中数量: ${selectedRedBalls.length}, 排除数量: ${excludedRedBalls.length}`);
+}
+
+let html = `
+    <td>${item.period}</td>
+    <td>${item.weekday}</td>
+`;
+                
+                // 红球和蓝球
+                item.redBalls.forEach(ball => {
+                    html += `<td><div class="ball-3d red-ball-3d">${ball}</div></td>`;
+                });
+                html += `<td><div class="ball-3d blue-ball-3d">${item.blueBall}</div></td>`;
+                
+                // 统计红球位数
+                item.redBalls.forEach(ball => {
+                    const digit = getDigitCount(ball);
+                    html += `<td class="digit-${digit}">${digit}</td>`;
+                });
+                
+                // 位置统计红球
+                item.redBalls.forEach((ball, index) => {
+                    const positionDigit = getPositionDigit(ball);
+                    html += `<td class="position-digit-${positionDigit}">${positionDigit}</td>`;
+                });
+                
+                // 尾号012路比
+                stats.tail012Roads.forEach(road => {
+                     html += `<td class="stat-value tail-road-${road}">${road}</td>`;
+                });
+                
+                // 尾号奇偶统计
+                stats.tailOddEven.forEach(oddEven => {
+                    const className = oddEven === '奇' ? 'tail-odd' : 'tail-even';
+                    html += `<td class="stat-value ${className}">${oddEven}</td>`;
+                });
+
+                // 012路比
+                html += `
+                    <td class="stat-value">${stats.road0}</td>
+                    <td class="stat-value">${stats.road1}</td>
+                    <td class="stat-value">${stats.road2}</td>
+                `;
+                
+                // 区间统计
+                html += `
+                    <td class="stat-value">${stats.zone1}</td>
+                    <td class="stat-value">${stats.zone2}</td>
+                    <td class="stat-value">${stats.zone3}</td>
+                `;
+                
+                // 奇偶比
+                html += `
+                    <td class="stat-value">${stats.odd}</td>
+                    <td class="stat-value">${stats.even}</td>
+                `;
+                
+                // 质合比
+                html += `
+                    <td class="stat-value">${stats.prime}</td>
+                    <td class="stat-value">${stats.composite}</td>
+                `;
+                
+                // 大小比
+                html += `
+                    <td class="stat-value">${stats.small}</td>
+                    <td class="stat-value">${stats.big}</td>
+                `;
+                             
+                // 参数信息
+                html += `
+                    <td class="stat-value">${stats.sum}</td>
+                    <td class="stat-value">${stats.span}</td>
+                    <td class="stat-value">${stats.acValue}</td>
+                    <td class="record-cell">${recordNumber}</td>
+                `;
+                
+                row.innerHTML = html;
+                fragment.appendChild(row);
+            });
+            
+            // 在数据行后添加带筛选输入框的空行
+            const emptyRow = createEmptyRow();
+            fragment.appendChild(emptyRow);
+            
+            // 添加底部表头行
+            const bottomHeaderRow = document.createElement('tr');
+            bottomHeaderRow.className = 'bottom-header-row';
+            bottomHeaderRow.innerHTML = `
+                <td>期号</td>
+                <td>星期</td>
+                <td>红1</td>
+                <td>红2</td>
+                <td>红3</td>
+                <td>红4</td>
+                <td>红5</td>
+                <td>红6</td>
+                <td>蓝球</td>
+                <td>1位</td>
+                <td>2位</td>
+                <td>3位</td>
+                <td>4位</td>
+                <td>5位</td>
+                <td>6位</td>
+                <td>置1</td>
+                <td>置2</td>
+                <td>置3</td>
+                <td>置4</td>
+                <td>置5</td>
+                <td>置6</td>
+                <td>尾1</td>
+                <td>尾2</td>
+                <td>尾3</td>
+                <td>尾4</td>
+                <td>尾5</td>
+                <td>尾6</td>
+                <td>计1</td>
+                <td>计2</td>
+                <td>计3</td>
+                <td>计4</td>
+                <td>计5</td>
+                <td>计6</td>
+                <td>0路</td>
+                <td>1路</td>
+                <td>2路</td>
+                <td>一区</td>
+                <td>二区</td>
+                <td>三区</td>
+                <td>奇数</td>
+                <td>偶数</td>
+                <td>质数</td>
+                <td>合数</td>
+                <td>小数</td>
+                <td>大数</td>
+                <td>和值</td>
+                <td>跨度</td>
+                <td>AC值</td>
+                <td>记录</td>
+            `;
+            fragment.appendChild(bottomHeaderRow);
+            
+            tableBody.innerHTML = '';
+            tableBody.appendChild(fragment);
+            
+            // 自动点亮红球杀号排除区域的号码
+            if (autoExcludedNumbers.size > 0) {
+                autoExcludedNumbers.forEach(number => {
+                    const redBallElement = document.querySelector(`.red-ball[data-number="${number}"]`);
+                    if (redBallElement && !redBallElement.classList.contains('excluded')) {
+                        redBallElement.click(); // 模拟点击来排除这个号码
+                    }
+                });
+            }
+            
+            // 加载保存的筛选条件
+            loadFilterConditions();
+        }
+
+        // 绘制一二区蓝球走势连接线
+        function drawZoneTrendLines(data) {
+            const linesContainer = document.getElementById('zoneTrendLinesContainer');
+            linesContainer.innerHTML = '';
+            
+            if (data.length < 2) return;
+            
+            const table = document.getElementById('blueTable');
+            const tableRect = table.getBoundingClientRect();
+            const tableBody = document.getElementById('blueTableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+            
+            // 一二区蓝球列的起始索引
+            const zone1StartCol = 13; // 一区蓝球开始列 (1-8)
+            const zone2StartCol = 21; // 二区蓝球开始列 (9-16)
+            
+            for (let i = 0; i < data.length - 1; i++) {
+                const currentData = data[i];
+                const nextData = data[i + 1];
+                const currentRow = rows[i];
+                const nextRow = rows[i + 1];
+                
+                if (!currentRow || !nextRow) continue;
+                
+                // 获取当前期蓝球号码所在的列索引
+                let currentColIndex;
+                if (currentData.blueBall <= 8) {
+                    currentColIndex = zone1StartCol + (currentData.blueBall - 1);
+                } else {
+                    currentColIndex = zone2StartCol + (currentData.blueBall - 9);
+                }
+                
+                // 获取下一期蓝球号码所在的列索引
+                let nextColIndex;
+                if (nextData.blueBall <= 8) {
+                    nextColIndex = zone1StartCol + (nextData.blueBall - 1);
+                } else {
+                    nextColIndex = zone2StartCol + (nextData.blueBall - 9);
+                }
+                
+                const currentCell = currentRow.cells[currentColIndex];
+                const nextCell = nextRow.cells[nextColIndex];
+                
+                if (!currentCell || !nextCell) continue;
+                
+                const currentBall = currentCell.querySelector('.ball-3d');
+                const nextBall = nextCell.querySelector('.ball-3d');
+                
+                if (!currentBall || !nextBall) continue;
+                
+                const currentRect = currentBall.getBoundingClientRect();
+                const nextRect = nextBall.getBoundingClientRect();
+                
+                // 计算连接线的起点和终点
+                const startX = currentRect.left + currentRect.width / 2 - tableRect.left;
+                const startY = currentRect.top + currentRect.height / 2 - tableRect.top;
+                const endX = nextRect.left + nextRect.width / 2 - tableRect.left;
+                const endY = nextRect.top + nextRect.height / 2 - tableRect.top;
+                
+                // 计算连接线的长度和角度
+                const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+                
+                // 创建连接线
+                const line = document.createElement('div');
+                line.className = 'zone-trend-line';
+                line.style.width = length + 'px';
+                line.style.left = startX + 'px';
+                line.style.top = startY + 'px';
+                line.style.transform = `rotate(${angle}deg)`;
+                
+                linesContainer.appendChild(line);
+            }
+        }
+
+        // 渲染蓝球走势表格
+        function renderBlueTable(data) {
+            const tableBody = document.getElementById('blueTableBody');
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="29" style="text-align: center; color: #bdc3c7; padding: 20px;">暂无数据，请导入Excel文件</td></tr>';
+                return;
+            }
+            
+            // 移除限制，使用完整的过滤后数据
+            const displayData = [...data];
+            
+            const fragment = document.createDocumentFragment();
+            
+            displayData.forEach(item => {
+                const row = document.createElement('tr');
+                const isBig = item.blueBall > 8;
+                const isOdd = item.blueBall % 2 === 1;
+                const road = item.blueBall % 3;
+                const stat0Class = road === 0 ? 'stat-one' : 'stat-zero';
+                const stat1Class = road === 1 ? 'stat-one' : 'stat-zero';
+                const stat2Class = road === 2 ? 'stat-one' : 'stat-zero';
+                
+                // 生成一区蓝球HTML
+                let zone1HTML = '';
+                for (let i = 1; i <= 8; i++) {
+                    zone1HTML += `<td class="zone-cell">${item.blueBall === i ? `<div class="ball-3d zone-1-ball">${i}</div>` : ''}</td>`;
+                }
+                
+                // 生成二区蓝球HTML
+                let zone2HTML = '';
+                for (let i = 9; i <= 16; i++) {
+                    zone2HTML += `<td class="zone-cell">${item.blueBall === i ? `<div class="ball-3d zone-2-ball">${i}</div>` : ''}</td>`;
+                }
+                
+                row.innerHTML = `
+                    <td>${item.period}</td>
+                    <td>${item.weekday}</td>
+                    <td class="col-group-1"><div class="ball-3d blue-ball-3d">${item.blueBall}</div></td>
+                    
+                    <!-- 大小区 -->
+                    <td>${isBig ? '<span class="size-big">大</span>' : ''}</td>
+                    <td class="col-group-2">${!isBig ? '<span class="size-small">小</span>' : ''}</td>
+                    
+                    <!-- 奇偶区 -->
+                    <td>${isOdd ? '<span class="odd">奇</span>' : ''}</td>
+                    <td class="col-group-3">${!isOdd ? '<span class="even">偶</span>' : ''}</td>
+                    
+                    <!-- 012路区 -->
+                    <td>${road === 0 ? '<span class="road-0">0</span>' : ''}</td>
+                    <td>${road === 1 ? '<span class="road-1">1</span>' : ''}</td>
+                    <td class="col-group-4">${road === 2 ? '<span class="road-2">2</span>' : ''}</td>
+                    
+                    <!-- 012统计 -->
+                    <td class="stat-cell ${stat0Class}">${road === 0 ? '1' : '0'}</td>
+                    <td class="stat-cell ${stat1Class}">${road === 1 ? '1' : '0'}</td>
+                    <td class="col-group-5 stat-cell ${stat2Class}">${road === 2 ? '1' : '0'}</td>
+                    
+                    <!-- 一区蓝球和二区蓝球 -->
+                    ${zone1HTML}
+                    ${zone2HTML}
+                `;
+                fragment.appendChild(row);
+            });
+            
+            tableBody.innerHTML = '';
+            tableBody.appendChild(fragment);
+            
+            // 延迟绘制连接线，确保DOM已渲染
+            setTimeout(() => {
+                drawZoneTrendLines(displayData);
+            }, 100);
+        }
+
+        // 数据过滤功能
+        function filterData() {
+            const yearFilter = document.getElementById('year').value;
+            const weekdayFilter = document.getElementById('weekday').value;
+            const periodFilter = document.getElementById('period').value;
+            
+            let filteredData = [...allLotteryData];
+            let filteredRoadData = [...allRoadData];
+            
+            if (yearFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.period.startsWith(yearFilter));
+                filteredRoadData = filteredRoadData.filter(item => item.period.startsWith(yearFilter));
+            }
+            
+            if (weekdayFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.weekday === weekdayFilter);
+                filteredRoadData = filteredRoadData.filter(item => item.weekday === weekdayFilter);
+            }
+            
+            let periodCount;
+            if (periodFilter === '全部数据') {
+                periodCount = filteredData.length;
+            } else {
+                periodCount = parseInt(periodFilter.replace('期', ''));
+                filteredData = filteredData.slice(-periodCount);
+                filteredRoadData = filteredRoadData.slice(-periodCount);
+            }
+            
+            console.log(`显示最近 ${periodCount} 期数据`);
+            renderBlueTable(filteredData);
+            renderRoadTable(filteredRoadData);
+        }
+
+        // 更新年份过滤器
+        function updateYearFilter() {
+            const yearSelect = document.getElementById('year');
+            yearSelect.innerHTML = '<option value="all">全部</option>';
+            const years = new Set();
+            allLotteryData.forEach(item => {
+                const year = item.period.substring(0, 4);
+                if (year && year.length === 4) years.add(year);
+            });
+            const sortedYears = Array.from(years).sort((a, b) => b - a);
+            sortedYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+            if (sortedYears.length > 0) yearSelect.value = sortedYears[0];
+        }
+
+        // Excel导入处理
+        function handleExcelImport() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.xlsx, .xls, .csv';
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const importBtn = document.getElementById('excelImportBtn');
+                const originalText = importBtn.textContent;
+                importBtn.textContent = '导入中...';
+                importBtn.disabled = true;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        processExcelData(jsonData);
+                    } catch (error) {
+                        console.error('Excel导入错误:', error);
+                        alert('文件导入失败，请检查文件格式');
+                    } finally {
+                        importBtn.textContent = originalText;
+                        importBtn.disabled = false;
+                    }
+                };
+                reader.onerror = function() {
+                    importBtn.textContent = originalText;
+                    importBtn.disabled = false;
+                    alert('文件读取失败');
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            fileInput.click();
+        }
+
+        // 处理Excel数据
+        function processExcelData(excelData) {
+            allLotteryData.length = 0;
+            allRoadData.length = 0;
+            
+            for (let i = 1; i < excelData.length; i++) {
+                const row = excelData[i];
+                if (!row || row.length < 9) continue;
+                
+                const period = row[0]?.toString() || '';
+                const redBall1 = parseInt(row[1]) || 0;
+                const redBall2 = parseInt(row[2]) || 0;
+                const redBall3 = parseInt(row[3]) || 0;
+                const redBall4 = parseInt(row[4]) || 0;
+                const redBall5 = parseInt(row[5]) || 0;
+                const redBall6 = parseInt(row[6]) || 0;
+                const blueBall = parseInt(row[7]) || 0;
+                const weekdayNum = parseInt(row[8]) || 2;
+                
+                if (!period || blueBall < 1 || blueBall > 16) continue;
+                
+                let weekday;
+                switch(weekdayNum) {
+                    case 2: weekday = '二'; break;
+                    case 4: weekday = '四'; break;
+                    case 7: weekday = '日'; break;
+                    default: weekday = '二';
+                }
+                
+                const redBalls = [redBall1, redBall2, redBall3, redBall4, redBall5, redBall6]
+                    .filter(ball => ball >= 1 && ball <= 33)
+                    .sort((a, b) => a - b);
+                
+                if (redBalls.length !== 6) continue;
+                
+                allLotteryData.push({ period, weekday, blueBall });
+                allRoadData.push({ period, weekday, redBalls, blueBall });
+            }
+            
+            allLotteryData.sort((a, b) => a.period.localeCompare(b.period));
+            allRoadData.sort((a, b) => a.period.localeCompare(b.period));
+            
+            saveDataToLocalStorage();
+            
+            updateYearFilter();
+            updateImportButton();
+            filterData();
+        }
+
+        // 表格折叠功能
+        function setupTableCollapse(type) {
+            const title = document.getElementById(`${type}Title`);
+            const tableContainer = document.getElementById(`${type}TableContainer`);
+            const footer = document.getElementById(`${type}Footer`);
+            const collapseBtn = title.querySelector('.collapse-btn');
+            const footerBtn = footer.querySelector('.footer-collapse-btn');
+            let isCollapsed = true;
+            
+            function toggleTable() {
+                isCollapsed = !isCollapsed;
+                
+                if (isCollapsed) {
+                    tableContainer.classList.add('collapsed');
+                    collapseBtn.textContent = '▶';
+                    footerBtn.classList.add('collapsed');
+                    footerBtn.textContent = '︽';
+                    
+                    setTimeout(() => {
+                        tableContainer.style.pointerEvents = 'none';
+                    }, PERFORMANCE_CONFIG.ANIMATION_DURATION);
+                } else {
+                    tableContainer.style.pointerEvents = 'auto';
+                    tableContainer.classList.remove('collapsed');
+                    collapseBtn.textContent = '▼';
+                    footerBtn.classList.remove('collapsed');
+                    footerBtn.textContent = '︾';
+                }
+            }
+            
+            title.addEventListener('click', toggleTable);
+            footer.addEventListener('click', toggleTable);
+        }
+
+        // 过滤分析功能
+        function saveToLocalStorage(key, data) {
+            try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) { console.warn('localStorage保存失败:', e); }
+        }
+
+        function loadFromLocalStorage(key, defaultValue = null) {
+            try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : defaultValue; } 
+            catch (e) { console.warn('localStorage读取失败:', e); return defaultValue; }
+        }
+
+        function initializeStoredData() {
+            const storedActiveConditions = loadFromLocalStorage(STORAGE_KEYS.ACTIVE_CONDITIONS);
+            if (storedActiveConditions) activeConditions = storedActiveConditions;
+        }
+
+        function initBlueFilter() {
+            const allNumbers = Array.from({length: 16}, (_, i) => i + 1);
+            const killBallsContainer = document.getElementById('kill-balls');
+            killBallsContainer.innerHTML = '';
+            
+            allNumbers.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'kill-ball';
+                if (num <= 8) ball.classList.add('small-ball');
+                else ball.classList.add('big-ball');
+                ball.textContent = num;
+                ball.dataset.number = num;
+                if (excludedBlueBalls.includes(num)) ball.classList.add('excluded');
+                
+                ball.addEventListener('click', function() {
+                    const number = parseInt(this.dataset.number);
+                    const index = excludedBlueBalls.indexOf(number);
+                    if (index === -1) { 
+                        excludedBlueBalls.push(number); 
+                        this.classList.add('excluded'); 
+                        selectedBlueBalls = selectedBlueBalls.filter(n => n !== number);
+                    } else { 
+                        excludedBlueBalls.splice(index, 1); 
+                        this.classList.remove('excluded'); 
+                    }
+                    saveToLocalStorage(STORAGE_KEYS.EXCLUDED_BLUE_BALLS, excludedBlueBalls);
+                    saveToLocalStorage(STORAGE_KEYS.SELECTED_BLUE_BALLS, selectedBlueBalls);
+                    updateFilterResults();
+                });
+                killBallsContainer.appendChild(ball);
+            });
+            
+            document.querySelectorAll('#blueFilterPanel .filter-btn').forEach(btn => {
+                if (activeConditions.includes(btn.dataset.filter)) btn.classList.add('active');
+            });
+            
+            document.getElementById('blueFilterPanel').addEventListener('click', function(e) {
+                if (e.target.classList.contains('filter-btn')) {
+                    e.target.classList.toggle('active');
+                    updateActiveConditions();
+                    updateFilterResults();
+                }
+            });
+            
+            document.getElementById('reset-filter-btn').addEventListener('click', function() {
+                document.querySelectorAll('#blueFilterPanel .filter-btn').forEach(btn => btn.classList.remove('active'));
+                excludedBlueBalls = [];
+                document.querySelectorAll('#kill-balls .kill-ball').forEach(ball => ball.classList.remove('excluded'));
+                activeConditions = [];
+                saveToLocalStorage(STORAGE_KEYS.ACTIVE_CONDITIONS, activeConditions);
+                saveToLocalStorage(STORAGE_KEYS.EXCLUDED_BLUE_BALLS, excludedBlueBalls);
+                updateFilterResults();
+            });
+            updateFilterResults();
+        }
+
+        function updateActiveConditions() {
+            activeConditions = [];
+            document.querySelectorAll('#blueFilterPanel .filter-btn.active').forEach(btn => activeConditions.push(btn.dataset.filter));
+            saveToLocalStorage(STORAGE_KEYS.ACTIVE_CONDITIONS, activeConditions);
+        }
+
+        function updateFilterResults() {
+            const allNumbers = Array.from({length: 16}, (_, i) => i + 1);
+            const conditions = {
+                small: [1,2,3,4,5,6,7,8], 
+                big: [9,10,11,12,13,14,15,16],
+                odd: [1,3,5,7,9,11,13,15], 
+                even: [2,4,6,8,10,12,14,16],
+                road0: [3,6,9,12,15], 
+                road1: [1,4,7,10,13,16], 
+                road2: [2,5,8,11,14]
+            };
+            
+            let result = [...allNumbers];
+            if (activeConditions.length > 0) {
+                result = result.filter(num => activeConditions.every(condition => conditions[condition].includes(num)));
+            }
+            result = result.filter(num => !excludedBlueBalls.includes(num));
+            
+            const resultContainer = document.getElementById('result-numbers');
+            resultContainer.innerHTML = '';
+            if (result.length > 0) {
+                result.forEach(num => {
+                    const div = document.createElement('div');
+                    div.className = 'result-number';
+                    div.textContent = num;
+                    resultContainer.appendChild(div);
+                });
+            } else {
+                resultContainer.innerHTML = '<div class="no-result">无符合条件号码</div>';
+            }
+        }
+
+        // 彩票筛选工具功能
+        const primes = [2,3,5,7,11,13,17,19,23,29,31];
+
+        // 计算符合条件的真实组数
+        function calculateRealCombinationCount(conditions) {
+            let count = 0;
+            // 只从选中的红球中生成组合（排除被排除的红球）
+            const availableNumbers = Array.from({length: 33}, (_, i) => i + 1)
+                .filter(num => !excludedRedBalls.includes(num));
+            const maxCalculations = 100000;
+            
+            function calculate(start, current, zoneCounts, oddCount, smallCount, primeCount, roadCounts, tailRoadCounts, tailOddEvenCounts) {
+                if (count >= maxCalculations) return;
+                
+                if (current.length === 6) {
+                    if (checkCombination(current, conditions)) {
+                        count++;
+                    }
+                    return;
+                }
+                
+                for (let i = start; i < availableNumbers.length; i++) {
+                    const num = availableNumbers[i];
+                    const newZoneCounts = [...zoneCounts];
+                    const newRoadCounts = [...roadCounts];
+                    const newTailRoadCounts = [...tailRoadCounts];
+                    const newTailOddEvenCounts = [...tailOddEvenCounts];
+                    
+                    // 区间统计
+                    if (num >= 1 && num <= 11) newZoneCounts[0]++;
+                    else if (num >= 12 && num <= 22) newZoneCounts[1]++;
+                    else if (num >= 23 && num <= 33) newZoneCounts[2]++;
+                    
+                    if (conditions.zone1 && newZoneCounts[0] > parseInt(conditions.zone1)) continue;
+                    if (conditions.zone2 && newZoneCounts[1] > parseInt(conditions.zone2)) continue;
+                    if (conditions.zone3 && newZoneCounts[2] > parseInt(conditions.zone3)) continue;
+                    
+                    const newOddCount = oddCount + (num % 2);
+                    const newSmallCount = smallCount + (num <= 16 ? 1 : 0);
+                    const newPrimeCount = primeCount + (primes.includes(num) ? 1 : 0);
+                    newRoadCounts[num % 3]++;
+                    
+                    // 尾号统计
+                    const tailDigit = num % 10;
+                    newTailRoadCounts[tailDigit % 3]++;
+                    newTailOddEvenCounts[tailDigit % 2]++;
+                    
+                    if (conditions.oddCount && newOddCount > parseInt(conditions.oddCount)) continue;
+                    if (conditions.smallCount && newSmallCount > parseInt(conditions.smallCount)) continue;
+                    if (conditions.primeCount && newPrimeCount > parseInt(conditions.primeCount)) continue;
+                    if (conditions.road0 && newRoadCounts[0] > parseInt(conditions.road0)) continue;
+                    if (conditions.road1 && newRoadCounts[1] > parseInt(conditions.road1)) continue;
+                    if (conditions.road2 && newRoadCounts[2] > parseInt(conditions.road2)) continue;
+                    
+                    // 位数统计检查
+                    const currentLength = current.length;
+                    if (conditions[`digit${currentLength + 1}`]) {
+                        const expectedDigit = parseInt(conditions[`digit${currentLength + 1}`]);
+                        const actualDigit = getDigitCount(num);
+                        if (actualDigit !== expectedDigit) continue;
+                    }
+                    
+                    // 位置统计检查
+                    if (conditions[`position${currentLength + 1}`]) {
+                        const expectedPosition = parseInt(conditions[`position${currentLength + 1}`]);
+                        const actualPosition = getPositionDigit(num);
+                        if (actualPosition !== expectedPosition) continue;
+                    }
+                    
+                    // 尾号012路检查
+                    if (conditions[`tailRoad${currentLength + 1}`]) {
+                        const expectedTailRoad = parseInt(conditions[`tailRoad${currentLength + 1}`]);
+                        const actualTailRoad = (num % 10) % 3;
+                        if (actualTailRoad !== expectedTailRoad) continue;
+                    }
+                    
+                    // 尾号奇偶检查
+                    if (conditions[`tailOddEven${currentLength + 1}`]) {
+                        const expectedTailOddEven = conditions[`tailOddEven${currentLength + 1}`];
+                        const actualTailOddEven = (num % 10) % 2 === 1 ? '奇' : '偶';
+                        if (actualTailOddEven !== expectedTailOddEven) continue;
+                    }
+                    
+                    current.push(num);
+                    calculate(i + 1, current, newZoneCounts, newOddCount, newSmallCount, newPrimeCount, newRoadCounts, newTailRoadCounts, newTailOddEvenCounts);
+                    current.pop();
+                }
+            }
+            
+            calculate(0, [], [0,0,0], 0, 0, 0, [0,0,0], [0,0,0], [0,0]);
+            return count;
+        }
+
+        // 生成符合条件的组合
+        function generateCombinations(conditions) {
+            const combinations = [];
+            // 只从选中的红球中生成组合（排除被排除的红球）
+            const availableNumbers = Array.from({length: 33}, (_, i) => i + 1)
+                .filter(num => !excludedRedBalls.includes(num));
+            
+            function generate(start, current, zoneCounts, oddCount, smallCount, primeCount, roadCounts, tailRoadCounts, tailOddEvenCounts) {
+                if (current.length === 6) {
+                    if (checkCombination(current, conditions)) {
+                        combinations.push([...current]);
+                    }
+                    return;
+                }
+                
+                for (let i = start; i < availableNumbers.length; i++) {
+                    const num = availableNumbers[i];
+                    const newZoneCounts = [...zoneCounts];
+                    const newRoadCounts = [...roadCounts];
+                    const newTailRoadCounts = [...tailRoadCounts];
+                    const newTailOddEvenCounts = [...tailOddEvenCounts];
+                    
+                    // 区间统计
+                    if (num >= 1 && num <= 11) newZoneCounts[0]++;
+                    else if (num >= 12 && num <= 22) newZoneCounts[1]++;
+                    else if (num >= 23 && num <= 33) newZoneCounts[2]++;
+                    
+                    if (conditions.zone1 && newZoneCounts[0] > parseInt(conditions.zone1)) continue;
+                    if (conditions.zone2 && newZoneCounts[1] > parseInt(conditions.zone2)) continue;
+                    if (conditions.zone3 && newZoneCounts[2] > parseInt(conditions.zone3)) continue;
+                    
+                    const newOddCount = oddCount + (num % 2);
+                    const newSmallCount = smallCount + (num <= 16 ? 1 : 0);
+                    const newPrimeCount = primeCount + (primes.includes(num) ? 1 : 0);
+                    newRoadCounts[num % 3]++;
+                    
+                    // 尾号统计
+                    const tailDigit = num % 10;
+                    newTailRoadCounts[tailDigit % 3]++;
+                    newTailOddEvenCounts[tailDigit % 2]++;
+                    
+                    if (conditions.oddCount && newOddCount > parseInt(conditions.oddCount)) continue;
+                    if (conditions.smallCount && newSmallCount > parseInt(conditions.smallCount)) continue;
+                    if (conditions.primeCount && newPrimeCount > parseInt(conditions.primeCount)) continue;
+                    if (conditions.road0 && newRoadCounts[0] > parseInt(conditions.road0)) continue;
+                    if (conditions.road1 && newRoadCounts[1] > parseInt(conditions.road1)) continue;
+                    if (conditions.road2 && newRoadCounts[2] > parseInt(conditions.road2)) continue;
+                    
+                    // 位数统计检查
+                    const currentLength = current.length;
+                    if (conditions[`digit${currentLength + 1}`]) {
+                        const expectedDigit = parseInt(conditions[`digit${currentLength + 1}`]);
+                        const actualDigit = getDigitCount(num);
+                        if (actualDigit !== expectedDigit) continue;
+                    }
+                    
+                    // 位置统计检查
+                    if (conditions[`position${currentLength + 1}`]) {
+                        const expectedPosition = parseInt(conditions[`position${currentLength + 1}`]);
+                        const actualPosition = getPositionDigit(num);
+                        if (actualPosition !== expectedPosition) continue;
+                    }
+                    
+                    // 尾号012路检查
+                    if (conditions[`tailRoad${currentLength + 1}`]) {
+                        const expectedTailRoad = parseInt(conditions[`tailRoad${currentLength + 1}`]);
+                        const actualTailRoad = (num % 10) % 3;
+                        if (actualTailRoad !== expectedTailRoad) continue;
+                    }
+                    
+                    // 尾号奇偶检查
+                    if (conditions[`tailOddEven${currentLength + 1}`]) {
+                        const expectedTailOddEven = conditions[`tailOddEven${currentLength + 1}`];
+                        const actualTailOddEven = (num % 10) % 2 === 1 ? '奇' : '偶';
+                        if (actualTailOddEven !== expectedTailOddEven) continue;
+                    }
+                    
+                    current.push(num);
+                    generate(i + 1, current, newZoneCounts, newOddCount, newSmallCount, newPrimeCount, newRoadCounts, newTailRoadCounts, newTailOddEvenCounts);
+                    current.pop();
+                }
+            }
+            
+            generate(0, [], [0,0,0], 0, 0, 0, [0,0,0], [0,0,0], [0,0]);
+            return combinations;
+        }
+
+        // 检查号码组合是否符合条件
+        function checkCombination(combination, conditions) {
+            if (combination.length !== 6) return false;
+            
+            // 检查位数统计
+            for (let i = 0; i < 6; i++) {
+                if (conditions[`digit${i + 1}`]) {
+                    const expectedDigit = parseInt(conditions[`digit${i + 1}`]);
+                    const actualDigit = getDigitCount(combination[i]);
+                    if (actualDigit !== expectedDigit) return false;
+                }
+            }
+            
+            // 检查位置统计
+            for (let i = 0; i < 6; i++) {
+                if (conditions[`position${i + 1}`]) {
+                    const expectedPosition = parseInt(conditions[`position${i + 1}`]);
+                    const actualPosition = getPositionDigit(combination[i]);
+                    if (actualPosition !== expectedPosition) return false;
+                }
+            }
+            
+            // 检查尾号012路
+            for (let i = 0; i < 6; i++) {
+                if (conditions[`tailRoad${i + 1}`]) {
+                    const expectedTailRoad = parseInt(conditions[`tailRoad${i + 1}`]);
+                    const actualTailRoad = (combination[i] % 10) % 3;
+                    if (actualTailRoad !== expectedTailRoad) return false;
+                }
+            }
+            
+            // 检查尾号奇偶
+            for (let i = 0; i < 6; i++) {
+                if (conditions[`tailOddEven${i + 1}`]) {
+                    const expectedTailOddEven = conditions[`tailOddEven${i + 1}`];
+                    const actualTailOddEven = (combination[i] % 10) % 2 === 1 ? '奇' : '偶';
+                    if (actualTailOddEven !== expectedTailOddEven) return false;
+                }
+            }
+            
+            if (conditions.sumValue) {
+                const sum = combination.reduce((a, b) => a + b, 0);
+                if (sum !== parseInt(conditions.sumValue)) return false;
+            }
+            
+            if (conditions.spanValue) {
+                const span = Math.max(...combination) - Math.min(...combination);
+                if (span !== parseInt(conditions.spanValue)) return false;
+            }
+            
+            if (conditions.acValue) {
+                const ac = calculateAC(combination);
+                if (ac !== parseInt(conditions.acValue)) return false;
+            }
+            
+            if (conditions.zone1 || conditions.zone2 || conditions.zone3) {
+                const zoneCounts = [0, 0, 0];
+                combination.forEach(num => {
+                    if (num >= 1 && num <= 11) zoneCounts[0]++;
+                    else if (num >= 12 && num <= 22) zoneCounts[1]++;
+                    else if (num >= 23 && num <= 33) zoneCounts[2]++;
+                });
+                
+                if (conditions.zone1 && zoneCounts[0] !== parseInt(conditions.zone1)) return false;
+                if (conditions.zone2 && zoneCounts[1] !== parseInt(conditions.zone2)) return false;
+                if (conditions.zone3 && zoneCounts[2] !== parseInt(conditions.zone3)) return false;
+            }
+            
+            if (conditions.oddCount || conditions.evenCount) {
+                const oddCount = combination.filter(num => num % 2 === 1).length;
+                const evenCount = 6 - oddCount;
+                
+                if (conditions.oddCount && oddCount !== parseInt(conditions.oddCount)) return false;
+                if (conditions.evenCount && evenCount !== parseInt(conditions.evenCount)) return false;
+            }
+            
+            if (conditions.smallCount || conditions.largeCount) {
+                const smallCount = combination.filter(num => num <= 16).length;
+                const largeCount = 6 - smallCount;
+                
+                if (conditions.smallCount && smallCount !== parseInt(conditions.smallCount)) return false;
+                if (conditions.largeCount && largeCount !== parseInt(conditions.largeCount)) return false;
+            }
+            
+            if (conditions.primeCount || conditions.compositeCount) {
+                const primeCount = combination.filter(num => primes.includes(num)).length;
+                const compositeCount = 6 - primeCount;
+                
+                if (conditions.primeCount && primeCount !== parseInt(conditions.primeCount)) return false;
+                if (conditions.compositeCount && compositeCount !== parseInt(conditions.compositeCount)) return false;
+            }
+            
+            if (conditions.road0 || conditions.road1 || conditions.road2) {
+                const roadCounts = [0, 0, 0];
+                combination.forEach(num => {
+                    roadCounts[num % 3]++;
+                });
+                
+                if (conditions.road0 && roadCounts[0] !== parseInt(conditions.road0)) return false;
+                if (conditions.road1 && roadCounts[1] !== parseInt(conditions.road1)) return false;
+                if (conditions.road2 && roadCounts[2] !== parseInt(conditions.road2)) return false;
+            }
+            
+            return true;
+        }
+
+        // 计算AC值
+        function calculateAC(combination) {
+            const diffs = new Set();
+            
+            for (let i = 0; i < combination.length; i++) {
+                for (let j = i + 1; j < combination.length; j++) {
+                    diffs.add(Math.abs(combination[i] - combination[j]));
+                }
+            }
+            
+            return diffs.size - (combination.length - 1);
+        }
+
+        // 获取筛选条件
+        function getFilterConditions() {
+            const conditions = {
+                sumValue: document.getElementById('sumValue').value,
+                spanValue: document.getElementById('spanValue').value,
+                acValue: document.getElementById('acValue').value,
+                zone1: document.getElementById('zone1').value,
+                zone2: document.getElementById('zone2').value,
+                zone3: document.getElementById('zone3').value,
+                oddCount: document.getElementById('oddCount').value,
+                evenCount: document.getElementById('evenCount').value,
+                smallCount: document.getElementById('smallCount').value,
+                largeCount: document.getElementById('largeCount').value,
+                primeCount: document.getElementById('primeCount').value,
+                compositeCount: document.getElementById('compositeCount').value,
+                road0: document.getElementById('road0').value,
+                road1: document.getElementById('road1').value,
+                road2: document.getElementById('road2').value
+            };
+            
+            // 添加位数统计条件
+            for (let i = 1; i <= 6; i++) {
+                conditions[`digit${i}`] = document.getElementById(`digit${i}`).value;
+            }
+            
+            // 添加位置统计条件
+            for (let i = 1; i <= 6; i++) {
+                conditions[`position${i}`] = document.getElementById(`position${i}`).value;
+            }
+            
+            // 添加尾号012路条件
+            for (let i = 1; i <= 6; i++) {
+                conditions[`tailRoad${i}`] = document.getElementById(`tailRoad${i}`).value;
+            }
+            
+            // 添加尾号奇偶条件
+            for (let i = 1; i <= 6; i++) {
+                conditions[`tailOddEven${i}`] = document.getElementById(`tailOddEven${i}`).value;
+            }
+            
+            return conditions;
+        }
+
+        // 计算组数
+        function calculateGroups() {
+            const conditions = getFilterConditions();
+            const calculationResult = document.getElementById('calculationResult');
+            calculationResult.innerHTML = '<div class="loading">正在计算组数...</div>';
+            calculationResult.className = 'calculation-result';
+            calculationResult.style.display = 'block';
+            
+            setTimeout(() => {
+                const startTime = performance.now();
+                calculatedCount = calculateRealCombinationCount(conditions);
+                const endTime = performance.now();
+                
+                let resultClass = 'safe';
+                let message = '';
+                
+                if (calculatedCount === 0) {
+                    message = '没有符合条件的号码';
+                    resultClass = 'warning';
+                } else if (calculatedCount <= 1000) {
+                    message = `找到 ${calculatedCount} 组号码，可安全生成`;
+                    resultClass = 'safe';
+                } else {
+                    message = `找到 ${calculatedCount} 组号码，生成可能需要一些时间`;
+                    resultClass = 'warning';
+                }
+                
+                calculationResult.innerHTML = `
+                    <div>${message}</div>
+                    <div class="calculation-details">计算耗时: ${(endTime - startTime).toFixed(0)} 毫秒</div>
+                `;
+                calculationResult.className = `calculation-result ${resultClass}`;
+            }, 100);
+        }
+
+        // 生成号码
+        function generateNumbers() {
+    if (calculatedCount === 0) {
+        const calculationResult = document.getElementById('calculationResult');
+        calculationResult.innerHTML = '<div class="warning">请先计算组数</div>';
+        calculationResult.className = 'calculation-result warning';
+        calculationResult.style.display = 'block';
+        return;
+    }
+    
+    if (calculatedCount > 5000) {
+        const calculationResult = document.getElementById('calculationResult');
+        calculationResult.innerHTML = '<div class="danger">组数过多，建议调整条件减少组数</div>';
+        calculationResult.className = 'calculation-result danger';
+        calculationResult.style.display = 'block';
+        return;
+    }
+    
+    const startTime = performance.now();
+    const conditions = getFilterConditions();
+    const numberSets = document.getElementById('numberSets');
+    const calculationResult = document.getElementById('calculationResult');
+    
+    numberSets.innerHTML = '<div class="loading">正在生成号码...</div>';
+    
+    setTimeout(() => {
+        const redCombinations = generateCombinations(conditions);
+        const endTime = performance.now();
+        
+        let finalCombinations = [];
+        
+        // 只从选中的蓝球中分配（selectedBlueBalls）
+        if (selectedBlueBalls.length > 0 && redCombinations.length > 0) {
+            const maxDisplay = Math.min(redCombinations.length, 200);
+            const selectedRedCombinations = redCombinations.slice(0, maxDisplay);
+            
+            finalCombinations = selectedRedCombinations.map(redBalls => {
+                const randomBlueIndex = Math.floor(Math.random() * selectedBlueBalls.length);
+                return {
+                    redBalls: [...redBalls],
+                    blueBall: selectedBlueBalls[randomBlueIndex]
+                };
+            });
+        } else {
+            // 如果没有选中的蓝球，就不生成蓝球
+            const maxDisplay = Math.min(redCombinations.length, 200);
+            finalCombinations = redCombinations.slice(0, maxDisplay).map(redBalls => ({
+                redBalls: [...redBalls],
+                blueBall: null
+            }));
+        }
+        
+        displayResults(finalCombinations);
+        
+        calculationResult.innerHTML = `
+            <div>已生成 ${finalCombinations.length} 组号码</div>
+            <div class="calculation-details">生成耗时: ${(endTime - startTime).toFixed(0)} 毫秒</div>
+        `;
+        calculationResult.className = 'calculation-result safe';
+    }, 100);
+}
+
+        // 显示结果
+        function displayResults(results) {
+            const numberSets = document.getElementById('numberSets');
+            numberSets.innerHTML = '';
+            
+            if (results.length === 0) {
+                numberSets.innerHTML = '<p style="text-align: center; color: #bdc3c7; grid-column: 1 / -1;">没有符合条件的号码</p>';
+                return;
+            }
+            
+            results.forEach(item => {
+                const setElement = document.createElement('div');
+                setElement.className = 'number-set';
+                
+                const sortedRedBalls = [...item.redBalls].sort((a, b) => a - b);
+                
+                // 添加红球
+                sortedRedBalls.forEach(number => {
+                    const numberElement = document.createElement('div');
+                    numberElement.className = 'number';
+                    numberElement.textContent = number;
+                    
+                    if (number <= 16) {
+                        numberElement.classList.add('small');
+                    } else {
+                        numberElement.classList.add('large');
+                    }
+                    
+                    if (number % 2 === 0) {
+                        numberElement.classList.add('even');
+                    } else {
+                        numberElement.classList.add('odd');
+                    }
+                    
+                    setElement.appendChild(numberElement);
+                });
+                
+                // 添加蓝球（如果有）
+                if (item.blueBall !== null) {
+                    const blueNumberElement = document.createElement('div');
+                    blueNumberElement.className = 'number blue';
+                    blueNumberElement.textContent = item.blueBall;
+                    setElement.appendChild(blueNumberElement);
+                }
+                
+                numberSets.appendChild(setElement);
+            });
+        }
+
+        // 重置筛选条件
+        function resetFilterConditions() {
+            document.getElementById('sumValue').value = '';
+            document.getElementById('spanValue').value = '';
+            document.getElementById('acValue').value = '';
+            document.getElementById('zone1').value = '';
+            document.getElementById('zone2').value = '';
+            document.getElementById('zone3').value = '';
+            document.getElementById('oddCount').value = '';
+            document.getElementById('evenCount').value = '';
+            document.getElementById('smallCount').value = '';
+            document.getElementById('largeCount').value = '';
+            document.getElementById('primeCount').value = '';
+            document.getElementById('compositeCount').value = '';
+            document.getElementById('road0').value = '';
+            document.getElementById('road1').value = '';
+            document.getElementById('road2').value = '';
+            
+            // 重置位数统计条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`digit${i}`).value = '';
+            }
+            
+            // 重置位置统计条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`position${i}`).value = '';
+            }
+            
+            // 重置尾号012路条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`tailRoad${i}`).value = '';
+            }
+            
+            // 重置尾号奇偶条件
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`tailOddEven${i}`).value = '';
+            }
+            
+            // 重置蓝球选择
+    selectedBlueBalls = [];
+    const blueBalls = document.querySelectorAll('.blue-ball');
+    blueBalls.forEach(ball => {
+        ball.classList.remove('selected');
+        ball.classList.add('excluded');
+    });
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_BLUE_BALLS);
+            
+            // 重置红球选择 - 使用补全号码逻辑
+            resetRedBallsToTailCompletion();
+            
+            // 清除保存的筛选条件
+            localStorage.removeItem(STORAGE_KEYS.FILTER_CONDITIONS);
+            
+            calculatedCount = 0;
+            const calculationResult = document.getElementById('calculationResult');
+            calculationResult.style.display = 'none';
+            const numberSets = document.getElementById('numberSets');
+            numberSets.innerHTML = '<p style="text-align: center; color: #bdc3c7; grid-column: 1 / -1;">请先设置条件并计算组数</p>';
+        }
+
+        // 格式复制功能
+        function copyFormatted() {
+            const numberSets = document.getElementById('numberSets');
+            const sets = numberSets.querySelectorAll('.number-set');
+            
+            if (sets.length === 0) {
+                alert('请先生成号码');
+                return;
+            }
+
+            let copyText = '';
+            
+            sets.forEach(set => {
+                const numbers = set.querySelectorAll('.number');
+                let line = '';
+                
+                numbers.forEach((numberEl, index) => {
+                    line += numberEl.textContent;
+                    if (index < numbers.length - 1) {
+                        line += '\t';
+                    }
+                });
+                
+                copyText += line + '\n';
+            });
+
+            copyToClipboard(copyText.trim());
+            showCopySuccess('格式复制到Excel里');
+        }
+
+        // 数量复制功能
+        function copyWithNumbers() {
+            const numberSets = document.getElementById('numberSets');
+            const sets = numberSets.querySelectorAll('.number-set');
+            
+            if (sets.length === 0) {
+                alert('请先生成号码');
+                return;
+            }
+
+            // 获取当前时间
+            const now = new Date();
+            const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            let copyText = '';
+            
+            // 添加头部信息
+            copyText += `${currentDate}     ${currentTime}     共 ${sets.length} 组\n`;
+            copyText += '='.repeat(32) + '\n';  // 分隔线
+            
+            let groupNumber = 1;
+            
+            sets.forEach(set => {
+                const numbers = set.querySelectorAll('.number');
+                let redBalls = [];
+                let blueBall = null;
+                
+                numbers.forEach((numberEl, index) => {
+                    if (numberEl.classList.contains('blue')) {
+                        blueBall = numberEl.textContent;
+                    } else {
+                        redBalls.push(numberEl.textContent);
+                    }
+                });
+                
+                let numberString = '';
+                
+                redBalls.forEach((ball, index) => {
+                    numberString += ball;
+                    if (index < redBalls.length - 1) {
+                        numberString += '\t';
+                    }
+                });
+            
+                if (blueBall) {
+                    numberString += '\t+' + blueBall;
+                }
+
+                copyText += `${groupNumber}组：${numberString}\n`;
+                groupNumber++;
+            });
+
+            copyToClipboard(copyText.trim());
+            showCopySuccess('数量复制成功！已添加时间信息');
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        // 显示复制成功提示
+        function showCopySuccess(message) {
+            const calculationResult = document.getElementById('calculationResult');
+            calculationResult.innerHTML = `<div>${message}</div>`;
+            calculationResult.className = 'calculation-result safe';
+            calculationResult.style.display = 'block';
+            
+            setTimeout(() => {
+                calculationResult.style.display = 'none';
+            }, 3000);
+        }
+
+        // 初始化应用
+        function initializeApp() {
+            document.getElementById('blueTableBody').innerHTML = '';
+            document.getElementById('roadTableBody').innerHTML = '';
+
+            // 添加十字架高亮效果
+            function setupCrossHighlight() {
+                const table = document.getElementById('roadTable');
+                
+                table.addEventListener('mouseover', function(e) {
+                    if (e.target.tagName === 'TD') {
+                        const td = e.target;
+                        const tr = td.parentElement;
+                        const colIndex = td.cellIndex;
+                        
+                        // 高亮整行
+                        tr.classList.add('row-highlight');
+                        
+                        // 高亮整列
+                        const allRows = table.querySelectorAll('tr');
+                        allRows.forEach(row => {
+                            if (row.cells[colIndex]) {
+                                row.cells[colIndex].classList.add('col-highlight');
+                            }
+                        });
+                    }
+                });
+                
+                table.addEventListener('mouseout', function(e) {
+                    if (e.target.tagName === 'TD') {
+                        // 移除所有高亮
+                        table.querySelectorAll('.row-highlight').forEach(el => {
+                            el.classList.remove('row-highlight');
+                        });
+                        table.querySelectorAll('.col-highlight').forEach(el => {
+                            el.classList.remove('col-highlight');
+                        });
+                    }
+                });
+            }
+            
+            // 调用函数
+            setupCrossHighlight();
+
+            // 初始化红球选择
+            initializeRedBalls();
+            
+            // 初始化蓝球选择
+            initializeBlueBalls();
+
+            // 更新当前日期显示
+            updateCurrentDate();
+
+            const hasData = loadDataFromLocalStorage();
+            if (hasData) {
+                updateYearFilter();
+                updateImportButton();
+                filterData();
+            } else {
+                renderBlueTable([]);
+                renderRoadTable([]);
+            }
+
+            // 更新当前日期显示
+            function updateCurrentDate() {
+                const now = new Date();
+                const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+                document.getElementById('currentDate').textContent = currentDate;
+            }
+
+            // 绑定事件
+            document.getElementById('excelImportBtn').addEventListener('click', handleExcelImport);
+            document.getElementById('year').addEventListener('change', filterData);
+            document.getElementById('weekday').addEventListener('change', filterData);
+            document.getElementById('period').addEventListener('change', filterData);
+            
+            // 绑定筛选按钮事件
+            document.getElementById('calculateButton').addEventListener('click', calculateGroups);
+            document.getElementById('generateButton').addEventListener('click', generateNumbers);
+            document.getElementById('resetButton').addEventListener('click', resetFilterConditions);
+            
+            // 初始化表格折叠
+            setupTableCollapse('blue');
+            setupTableCollapse('filter');
+            setupTableCollapse('road');
+            
+            initializeStoredData();
+            initBlueFilter();
+            
+            console.log('双色球综合分析系统初始化完成');
+        }
+
+        // DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
