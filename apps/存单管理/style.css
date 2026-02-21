@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  padding: 16px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: system-ui, sans-serif;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+textarea {
+  width: 100%;
+  height: calc(100vh - 80px);
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  resize: none;
+  font-size: 16px;
+  background: #1e293b;
+  color: #e2e8f0;
+  outline: none;
+}
