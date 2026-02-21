@@ -109,3 +109,9 @@ html, body {
 .hidden {
   display: none;
 }
+img {
+  -webkit-touch-callout: none; /* 禁止长按菜单 */
+  -webkit-user-drag: none;     /* 禁止图片被拖动 */
+  user-select: none;           /* 禁止选中 */
+}
+
