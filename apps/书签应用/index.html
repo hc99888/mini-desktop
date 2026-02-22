@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>分类书签九宫格</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#333;padding:10px;}
+h1{text-align:center;font-size:20px;margin-bottom:10px;}
+
+.toolbar{
+  display:flex;gap:8px;flex-wrap:wrap;
+  justify-content:center;margin-bottom:10px;
+}
+.toolbar button{
+  padding:6px 10px;font-size:14px;border:none;
+  border-radius:4px;color:#fff;background:#007bff;cursor:pointer;
+}
+.toolbar .secondary{background:#6c757d;}
+.toolbar .danger{background:#dc3545;}
+.toolbar input[type=file]{display:none;}
+
+.categories-container{
+  display:flex;flex-direction:column;gap:20px;
+}
+
+/* 分类块可拖动 */
+.category-block{
+  background:transparent;
+}
+.category-block.dragging{
+  opacity:0.4;
+}
+
+.category-header{
+  display:flex;align-items:center;margin-bottom:6px;padding:0 4px;
+}
+.category-name{
+  font-size:16px;font-weight:600;margin-right:8px;
+}
+.category-actions{
+  margin-left:auto;display:flex;gap:4px;
+}
+.category-actions button{
+  padding:2px 6px;font-size:11px;border:none;
+  border-radius:4px;color:#fff;background:#6c757d;
+}
+.category-actions .edit-cat{background:#007bff;}
+.category-actions .del-cat{background:#dc3545;}
+
+.grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+}
+
+/* 书签 tile */
+.tile{
+  background:#fff;border-radius:8px;padding:8px 4px;
+  min-height:80px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;position:relative;
+  cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);
+}
+.tile.dragging{
+  opacity:0.4;
+}
+
+.tile-logo{
+  width:32px;height:32px;border-radius:8px;background:#ddd;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold;color:#fff;margin-bottom:4px;font-size:16px;
+  overflow:hidden;
+}
+.tile-logo img{
+  width:100%;height:100%;object-fit:cover;
+}
+.tile-title{
+  font-size:12px;text-align:center;max-height:32px;overflow:hidden;
+}
+
+.tile-actions{
+  position:absolute;top:4px;right:4px;display:flex;gap:4px;
+  opacity:0;transition:.2s;
+}
+.tile:hover .tile-actions,
+.tile.show-actions .tile-actions{
+  opacity:1;
+}
+.tile-actions button{
+  padding:2px 4px;font-size:10px;border:none;
+  border-radius:3px;background:rgba(0,0,0,.5);color:#fff;
+}
+
+/* 弹窗 */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);
+  display:none;align-items:center;justify-content:center;z-index:1000;
+}
+.modal{
+  background:#fff;border-radius:8px;padding:16px;width:90%;
+  max-width:360px;box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.modal h2{font-size:16px;margin-bottom:10px;}
+.modal label{font-size:13px;margin:6px 0 2px;display:block;}
+.modal input{
+  width:100%;padding:6px 8px;font-size:14px;
+  border:1px solid #ccc;border-radius:4px;
+}
+.modal-buttons{
+  margin-top:12px;display:flex;justify-content:flex-end;gap:8px;
+}
+.modal-buttons button{
+  padding:6px 10px;border:none;border-radius:4px;color:#fff;
+}
+.modal-buttons .cancel{background:#6c757d;}
+.modal-buttons .ok{background:#007bff;}
+
+.category-select{
+  position:relative;display:flex;align-items:center;
+}
+.category-select input{flex:1;}
+.dropdown-btn{
+  margin-left:6px;padding:4px 8px;font-size:14px;
+  border:1px solid #ccc;background:#eee;border-radius:4px;cursor:pointer;
+}
+.dropdown-menu{
+  position:absolute;top:38px;left:0;right:0;background:#fff;
+  border:1px solid #ccc;border-radius:6px;max-height:200px;
+  overflow-y:auto;display:none;z-index:2000;
+}
+.dropdown-menu div{
+  padding:8px;cursor:pointer;
+}
+.dropdown-menu div:hover{
+  background:#f0f0f0;
+}
+</style>
+
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</head>
+
+<body>
+<h1>分类书签九宫格</h1>
+
+<div class="toolbar">
+  <button id="addBookmarkBtn">添加书签</button>
+  <button id="exportBtn" class="secondary">导出数据</button>
+  <label>
+    <button id="importBtn" class="secondary">导入数据</button>
+    <input type="file" id="importFile" accept="application/json" />
+  </label>
+  <button id="clearBtn" class="danger">清空全部</button>
+</div>
+
+<div id="categoriesContainer" class="categories-container"></div>
+
+<!-- 添加/编辑书签弹窗 -->
+<div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h2 id="modalTitle">添加书签</h2>
+
+    <label>分类：</label>
+    <div class="category-select">
+      <input type="text" id="inputCategory" placeholder="选择或输入分类（留空为默认）" />
+      <button id="categoryDropdownBtn" class="dropdown-btn">▼</button>
+      <div id="categoryDropdownMenu" class="dropdown-menu"></div>
+    </div>
+
+    <label>标题（可选）：</label>
+    <input type="text" id="inputTitle" placeholder="例如：B站" />
+
+    <label>网址：</label>
+    <input type="text" id="inputUrl" placeholder="https://..." />
+
+    <label>说明（可选）：</label>
+    <input type="text" id="inputDesc" placeholder="例如：常用视频网站" />
+
+    <div class="modal-buttons">
+      <button class="cancel" id="cancelModal">取消</button>
+      <button class="ok" id="okModal">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑分类弹窗 -->
+<div id="categoryModalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h2 id="categoryModalTitle">编辑分类</h2>
+    <label>分类名称：</label>
+    <input type="text" id="inputCategoryName" />
+    <div class="modal-buttons">
+      <button class="cancel" id="cancelCategoryModal">取消</button>
+      <button class="ok" id="okCategoryModal">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 书签说明弹窗 -->
+<div id="descModalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <h2>书签说明</h2>
+    <p id="descContent" style="font-size:14px;line-height:1.6;"></p>
+    <div class="modal-buttons">
+      <button class="cancel" id="closeDescModal">关闭</button>
+      <button class="ok" id="visitLinkBtn">继续访问</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const STORAGE_KEY="catBookmarks_v4";
+let categories=[];
+let editingCatIndex=null;
+let editingBookmark={catIndex:null,bookmarkIndex:null};
+
+const container=document.getElementById("categoriesContainer");
+const addBookmarkBtn=document.getElementById("addBookmarkBtn");
+const exportBtn=document.getElementById("exportBtn");
+const importBtn=document.getElementById("importBtn");
+const importFile=document.getElementById("importFile");
+const clearBtn=document.getElementById("clearBtn");
+
+const modalBackdrop=document.getElementById("modalBackdrop");
+const modalTitle=document.getElementById("modalTitle");
+const inputCategory=document.getElementById("inputCategory");
+const inputTitle=document.getElementById("inputTitle");
+const inputUrl=document.getElementById("inputUrl");
+const inputDesc=document.getElementById("inputDesc");
+const cancelModal=document.getElementById("cancelModal");
+const okModal=document.getElementById("okModal");
+
+const catModalBackdrop=document.getElementById("categoryModalBackdrop");
+const inputCategoryName=document.getElementById("inputCategoryName");
+const cancelCategoryModal=document.getElementById("cancelCategoryModal");
+const okCategoryModal=document.getElementById("okCategoryModal");
+
+const dropdownBtn=document.getElementById("categoryDropdownBtn");
+const dropdownMenu=document.getElementById("categoryDropdownMenu");
+
+const descModalBackdrop=document.getElementById("descModalBackdrop");
+const descContent=document.getElementById("descContent");
+const closeDescModal=document.getElementById("closeDescModal");
+const visitLinkBtn=document.getElementById("visitLinkBtn");
+let currentVisitUrl="";
+
+function escapeHtml(t){
+  return t.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+}
+function getInitial(t){
+  t=(t||"?").trim();
+  return t?t[0].toUpperCase():"?";
+}
+function getColor(t){
+  t=t||"?";
+  let h=0;
+  for(let i=0;i<t.length;i++)h=t.charCodeAt(i)+((h<<5)-h);
+  return`hsl(${Math.abs(h)%360},60%,55%)`;
+}
+function normalizeUrl(u){
+  u=u.trim();
+  return/^https?:\/\//i.test(u)?u:"https://"+u;
+}
+function favicon(u){
+  try{
+    const host=new URL(u).hostname;
+    return`https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+  }catch(e){return"";}
+}
+
+dropdownBtn.onclick=e=>{
+  e.stopPropagation();
+  renderDropdown();
+  dropdownMenu.style.display=
+    dropdownMenu.style.display==="block"?"none":"block";
+};
+function renderDropdown(){
+  dropdownMenu.innerHTML="";
+  categories.forEach(c=>{
+    const d=document.createElement("div");
+    d.textContent=c.name;
+    d.onclick=()=>{
+      inputCategory.value=c.name;
+      dropdownMenu.style.display="none";
+    };
+    dropdownMenu.appendChild(d);
+  });
+}
+document.onclick=()=>dropdownMenu.style.display="none";
+
+function render(){
+  container.innerHTML="";
+
+  categories.forEach((cat,ci)=>{
+    const block=document.createElement("div");
+    block.className="category-block";
+    block.draggable=true;
+    block.dataset.index=ci;
+
+    block.addEventListener("dragstart",e=>{
+      block.classList.add("dragging");
+      e.dataTransfer.setData("text/plain",ci);
+    });
+    block.addEventListener("dragend",()=>{
+      block.classList.remove("dragging");
+    });
+
+    block.addEventListener("dragover",e=>{
+      e.preventDefault();
+      const dragging=document.querySelector(".category-block.dragging");
+      if(!dragging)return;
+      const blocks=[...container.children];
+      const currentIndex=blocks.indexOf(block);
+      const draggingIndex=blocks.indexOf(dragging);
+      if(currentIndex!==draggingIndex){
+        if(currentIndex>draggingIndex){
+          container.insertBefore(dragging,block.nextSibling);
+        }else{
+          container.insertBefore(dragging,block);
+        }
+      }
+    });
+
+    block.addEventListener("drop",()=>{
+      const newOrder=[...container.children].map(b=>{
+        return categories[b.dataset.index];
+      });
+      categories=newOrder;
+      save();
+      render();
+    });
+
+    const header=document.createElement("div");
+    header.className="category-header";
+    header.innerHTML=`
+      <span class="category-name">${escapeHtml(cat.name)}</span>
+      <div class="category-actions">
+        <button class="edit-cat" data-i="${ci}">改</button>
+        <button class="del-cat" data-i="${ci}">删</button>
+      </div>
+    `;
+
+    const grid=document.createElement("div");
+    grid.className="grid";
+
+    cat.bookmarks.forEach((b,bi)=>{
+      grid.appendChild(createTile(ci,bi,b));
+    });
+
+    block.appendChild(header);
+    block.appendChild(grid);
+    container.appendChild(block);
+  });
+
+  document.querySelectorAll(".edit-cat").forEach(btn=>{
+    btn.onclick=()=>openEditCategory(+btn.dataset.i);
+  });
+  document.querySelectorAll(".del-cat").forEach(btn=>{
+    btn.onclick=()=>{
+      const i=+btn.dataset.i;
+      if(confirm(`删除分类“${categories[i].name}”？`)){
+        categories.splice(i,1);
+        save();render();
+      }
+    };
+  });
+}
+
+function createTile(ci,bi,b){
+  const t=document.createElement("div");
+  t.className="tile";
+  t.draggable=true;
+  t.dataset.ci=ci;
+  t.dataset.bi=bi;
+
+  t.addEventListener("dragstart",()=>{
+    t.classList.add("dragging");
+  });
+  t.addEventListener("dragend",()=>{
+    t.classList.remove("dragging");
+  });
+
+  t.addEventListener("dragover",e=>{
+    e.preventDefault();
+    const dragging=document.querySelector(".tile.dragging");
+    if(!dragging)return;
+
+    const grid=t.parentElement;
+    const tiles=[...grid.children];
+    const currentIndex=tiles.indexOf(t);
+    const draggingIndex=tiles.indexOf(dragging);
+
+    if(currentIndex!==draggingIndex){
+      if(currentIndex>draggingIndex){
+        grid.insertBefore(dragging,t.nextSibling);
+      }else{
+        grid.insertBefore(dragging,t);
+      }
+    }
+  });
+
+  t.addEventListener("drop",()=>{
+    const grid=t.parentElement;
+    const newOrder=[...grid.children].map(tile=>{
+      const ci=tile.dataset.ci;
+      const bi=tile.dataset.bi;
+      return categories[ci].bookmarks[bi];
+    });
+    categories[ci].bookmarks=newOrder;
+    save();
+    render();
+  });
+
+  t.onclick=e=>{
+    if(t.classList.contains("show-actions")){
+      currentVisitUrl=b.url;
+      descContent.textContent=b.desc || "无说明";
+      descModalBackdrop.style.display="flex";
+      t.classList.remove("show-actions");
+    }else{
+      document.querySelectorAll(".tile.show-actions")
+        .forEach(x=>x.classList.remove("show-actions"));
+      t.classList.add("show-actions");
+    }
+  };
+
+  const logo=document.createElement("div");
+  logo.className="tile-logo";
+  if(b.favicon){
+    const img=document.createElement("img");
+    img.src=b.favicon;
+    img.onerror=()=>{
+      logo.textContent=getInitial(b.title||b.url);
+      logo.style.background=getColor(b.title||b.url);
+    };
+    logo.appendChild(img);
+  }else{
+    logo.textContent=getInitial(b.title||b.url);
+    logo.style.background=getColor(b.title||b.url);
+  }
+
+  const title=document.createElement("div");
+  title.className="tile-title";
+  title.textContent=b.title||b.url;
+
+  const act=document.createElement("div");
+  act.className="tile-actions";
+
+  const eBtn=document.createElement("button");
+  eBtn.textContent="改";
+  eBtn.onclick=e=>{
+    e.stopPropagation();
+    openEditBookmark(ci,bi);
+  };
+
+  const dBtn=document.createElement("button");
+  dBtn.textContent="删";
+  dBtn.onclick=e=>{
+    e.stopPropagation();
+    if(confirm("删除书签？")){
+      categories[ci].bookmarks.splice(bi,1);
+      save();render();
+    }
+  };
+
+  act.append(eBtn,dBtn);
+  t.append(logo,title,act);
+  return t;
+}
+
+function show(m){m.style.display="flex";}
+function hide(m){m.style.display="none";}
+
+function openAddBookmark(){
+  modalTitle.textContent="添加书签";
+  inputCategory.value="";
+  inputTitle.value="";
+  inputUrl.value="";
+  inputDesc.value="";
+  editingBookmark={catIndex:null,bookmarkIndex:null};
+  show(modalBackdrop);
+}
+
+function openEditBookmark(ci,bi){
+  modalTitle.textContent="编辑书签";
+  const b=categories[ci].bookmarks[bi];
+  inputCategory.value=categories[ci].name;
+  inputTitle.value=b.title||"";
+  inputUrl.value=b.url||"";
+  inputDesc.value=b.desc||"";
+  editingBookmark={catIndex:ci,bookmarkIndex:bi};
+  show(modalBackdrop);
+}
+
+function openEditCategory(i){
+  inputCategoryName.value=categories[i].name;
+  editingCatIndex=i;
+  show(catModalBackdrop);
+}
+
+okModal.onclick=()=>{
+  let cat=inputCategory.value.trim();
+  const title=inputTitle.value.trim();
+  const url=inputUrl.value.trim();
+  const desc=inputDesc.value.trim();
+
+  if(!url){
+    alert("网址不能为空");
+    return;
+  }
+
+  if(!cat)cat="默认";
+
+  const u=normalizeUrl(url);
+  const data={
+    title:title||u,
+    url:u,
+    favicon:favicon(u),
+    desc:desc||""
+  };
+
+   let ci = categories.findIndex(c => c.name === cat);
+  if (ci === -1) {
+    categories.push({ name: cat, bookmarks: [] });
+    ci = categories.length - 1;
+  }
+
+  if (editingBookmark.bookmarkIndex != null) {
+    const old = editingBookmark;
+    if (old.catIndex === ci) {
+      categories[ci].bookmarks[old.bookmarkIndex] = data;
+    } else {
+      categories[old.catIndex].bookmarks.splice(old.bookmarkIndex, 1);
+      categories[ci].bookmarks.push(data);
+    }
+  } else {
+    categories[ci].bookmarks.push(data);
+  }
+
+  save();
+  render();
+  hide(modalBackdrop);
+};
+
+cancelModal.onclick = () => hide(modalBackdrop);
+modalBackdrop.onclick = e => { if (e.target === modalBackdrop) hide(modalBackdrop); };
+
+okCategoryModal.onclick = () => {
+  const name = inputCategoryName.value.trim();
+  if (!name) {
+    alert("分类名称不能为空");
+    return;
+  }
+  if (editingCatIndex != null) {
+    categories[editingCatIndex].name = name;
+    editingCatIndex = null;
+  }
+  save();
+  render();
+  hide(catModalBackdrop);
+};
+
+cancelCategoryModal.onclick = () => hide(catModalBackdrop);
+catModalBackdrop.onclick = e => { if (e.target === catModalBackdrop) hide(catModalBackdrop); };
+
+addBookmarkBtn.onclick = openAddBookmark;
+
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(categories, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "bookmarks.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+importBtn.onclick = () => importFile.click();
+
+importFile.onchange = () => {
+  const f = importFile.files[0];
+  if (!f) return;
+
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) {
+        alert("导入格式不正确");
+        return;
+      }
+
+      // 自动兼容旧数据
+      data.forEach(cat => {
+        cat.bookmarks.forEach(b => {
+          if (!("desc" in b)) b.desc = "";
+        });
+      });
+
+      categories = data;
+      save();
+      render();
+      alert("导入成功");
+    } catch (err) {
+      alert("导入失败：JSON 解析错误");
+    }
+  };
+  r.readAsText(f, "utf-8");
+};
+
+clearBtn.onclick = () => {
+  if (confirm("确定清空全部分类和书签吗？")) {
+    categories = [];
+    save();
+    render();
+  }
+};
+
+// 点击空白处隐藏 tile 操作按钮
+document.addEventListener("click", e => {
+  if (!e.target.closest(".tile")) {
+    document.querySelectorAll(".tile.show-actions")
+      .forEach(t => t.classList.remove("show-actions"));
+  }
+});
+
+// 说明弹窗事件
+closeDescModal.onclick = () => hide(descModalBackdrop);
+descModalBackdrop.onclick = e => { if (e.target === descModalBackdrop) hide(descModalBackdrop); };
+visitLinkBtn.onclick = () => {
+  if (currentVisitUrl) {
+    window.open(currentVisitUrl, "_blank");
+    hide(descModalBackdrop);
+  }
+};
+
+// 保存到 localStorage
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+}
+
+// 初始化
+function init() {
+  const s = localStorage.getItem(STORAGE_KEY);
+  if (s) {
+    try {
+      categories = JSON.parse(s) || [];
+
+      // 自动兼容旧数据
+      categories.forEach(cat => {
+        cat.bookmarks.forEach(b => {
+          if (!("desc" in b)) b.desc = "";
+        });
+      });
+
+    } catch (e) {
+      categories = [];
+    }
+  }
+  render();
+}
+
+init();
+})();
+</script>
+
+</body>
+</html>
