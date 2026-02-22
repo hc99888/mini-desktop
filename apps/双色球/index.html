@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>订阅抓取器</title>
+
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 20px;
+    background: #eef2f7;
+}
+.card {
+    background: white;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    background: #0078ff;
+    color: white;
+    transition: 0.2s;
+}
+button:active {
+    transform: scale(0.97);
+}
+.switch {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+.switch input {
+    width: 20px;
+    height: 20px;
+}
+.speed {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #555;
+}
+</style>
+</head>
+
+<body>
+
+<h2>订阅抓取器（高级版）</h2>
+
+<div class="card">
+    <button id="fetchBtn">一键抓取订阅</button>
+
+    <div class="switch">
+        <input type="checkbox" id="autoUpdate">
+        <label for="autoUpdate" style="margin-left: 10px;">自动更新（每6小时）</label>
+    </div>
+
+    <p><b>最新更新时间：</b><span id="lastUpdate">无</span></p>
+    <p><b>节点数量：</b><span id="nodeCount">0</span></p>
+</div>
+
+<div class="card">
+    <button id="speedBtn" style="background:#ff9800;">节点测速</button>
+    <div id="speedResult" class="speed">未测速</div>
+</div>
+
+<div class="card">
+    <button id="exportBtn" style="background:#28a745;">导出总订阅链接</button>
+</div>
+
+<script>
+const RAW = "https://openproxylist.com/v2ray/raw.txt";
+const SUB = "https://openproxylist.com/v2ray/subscription.txt";
+
+async function fetchText(url) {
+    const res = await fetch(url);
+    return await res.text();
+}
+
+async function fetchAll() {
+    document.getElementById("fetchBtn").innerText = "抓取中...";
+    try {
+        const raw = await fetchText(RAW);
+        const sub = await fetchText(SUB);
+
+        const merged = raw + "\n" + sub;
+
+        localStorage.setItem("merged", merged);
+        localStorage.setItem("lastUpdate", new Date().toLocaleString());
+
+        document.getElementById("lastUpdate").innerText = localStorage.getItem("lastUpdate");
+        document.getElementById("nodeCount").innerText = merged.split("\n").length;
+
+        alert("抓取完成！");
+    } catch (e) {
+        alert("抓取失败，请检查网络");
+    }
+    document.getElementById("fetchBtn").innerText = "一键抓取订阅";
+}
+
+document.getElementById("fetchBtn").onclick = fetchAll;
+
+document.getElementById("exportBtn").onclick = () => {
+    const merged = localStorage.getItem("merged") || "";
+    const base64 = btoa(merged);
+    const link = "data:;base64," + base64;
+    navigator.clipboard.writeText(link);
+    alert("已复制总订阅链接！");
+};
+
+document.getElementById("autoUpdate").checked =
+    localStorage.getItem("autoUpdate") === "1";
+
+document.getElementById("autoUpdate").onchange = (e) => {
+    localStorage.setItem("autoUpdate", e.target.checked ? "1" : "0");
+};
+
+setInterval(() => {
+    if (localStorage.getItem("autoUpdate") === "1") {
+        fetchAll();
+    }
+}, 6 * 60 * 60 * 1000);
+
+window.onload = () => {
+    document.getElementById("lastUpdate").innerText =
+        localStorage.getItem("lastUpdate") || "无";
+    const merged = localStorage.getItem("merged") || "";
+    document.getElementById("nodeCount").innerText =
+        merged ? merged.split("\n").length : 0;
+};
+
+// ----------------------
+// 节点测速（JS 版）
+// ----------------------
+document.getElementById("speedBtn").onclick = async () => {
+    const merged = localStorage.getItem("merged") || "";
+    const nodes = merged.split("\n").filter(x => x.includes("vmess://"));
+
+    if (nodes.length === 0) {
+        alert("没有可测速的节点");
+        return;
+    }
+
+    document.getElementById("speedResult").innerText = "测速中...";
+
+    const testUrl = "https://www.google.com/generate_204";
+    const start = performance.now();
+
+    try {
+        await fetch(testUrl, {mode:"no-cors"});
+        const ms = Math.round(performance.now() - start);
+        document.getElementById("speedResult").innerText =
+            "延迟：" + ms + " ms（模拟测速）";
+    } catch {
+        document.getElementById("speedResult").innerText = "测速失败";
+    }
+};
+</script>
+
+</body>
+</html>
