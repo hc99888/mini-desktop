@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>订阅抓取器</title>
+<title>订阅抓取器（最终修复版）</title>
 
 <style>
 body {
@@ -51,7 +51,7 @@ button:active {
 
 <body>
 
-<h2>订阅抓取器（高级版）</h2>
+<h2>订阅抓取器（最终修复版）</h2>
 
 <div class="card">
     <button id="fetchBtn">一键抓取订阅</button>
@@ -75,27 +75,51 @@ button:active {
 </div>
 
 <script>
-const RAW = "https://openproxylist.com/v2ray/raw.txt";
-const SUB = "https://openproxylist.com/v2ray/subscription.txt";
+// ⭐ 正确的订阅源（唯一）
+const SUB = "https://cors.isteed.cc/https://openproxylist.com/v2ray/rawlist/subscribe";
 
-async function fetchText(url) {
-    const res = await fetch(url);
-    return await res.text();
+// ----------------------
+// Base64 自动识别 + 解码
+// ----------------------
+function tryDecodeBase64(str) {
+    try {
+        const cleaned = str.replace(/\s+/g, "");
+        if (/^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+            return atob(cleaned);
+        }
+    } catch {}
+    return str;
 }
 
+// ----------------------
+// 节点数量统计（最终版）
+// ----------------------
+function countNodes(text) {
+    text = tryDecodeBase64(text);
+
+    const schemes = ["vmess://", "vless://", "trojan://", "ss://", "ssr://"];
+    let count = 0;
+
+    schemes.forEach(s => {
+        count += (text.split(s).length - 1);
+    });
+
+    return count;
+}
+
+// ----------------------
+// 抓取订阅（最终版）
+// ----------------------
 async function fetchAll() {
     document.getElementById("fetchBtn").innerText = "抓取中...";
     try {
-        const raw = await fetchText(RAW);
-        const sub = await fetchText(SUB);
-
-        const merged = raw + "\n" + sub;
+        const merged = await fetch(SUB).then(r => r.text());
 
         localStorage.setItem("merged", merged);
         localStorage.setItem("lastUpdate", new Date().toLocaleString());
 
         document.getElementById("lastUpdate").innerText = localStorage.getItem("lastUpdate");
-        document.getElementById("nodeCount").innerText = merged.split("\n").length;
+        document.getElementById("nodeCount").innerText = countNodes(merged);
 
         alert("抓取完成！");
     } catch (e) {
@@ -106,6 +130,9 @@ async function fetchAll() {
 
 document.getElementById("fetchBtn").onclick = fetchAll;
 
+// ----------------------
+// 导出订阅
+// ----------------------
 document.getElementById("exportBtn").onclick = () => {
     const merged = localStorage.getItem("merged") || "";
     const base64 = btoa(merged);
@@ -114,6 +141,9 @@ document.getElementById("exportBtn").onclick = () => {
     alert("已复制总订阅链接！");
 };
 
+// ----------------------
+// 自动更新
+// ----------------------
 document.getElementById("autoUpdate").checked =
     localStorage.getItem("autoUpdate") === "1";
 
@@ -127,26 +157,21 @@ setInterval(() => {
     }
 }, 6 * 60 * 60 * 1000);
 
+// ----------------------
+// 页面加载时恢复数据
+// ----------------------
 window.onload = () => {
     document.getElementById("lastUpdate").innerText =
         localStorage.getItem("lastUpdate") || "无";
+
     const merged = localStorage.getItem("merged") || "";
-    document.getElementById("nodeCount").innerText =
-        merged ? merged.split("\n").length : 0;
+    document.getElementById("nodeCount").innerText = countNodes(merged);
 };
 
 // ----------------------
-// 节点测速（JS 版）
+// 节点测速（模拟延迟）
 // ----------------------
 document.getElementById("speedBtn").onclick = async () => {
-    const merged = localStorage.getItem("merged") || "";
-    const nodes = merged.split("\n").filter(x => x.includes("vmess://"));
-
-    if (nodes.length === 0) {
-        alert("没有可测速的节点");
-        return;
-    }
-
     document.getElementById("speedResult").innerText = "测速中...";
 
     const testUrl = "https://www.google.com/generate_204";
