@@ -5,9 +5,9 @@
     "url": "apps/书签应用/"
   },
   {
-    "name": "存单管理",
-    "icon": "apps/存单管理/icon.png",
-    "url": "apps/存单管理/"
+    "name": "仓库资源",
+    "icon": "apps/仓库资源/icon.png",
+    "url": "apps/仓库资源/"
   },
   {
     "name": "双色球",
@@ -20,6 +20,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
