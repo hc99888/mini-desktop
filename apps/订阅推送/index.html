@@ -70,7 +70,7 @@ button.error {
 .stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 10px;
     margin: 10px 0;
     padding: 10px;
     background: #f8f9fa;
@@ -78,9 +78,9 @@ button.error {
 }
 .stats-item {
     background: white;
-    padding: 5px 12px;
+    padding: 5px 10px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: 13px;
 }
 .url-container {
     margin-top: 15px;
@@ -144,19 +144,17 @@ button.error {
     <p><b>⚙️ GitHub配置</b></p>
     <div class="github-config">
         <label>GitHub用户名：</label>
-       <input type="text" id="githubUser" placeholder="hc99888" readonly>
-
+        <input type="text" id="githubUser" placeholder="例如: hc99888" readonly>
         
         <label>仓库名：</label>
-        <input type="text" id="githubRepo" placeholder="subscription-auto-push" readonly>
-
+        <input type="text" id="githubRepo" placeholder="例如: subscription-auto-push" readonly>
         
         <label>Personal Access Token：</label>
         <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
         
-        <label>文件名（可选）：</label>
-        <input type="text" id="githubFilename" value="订阅推送.txt" readonly>
-
+        <label>文件名：</label>
+        <!-- 不再写死 value，交给 JS 默认值控制 -->
+        <input type="text" id="githubFilename" placeholder="订阅推送.txt" readonly>
         
         <p class="small">⚠️ Token需要 repo 权限，不会保存在服务器，只存在本地浏览器</p>
     </div>
@@ -181,6 +179,11 @@ button.error {
         <span class="stats-item">📊 总行数：<span id="rawLines">0</span></span>
         <span class="stats-item">✅ 有效节点：<span id="validCount">0</span></span>
         <span class="stats-item">❌ 无效行：<span id="invalidCount">0</span></span>
+        <span class="stats-item">vmess：<span id="vmessCount">0</span></span>
+        <span class="stats-item">vless：<span id="vlessCount">0</span></span>
+        <span class="stats-item">trojan：<span id="trojanCount">0</span></span>
+        <span class="stats-item">ss：<span id="ssCount">0</span></span>
+        <span class="stats-item">ssr：<span id="ssrCount">0</span></span>
     </div>
 </div>
 
@@ -227,7 +230,7 @@ let currentValidNodes = [];
 function loadGithubConfig() {
     const defaultUser = "hc99888";                 // 你的 GitHub 用户名
     const defaultRepo = "subscription-auto-push";  // 仓库名
-    const defaultFilename = "订阅推送.txt";
+    const defaultFilename = "订阅推送.txt";        // 默认文件名
 
     if (!localStorage.getItem("githubUser")) {
         localStorage.setItem("githubUser", defaultUser);
@@ -268,21 +271,43 @@ function tryDecodeBase64(str) {
 }
 
 // ----------------------
-// 解析节点
+// 解析节点 + 协议统计
 // ----------------------
 function parseNodes(rawText) {
     const decoded = tryDecodeBase64(rawText);
     const lines = decoded.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
     
-    const valid = lines.filter(line => VALID_PREFIXES.some(p => line.startsWith(p)));
-    const invalid = lines.filter(line => !VALID_PREFIXES.some(p => line.startsWith(p)));
+    const valid = [];
+    const invalid = [];
+    const protoCount = {
+        vmess: 0,
+        vless: 0,
+        trojan: 0,
+        ss: 0,
+        ssr: 0
+    };
+
+    for (const line of lines) {
+        const isValid = VALID_PREFIXES.some(p => line.startsWith(p));
+        if (isValid) {
+            valid.push(line);
+            if (line.startsWith("vmess://")) protoCount.vmess++;
+            else if (line.startsWith("vless://")) protoCount.vless++;
+            else if (line.startsWith("trojan://")) protoCount.trojan++;
+            else if (line.startsWith("ss://")) protoCount.ss++;
+            else if (line.startsWith("ssr://")) protoCount.ssr++;
+        } else {
+            invalid.push(line);
+        }
+    }
     
     return {
         rawLines: lines.length,
         valid: valid,
         invalid: invalid,
         validCount: valid.length,
-        invalidCount: invalid.length
+        invalidCount: invalid.length,
+        protoCount
     };
 }
 
@@ -293,6 +318,12 @@ function updateDisplay(parsed) {
     document.getElementById("rawLines").innerText = parsed.rawLines;
     document.getElementById("validCount").innerText = parsed.validCount;
     document.getElementById("invalidCount").innerText = parsed.invalidCount;
+
+    document.getElementById("vmessCount").innerText = parsed.protoCount.vmess;
+    document.getElementById("vlessCount").innerText = parsed.protoCount.vless;
+    document.getElementById("trojanCount").innerText = parsed.protoCount.trojan;
+    document.getElementById("ssCount").innerText = parsed.protoCount.ss;
+    document.getElementById("ssrCount").innerText = parsed.protoCount.ssr;
 }
 
 // ----------------------
@@ -380,7 +411,7 @@ async function pushToGithub() {
     
     if (!username || !repo || !token) {
         statusDiv.className = "status error";
-        statusDiv.innerText = "❌ 请填写完整的GitHub配置";
+        statusDiv.innerText = "❌ 请填写完整的GitHub配置（Token必填）";
         return;
     }
     
@@ -393,7 +424,7 @@ async function pushToGithub() {
     try {
         let sha = null;
         try {
-            const getResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filename}`, {
+            const getResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(filename)}`, {
                 headers: {
                     'Authorization': `token ${token}`,
                     'Accept': 'application/vnd.github.v3+json'
@@ -407,7 +438,7 @@ async function pushToGithub() {
 
         const content = btoa(unescape(encodeURIComponent(currentRawText)));
         
-        const pushResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filename}`, {
+        const pushResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(filename)}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `token ${token}`,
@@ -422,8 +453,8 @@ async function pushToGithub() {
         });
         
         if (pushResponse.ok) {
-            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/${filename}`;
-            const jsdelivrUrl = `https://cdn.jsdelivr.net/gh/${username}/${repo}/${filename}`;
+            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/${encodeURIComponent(filename)}`;
+            const jsdelivrUrl = `https://cdn.jsdelivr.net/gh/${username}/${repo}/${encodeURIComponent(filename)}`;
             
             document.getElementById("subscriptionUrl").value = rawUrl;
             
