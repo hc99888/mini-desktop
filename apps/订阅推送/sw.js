@@ -5,8 +5,8 @@ self.addEventListener("install", (event) => {
         "./",
         "./index.html",
         "./manifest.webmanifest",
-        "./icon.jpg",
-        "./icon.jpg"
+        "./icon.png",
+        "./icon.png"
       ]);
     })
   );
@@ -19,5 +19,6 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
 
 
