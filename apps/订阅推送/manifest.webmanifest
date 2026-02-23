@@ -7,16 +7,17 @@
   "theme_color": "#0078ff",
   "icons": [
     {
-      "src": "icon.webp",
+      "src": "icon.jpg",
       "sizes": "192x192",
-      "type": "image/webp"
+      "type": "image/jpg"
     },
     {
-      "src": "icon.webp",
+      "src": "icon.jpg",
       "sizes": "512x512",
-      "type": "image/webp"
+      "type": "image/jpg"
     }
   ]
 }
+
 
 
