@@ -1,5 +1,10 @@
 [
   {
+    "name": "订阅推送",
+    "icon": "apps/订阅推送/icon.png",
+    "url": "apps/订阅推送/"
+  },
+  {
     "name": "书签应用",
     "icon": "apps/书签应用/icon-192.png",
     "url": "apps/书签应用/"
@@ -9,17 +14,14 @@
     "icon": "apps/仓库资源/icon.png",
     "url": "apps/仓库资源/"
   },
-  {
-    "name": "双色球",
-    "icon": "apps/双色球/icon.png",
-    "url": "apps/双色球/"
-  },
+
   {
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
