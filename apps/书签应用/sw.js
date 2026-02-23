@@ -26,8 +26,8 @@ const FILES = [
   `${BASE}/`,
   `${BASE}/index.html`,
   `${BASE}/manifest.json`,
-  `${BASE}/icon-192.png`,
-  `${BASE}/icon-512.png`
+  `${BASE}/app1.png`,
+  `${BASE}/app1.png`
 ];
 
 // 安装时缓存文件
@@ -53,3 +53,4 @@ self.addEventListener("fetch", event => {
       .catch(() => caches.match(event.request)) // 网络失败 → 使用缓存
   );
 });
+
