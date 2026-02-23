@@ -3,21 +3,33 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>订阅抓取器（GitHub自动推送版）</title>
+<title>订阅抓取器-自动推送</title>
 
 <style>
+/* 全局样式 */
 body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    padding: 20px;
+    padding: 15px;
     background: #eef2f7;
+    margin: 0;
 }
+
+/* 卡片布局 */
 .card {
     background: white;
-    padding: 18px;
+    padding: 16px;
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 18px;
+}
+
+/* 标题 */
+h2 {
+    text-align: center;
     margin-bottom: 20px;
 }
+
+/* 按钮 */
 button {
     width: 100%;
     padding: 14px;
@@ -33,512 +45,144 @@ button {
 button:active {
     transform: scale(0.97);
 }
-button.copied {
-    background: #9e9e9e !important;
-}
-button.success {
-    background: #28a745 !important;
-}
-button.error {
-    background: #dc3545 !important;
-}
-.switch {
-    display: flex;
-    align-items: center;
+
+/* 统计区域 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
     margin-top: 10px;
 }
-.switch input {
-    width: 20px;
-    height: 20px;
+.stats-box {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
 }
-.speed, .small {
+
+/* 协议统计 */
+.proto-line {
     margin-top: 10px;
     font-size: 14px;
-    color: #555;
+    line-height: 1.6;
 }
-.segment-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 15px;
-}
-.segment-buttons button {
-    flex: 1 1 calc(50% - 8px);
-    background: #28a745;
-    margin-top: 0;
-}
-.stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 10px 0;
+
+/* 输入框 */
+input, textarea {
+    width: 100%;
     padding: 10px;
-    background: #f8f9fa;
     border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+    box-sizing: border-box;
 }
-.stats-item {
-    background: white;
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 13px;
-}
-.url-container {
-    margin-top: 15px;
+
+/* 推送结果 textarea */
+#pushResultBox {
+    width: 100%;
+    height: 80px;
     padding: 10px;
-    background: #e8f4fd;
     border-radius: 8px;
+    border: 1px solid #b8daff;
+    background: #eef7ff;
+    resize: none;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.4;
     word-break: break-all;
 }
-.url-container input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #b8daff;
-    border-radius: 4px;
+
+/* 分段复制按钮两列布局 */
+.segment-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+.segment-buttons button {
+    background: #28a745;
+}
+
+/* 测速 */
+.speed {
+    margin-top: 10px;
     font-size: 14px;
-    box-sizing: border-box;
-}
-.github-config {
-    background: #f0f0f0;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-.github-config input {
-    width: 100%;
-    padding: 8px;
-    margin: 5px 0 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-.status {
-    padding: 10px;
-    border-radius: 4px;
-    margin: 10px 0;
-    display: none;
-}
-.status.success {
-    background: #d4edda;
-    color: #155724;
-    display: block;
-}
-.status.error {
-    background: #f8d7da;
-    color: #721c24;
-    display: block;
-}
-.status.info {
-    background: #d1ecf1;
-    color: #0c5460;
-    display: block;
 }
 </style>
 </head>
 
 <body>
 
-<h2>📡 订阅抓取器（GitHub自动推送版）</h2>
+<h2>📡 订阅抓取器 - 自动推送</h2>
 
-<!-- GitHub配置卡片 -->
+<!-- 抓取订阅 -->
 <div class="card">
-    <p><b>⚙️ GitHub配置</b></p>
-    <div class="github-config">
-        <label>GitHub用户名：</label>
-        <input type="text" id="githubUser" placeholder="例如: hc99888" readonly>
-        
-        <label>仓库名：</label>
-        <input type="text" id="githubRepo" placeholder="例如: subscription-auto-push" readonly>
-        
-        <label>Personal Access Token：</label>
-        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-        
-        <label>文件名：</label>
-        <!-- 不再写死 value，交给 JS 默认值控制 -->
-        <input type="text" id="githubFilename" placeholder="Node name.txt">
-        
-        <p class="small">⚠️ Token需要 repo 权限，不会保存在服务器，只存在本地浏览器</p>
-    </div>
-    
-    <div id="githubStatus" class="status"></div>
-    
-    <button id="pushToGithubBtn" style="background: #6f42c1;">📤 一键推送到GitHub</button>
-    <p class="small">点击后自动将节点数据推送到您的GitHub仓库</p>
-</div>
+    <h3>抓取订阅</h3>
 
-<div class="card">
     <button id="fetchBtn">🚀 一键抓取订阅</button>
 
-    <div class="switch">
-        <input type="checkbox" id="autoUpdate">
-        <label for="autoUpdate" style="margin-left: 10px;">自动更新（每6小时）</label>
+    <p>最近更新：<span id="lastUpdate">无</span></p>
+
+    <label><input type="checkbox" id="autoUpdate"> 自动更新（每 6 小时）</label>
+
+    <h4>统计：</h4>
+    <div class="stats-grid">
+        <div class="stats-box">总行数：<span id="rawLines">0</span></div>
+        <div class="stats-box">有效：<span id="validCount">0</span></div>
+        <div class="stats-box">无效：<span id="invalidCount">0</span></div>
     </div>
 
-    <p><b>最新更新时间：</b><span id="lastUpdate">无</span></p>
-    
-    <div class="stats">
-        <span class="stats-item">📊 总行数：<span id="rawLines">0</span></span>
-        <span class="stats-item">✅ 有效节点：<span id="validCount">0</span></span>
-        <span class="stats-item">❌ 无效行：<span id="invalidCount">0</span></span>
-        <span class="stats-item">vmess：<span id="vmessCount">0</span></span>
-        <span class="stats-item">vless：<span id="vlessCount">0</span></span>
-        <span class="stats-item">trojan：<span id="trojanCount">0</span></span>
-        <span class="stats-item">ss：<span id="ssCount">0</span></span>
-        <span class="stats-item">ssr：<span id="ssrCount">0</span></span>
+    <h4>协议统计：</h4>
+    <div class="proto-line">
+        vmess：<span id="vmessCount">0</span>　
+        vless：<span id="vlessCount">0</span>　
+        trojan：<span id="trojanCount">0</span><br>
+        ss：<span id="ssCount">0</span>　
+        ssr：<span id="ssrCount">0</span>
     </div>
 </div>
 
+<!-- GitHub 推送 -->
 <div class="card">
-    <p><b>🔗 GitHub订阅链接（点击复制）</b></p>
-    <div class="url-container">
-        <input type="text" id="subscriptionUrl" readonly value="请先推送到GitHub" />
-    </div>
-    
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-        <button id="copyUrlBtn" style="background: #17a2b8; flex: 1;">📋 复制链接</button>
-        <button id="testUrlBtn" style="background: #fd7e14; flex: 1;">🌐 测试链接</button>
-    </div>
-    
-    <p class="small">
-        ✅ 这是真正的在线订阅链接，可在 v2rayN / Clash 等客户端直接使用
-    </p>
+    <h3>GitHub 推送</h3>
+
+    <label>文件名（可编辑）：</label>
+    <input type="text" id="githubFilename" placeholder="subscribe.txt">
+
+    <label>Token：</label>
+    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx">
+
+    <button id="pushToGithubBtn" style="background:#6f42c1;">📤 推送到 GitHub</button>
+
+    <h4>推送结果：</h4>
+    <textarea id="pushResultBox" readonly>暂无推送</textarea>
 </div>
 
+<!-- 分段复制 -->
 <div class="card">
-    <p><b>📋 分段复制节点（每80个一段）</b></p>
+    <h3>分段复制</h3>
     <div id="segmentButtons" class="segment-buttons"></div>
 </div>
-
-<div class="card">
-    <button id="speedBtn" style="background:#ff9800;">⏱️ 节点测速</button>
-    <div id="speedResult" class="speed">未测速</div>
-</div>
-
 <script>
-// 订阅源（使用稳定 CORS 代理）
-const SUB = "https://api.allorigins.win/raw?url=https://openproxylist.com/v2ray/rawlist/subscribe";
+/* -----------------------------
+   默认配置
+----------------------------- */
+const defaultUser = "hc99888";
+const defaultRepo = "subscription-auto-push";
+const defaultFilename = "subscribe.txt";
 
-// 有效协议前缀
+const SUB = "https://api.allorigins.win/raw?url=https://openproxylist.com/v2ray/rawlist/subscribe";
 const VALID_PREFIXES = ["vmess://", "vless://", "trojan://", "ss://", "ssr://"];
 
-// 当前数据
 let currentRawText = "";
 let currentValidNodes = [];
 
-// ----------------------
-// GitHub配置加载/保存
-// ----------------------
-function loadGithubConfig() {
-    const defaultUser = "hc99888";                 // 你的 GitHub 用户名
-    const defaultRepo = "subscription-auto-push";  // 仓库名
-    const defaultFilename = "Node name.txt";        // 默认文件名
-
-    if (!localStorage.getItem("githubUser")) {
-        localStorage.setItem("githubUser", defaultUser);
-    }
-    if (!localStorage.getItem("githubRepo")) {
-        localStorage.setItem("githubRepo", defaultRepo);
-    }
-    if (!localStorage.getItem("githubFilename")) {
-        localStorage.setItem("githubFilename", defaultFilename);
-    }
-
-    document.getElementById("githubUser").value = localStorage.getItem("githubUser");
-    document.getElementById("githubRepo").value = localStorage.getItem("githubRepo");
-    document.getElementById("githubToken").value = localStorage.getItem("githubToken") || "";
-    document.getElementById("githubFilename").value = localStorage.getItem("githubFilename");
-}
-
-function saveGithubConfig() {
-    localStorage.setItem("githubUser", document.getElementById("githubUser").value);
-    localStorage.setItem("githubRepo", document.getElementById("githubRepo").value);
-    localStorage.setItem("githubToken", document.getElementById("githubToken").value);
-    localStorage.setItem("githubFilename", document.getElementById("githubFilename").value);
-}
-
-// ----------------------
-// Base64解码
-// ----------------------
-function tryDecodeBase64(str) {
-    if (VALID_PREFIXES.some(p => str.includes(p))) return str;
-    try {
-        const cleaned = str.replace(/\s+/g, "");
-        if (/^[A-Za-z0-9+/=]+$/.test(cleaned)) {
-            const decoded = atob(cleaned);
-            if (VALID_PREFIXES.some(p => decoded.includes(p))) return decoded;
-        }
-    } catch {}
-    return str;
-}
-
-// ----------------------
-// 解析节点 + 协议统计
-// ----------------------
-function parseNodes(rawText) {
-    const decoded = tryDecodeBase64(rawText);
-    const lines = decoded.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
-    
-    const valid = [];
-    const invalid = [];
-    const protoCount = {
-        vmess: 0,
-        vless: 0,
-        trojan: 0,
-        ss: 0,
-        ssr: 0
-    };
-
-    for (const line of lines) {
-        const isValid = VALID_PREFIXES.some(p => line.startsWith(p));
-        if (isValid) {
-            valid.push(line);
-            if (line.startsWith("vmess://")) protoCount.vmess++;
-            else if (line.startsWith("vless://")) protoCount.vless++;
-            else if (line.startsWith("trojan://")) protoCount.trojan++;
-            else if (line.startsWith("ss://")) protoCount.ss++;
-            else if (line.startsWith("ssr://")) protoCount.ssr++;
-        } else {
-            invalid.push(line);
-        }
-    }
-    
-    return {
-        rawLines: lines.length,
-        valid: valid,
-        invalid: invalid,
-        validCount: valid.length,
-        invalidCount: invalid.length,
-        protoCount
-    };
-}
-
-// ----------------------
-// 更新显示
-// ----------------------
-function updateDisplay(parsed) {
-    document.getElementById("rawLines").innerText = parsed.rawLines;
-    document.getElementById("validCount").innerText = parsed.validCount;
-    document.getElementById("invalidCount").innerText = parsed.invalidCount;
-
-    document.getElementById("vmessCount").innerText = parsed.protoCount.vmess;
-    document.getElementById("vlessCount").innerText = parsed.protoCount.vless;
-    document.getElementById("trojanCount").innerText = parsed.protoCount.trojan;
-    document.getElementById("ssCount").innerText = parsed.protoCount.ss;
-    document.getElementById("ssrCount").innerText = parsed.protoCount.ssr;
-}
-
-// ----------------------
-// 渲染分段按钮
-// ----------------------
-function renderSegmentButtons(validNodes) {
-    const container = document.getElementById("segmentButtons");
-    container.innerHTML = "";
-    if (!validNodes.length) return;
-
-    const per = 80;
-    const total = validNodes.length;
-    const segments = Math.ceil(total / per);
-
-    for (let i = 0; i < segments; i++) {
-        const start = i * per;
-        const end = Math.min(start + per, total);
-        const btn = document.createElement("button");
-        btn.textContent = `第${i + 1}段（${start + 1}-${end}）共${end-start}条`;
-        
-        btn.onclick = (function(s, e, idx) {
-            return function() {
-                const part = validNodes.slice(s, e).join("\n");
-                navigator.clipboard.writeText(part).then(() => {
-                    this.classList.add("copied");
-                    this.textContent = `✅ 已复制第${idx + 1}段`;
-                    setTimeout(() => {
-                        this.classList.remove("copied");
-                        this.textContent = `第${idx + 1}段（${s + 1}-${e}）共${e-s}条`;
-                    }, 1000);
-                }).catch(() => alert("复制失败"));
-            };
-        })(start, end, i);
-        
-        container.appendChild(btn);
-    }
-}
-
-// ----------------------
-// 抓取订阅
-// ----------------------
-async function fetchAll() {
-    const fetchBtn = document.getElementById("fetchBtn");
-    fetchBtn.innerText = "⏳ 抓取中...";
-    fetchBtn.disabled = true;
-
-    try {
-        const response = await fetch(SUB);
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        currentRawText = await response.text();
-        
-        localStorage.setItem("merged", currentRawText);
-        localStorage.setItem("lastUpdate", new Date().toLocaleString());
-        
-        const parsed = parseNodes(currentRawText);
-        currentValidNodes = parsed.valid;
-        
-        document.getElementById("lastUpdate").innerText = localStorage.getItem("lastUpdate");
-        updateDisplay(parsed);
-        renderSegmentButtons(parsed.valid);
-        
-        alert(`✅ 抓取成功！有效节点：${parsed.validCount}`);
-    } catch (e) {
-        alert("❌ 抓取失败：" + e.message);
-    }
-    
-    fetchBtn.innerText = "🚀 一键抓取订阅";
-    fetchBtn.disabled = false;
-}
-
-// ----------------------
-// 推送到GitHub
-// ----------------------
-async function pushToGithub() {
-    const statusDiv = document.getElementById("githubStatus");
-    statusDiv.className = "status info";
-    statusDiv.innerText = "⏳ 正在推送到GitHub...";
-    
-    saveGithubConfig();
-    
-    const username = document.getElementById("githubUser").value;
-    const repo = document.getElementById("githubRepo").value;
-    const token = document.getElementById("githubToken").value;
-    const filename = document.getElementById("githubFilename").value;
-    
-    if (!username || !repo || !token) {
-        statusDiv.className = "status error";
-        statusDiv.innerText = "❌ 请填写完整的GitHub配置（Token必填）";
-        return;
-    }
-    
-    if (!currentRawText) {
-        statusDiv.className = "status error";
-        statusDiv.innerText = "❌ 没有数据，请先抓取订阅";
-        return;
-    }
-    
-    try {
-        let sha = null;
-        try {
-            const getResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(filename)}`, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            if (getResponse.ok) {
-                const data = await getResponse.json();
-                sha = data.sha;
-            }
-        } catch (e) {}
-
-        const content = btoa(unescape(encodeURIComponent(currentRawText)));
-        
-        const pushResponse = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${encodeURIComponent(filename)}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify({
-                message: `更新订阅 ${new Date().toLocaleString()}`,
-                content: content,
-                sha: sha
-            })
-        });
-        
-        if (pushResponse.ok) {
-            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/${encodeURIComponent(filename)}`;
-            const jsdelivrUrl = `https://cdn.jsdelivr.net/gh/${username}/${repo}/${encodeURIComponent(filename)}`;
-            
-            document.getElementById("subscriptionUrl").value = rawUrl;
-            
-            statusDiv.className = "status success";
-            statusDiv.innerHTML = `
-                ✅ 推送成功！<br>
-                📍 GitHub Raw: <a href="${rawUrl}" target="_blank">${rawUrl}</a><br>
-                📍 jsDelivr: <a href="${jsdelivrUrl}" target="_blank">${jsdelivrUrl}</a>
-            `;
-            
-            localStorage.setItem("githubRawUrl", rawUrl);
-        } else {
-            const error = await pushResponse.json();
-            statusDiv.className = "status error";
-            statusDiv.innerText = `❌ 推送失败：${error.message}`;
-        }
-    } catch (error) {
-        statusDiv.className = "status error";
-        statusDiv.innerText = `❌ 推送失败：${error.message}`;
-    }
-}
-
-// ----------------------
-// 复制链接
-// ----------------------
-document.getElementById("copyUrlBtn").onclick = () => {
-    const url = document.getElementById("subscriptionUrl").value;
-    if (url && url !== "请先推送到GitHub") {
-        navigator.clipboard.writeText(url).then(() => {
-            alert("✅ 链接已复制到剪贴板");
-        });
-    } else {
-        alert("请先推送到GitHub");
-    }
-};
-
-// ----------------------
-// 测试链接
-// ----------------------
-document.getElementById("testUrlBtn").onclick = () => {
-    const url = document.getElementById("subscriptionUrl").value;
-    if (url && url !== "请先推送到GitHub") {
-        window.open(url, '_blank');
-    } else {
-        alert("请先推送到GitHub");
-    }
-};
-
-// ----------------------
-// 绑定事件
-// ----------------------
-document.getElementById("fetchBtn").onclick = fetchAll;
-document.getElementById("pushToGithubBtn").onclick = pushToGithub;
-
-document.getElementById("speedBtn").onclick = async () => {
-    document.getElementById("speedResult").innerText = "测速中...";
-    const start = performance.now();
-    try {
-        await fetch("https://www.google.com/generate_204", {mode: "no-cors"});
-        const ms = Math.round(performance.now() - start);
-        document.getElementById("speedResult").innerText = "⏱️ 延迟：" + ms + " ms";
-    } catch {
-        document.getElementById("speedResult").innerText = "❌ 测速失败";
-    }
-};
-
-// 自动更新
-document.getElementById("autoUpdate").checked = localStorage.getItem("autoUpdate") === "1";
-document.getElementById("autoUpdate").onchange = (e) => {
-    localStorage.setItem("autoUpdate", e.target.checked ? "1" : "0");
-};
-
-setInterval(() => {
-    if (localStorage.getItem("autoUpdate") === "1") {
-        fetchAll();
-    }
-}, 6 * 60 * 60 * 1000);
-
-// 页面加载
+/* -----------------------------
+   加载默认配置
+----------------------------- */
 window.onload = () => {
-    loadGithubConfig();
-    
-    document.getElementById("lastUpdate").innerText = localStorage.getItem("lastUpdate") || "无";
-    
+    document.getElementById("githubFilename").value = defaultFilename;
+
     const saved = localStorage.getItem("merged");
     if (saved) {
         currentRawText = saved;
@@ -547,10 +191,167 @@ window.onload = () => {
         updateDisplay(parsed);
         renderSegmentButtons(parsed.valid);
     }
-    
-    const savedUrl = localStorage.getItem("githubRawUrl");
-    if (savedUrl) {
-        document.getElementById("subscriptionUrl").value = savedUrl;
+
+    document.getElementById("lastUpdate").innerText =
+        localStorage.getItem("lastUpdate") || "无";
+};
+
+/* -----------------------------
+   Base64 解码
+----------------------------- */
+function tryDecodeBase64(str) {
+    try {
+        const cleaned = str.replace(/\s+/g, "");
+        const decoded = atob(cleaned);
+        if (VALID_PREFIXES.some(p => decoded.includes(p))) return decoded;
+    } catch {}
+    return str;
+}
+
+/* -----------------------------
+   解析节点 + 协议统计
+----------------------------- */
+function parseNodes(rawText) {
+    const decoded = tryDecodeBase64(rawText);
+    const lines = decoded.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
+
+    const valid = [];
+    const invalid = [];
+    const protoCount = { vmess:0, vless:0, trojan:0, ss:0, ssr:0 };
+
+    for (const line of lines) {
+        const ok = VALID_PREFIXES.some(p => line.startsWith(p));
+        if (ok) {
+            valid.push(line);
+            if (line.startsWith("vmess://")) protoCount.vmess++;
+            else if (line.startsWith("vless://")) protoCount.vless++;
+            else if (line.startsWith("trojan://")) protoCount.trojan++;
+            else if (line.startsWith("ss://")) protoCount.ss++;
+            else if (line.startsWith("ssr://")) protoCount.ssr++;
+        } else invalid.push(line);
+    }
+
+    return {
+        rawLines: lines.length,
+        valid,
+        invalid,
+        validCount: valid.length,
+        invalidCount: invalid.length,
+        protoCount
+    };
+}
+
+/* -----------------------------
+   更新 UI
+----------------------------- */
+function updateDisplay(p) {
+    document.getElementById("rawLines").innerText = p.rawLines;
+    document.getElementById("validCount").innerText = p.validCount;
+    document.getElementById("invalidCount").innerText = p.invalidCount;
+
+    document.getElementById("vmessCount").innerText = p.protoCount.vmess;
+    document.getElementById("vlessCount").innerText = p.protoCount.vless;
+    document.getElementById("trojanCount").innerText = p.protoCount.trojan;
+    document.getElementById("ssCount").innerText = p.protoCount.ss;
+    document.getElementById("ssrCount").innerText = p.protoCount.ssr;
+}
+
+/* -----------------------------
+   渲染分段复制按钮
+----------------------------- */
+function renderSegmentButtons(nodes) {
+    const box = document.getElementById("segmentButtons");
+    box.innerHTML = "";
+    if (!nodes.length) return;
+
+    const per = 80;
+    const total = nodes.length;
+    const seg = Math.ceil(total / per);
+
+    for (let i = 0; i < seg; i++) {
+        const start = i * per;
+        const end = Math.min(start + per, total);
+
+        const btn = document.createElement("button");
+        btn.textContent = `第 ${i+1} 段（${start+1}–${end}）`;
+
+        btn.onclick = () => {
+            const part = nodes.slice(start, end).join("\n");
+            navigator.clipboard.writeText(part);
+            btn.textContent = "已复制 ✔";
+            setTimeout(() => {
+                btn.textContent = `第 ${i+1} 段（${start+1}–${end}）`;
+            }, 1000);
+        };
+
+        box.appendChild(btn);
+    }
+}
+
+/* -----------------------------
+   抓取订阅
+----------------------------- */
+document.getElementById("fetchBtn").onclick = async () => {
+    const btn = document.getElementById("fetchBtn");
+    btn.innerText = "⏳ 抓取中...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(SUB);
+        currentRawText = await res.text();
+
+        localStorage.setItem("merged", currentRawText);
+        localStorage.setItem("lastUpdate", new Date().toLocaleString());
+
+        const parsed = parseNodes(currentRawText);
+        currentValidNodes = parsed.valid;
+
+        updateDisplay(parsed);
+        renderSegmentButtons(parsed.valid);
+
+        document.getElementById("lastUpdate").innerText =
+            localStorage.getItem("lastUpdate");
+
+        alert("抓取成功！");
+    } catch {
+        alert("抓取失败");
+    }
+
+    btn.innerText = "🚀 一键抓取订阅";
+    btn.disabled = false;
+};
+
+/* -----------------------------
+   推送到 GitHub
+----------------------------- */
+document.getElementById("pushToGithubBtn").onclick = async () => {
+    const token = document.getElementById("githubToken").value;
+    const filename = document.getElementById("githubFilename").value || defaultFilename;
+
+    if (!token) return alert("请输入 Token");
+
+    const content = btoa(unescape(encodeURIComponent(currentRawText)));
+
+    const url = `https://api.github.com/repos/${defaultUser}/${defaultRepo}/contents/${filename}`;
+
+    const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            message: "更新订阅",
+            content
+        })
+    });
+
+    if (res.ok) {
+        const raw = `https://raw.githubusercontent.com/${defaultUser}/${defaultRepo}/main/${filename}`;
+        document.getElementById("pushResultBox").value = raw;
+        alert("推送成功！");
+    } else {
+        alert("推送失败");
     }
 };
 </script>
