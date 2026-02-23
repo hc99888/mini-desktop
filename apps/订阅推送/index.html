@@ -46,25 +46,39 @@ button:active {
     transform: scale(0.97);
 }
 
-/* 统计区域 */
+/* 统计卡片 */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 12px;
     margin-top: 10px;
 }
 .stats-box {
-    background: #f8f9fa;
-    padding: 10px;
+    background: #e8f1ff;
+    border-left: 6px solid #0078ff;
+    padding: 12px;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
 }
 
-/* 协议统计 */
-.proto-line {
+/* 协议统计卡片 */
+.proto-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
     margin-top: 10px;
+}
+.proto-box {
+    background: #f0f7ff;
+    border-left: 5px solid #28a745;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
     font-size: 14px;
-    line-height: 1.6;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 
 /* 输入框 */
@@ -77,10 +91,35 @@ input, textarea {
     box-sizing: border-box;
 }
 
-/* 推送结果 textarea */
+/* Token 输入框 + 显示/隐藏/锁定按钮 */
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.input-row input {
+    flex: 1;
+}
+.token-btn {
+    padding: 8px 12px;
+    background: #6c757d;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* 推送结果 + 复制按钮（自动对齐） */
+.result-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch; /* 关键：让右侧按钮自动跟随高度 */
+}
+
 #pushResultBox {
-    width: 100%;
-    height: 80px;
+    flex: 1;
+    min-height: 80px;
+    height: auto;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid #b8daff;
@@ -90,6 +129,19 @@ input, textarea {
     font-size: 14px;
     line-height: 1.4;
     word-break: break-all;
+}
+
+/* 自动跟随 textarea 高度 */
+.copy-btn {
+    padding: 0 16px;
+    background: #17a2b8;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 /* 分段复制按钮两列布局 */
@@ -103,10 +155,18 @@ input, textarea {
     background: #28a745;
 }
 
-/* 测速 */
-.speed {
-    margin-top: 10px;
-    font-size: 14px;
+/* 自动更新 - 正方形 checkbox */
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+.check-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #0078ff;
+    border-radius: 4px;
 }
 </style>
 </head>
@@ -117,12 +177,16 @@ input, textarea {
 
 <!-- 抓取订阅 -->
 <div class="card">
+    <h3>抓取订阅</h3>
 
     <button id="fetchBtn">🚀 一键抓取订阅</button>
 
     <p>最近更新：<span id="lastUpdate">无</span></p>
 
-    <label><input type="checkbox" id="autoUpdate"> 🚀 自动更新（每 6 小时）</label>
+    <label class="check-row">
+        <input type="checkbox" id="autoUpdate">
+        <span>🚀 自动更新（每 6 小时）</span>
+    </label>
 
     <h4>统计：</h4>
     <div class="stats-grid">
@@ -132,12 +196,12 @@ input, textarea {
     </div>
 
     <h4>协议统计：</h4>
-    <div class="proto-line">
-        vmess：<span id="vmessCount">0</span>　
-        vless：<span id="vlessCount">0</span>　
-        trojan：<span id="trojanCount">0</span><br>
-        ss：<span id="ssCount">0</span>　
-        ssr：<span id="ssrCount">0</span>
+    <div class="proto-grid">
+        <div class="proto-box">vmess<br><span id="vmessCount">0</span></div>
+        <div class="proto-box">vless<br><span id="vlessCount">0</span></div>
+        <div class="proto-box">trojan<br><span id="trojanCount">0</span></div>
+        <div class="proto-box">ss<br><span id="ssCount">0</span></div>
+        <div class="proto-box">ssr<br><span id="ssrCount">0</span></div>
     </div>
 </div>
 
@@ -149,12 +213,19 @@ input, textarea {
     <input type="text" id="githubFilename" placeholder="subscribe.txt">
 
     <label>Token：</label>
-    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx">
+    <div class="input-row">
+        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx">
+        <div class="token-btn" id="toggleToken">显示</div>
+        <div class="token-btn" id="lockToken">锁定</div>
+    </div>
 
     <button id="pushToGithubBtn" style="background:#6f42c1;">📤 推送到 GitHub</button>
 
     <h4>推送结果：</h4>
-    <textarea id="pushResultBox" readonly>暂无推送</textarea>
+    <div class="result-row">
+        <textarea id="pushResultBox" readonly>暂无推送</textarea>
+        <div class="copy-btn" id="copyResult">复制</div>
+    </div>
 </div>
 
 <!-- 分段复制 -->
@@ -162,6 +233,7 @@ input, textarea {
     <h3>分段复制</h3>
     <div id="segmentButtons" class="segment-buttons"></div>
 </div>
+
 <script>
 /* -----------------------------
    默认配置
@@ -177,10 +249,17 @@ let currentRawText = "";
 let currentValidNodes = [];
 
 /* -----------------------------
-   加载默认配置
+   页面加载
 ----------------------------- */
 window.onload = () => {
-    document.getElementById("githubFilename").value = defaultFilename;
+    document.getElementById("githubFilename").value =
+        localStorage.getItem("githubFilename") || defaultFilename;
+
+    document.getElementById("githubToken").value =
+        localStorage.getItem("githubToken") || "";
+
+    const locked = localStorage.getItem("tokenLocked") === "1";
+    if (locked) lockTokenField(true);
 
     const saved = localStorage.getItem("merged");
     if (saved) {
@@ -321,7 +400,7 @@ document.getElementById("fetchBtn").onclick = async () => {
 };
 
 /* -----------------------------
-   推送到 GitHub
+   推送到 GitHub（含 sha 修复）
 ----------------------------- */
 document.getElementById("pushToGithubBtn").onclick = async () => {
     const token = document.getElementById("githubToken").value;
@@ -329,9 +408,29 @@ document.getElementById("pushToGithubBtn").onclick = async () => {
 
     if (!token) return alert("请输入 Token");
 
-    const content = btoa(unescape(encodeURIComponent(currentRawText)));
+    localStorage.setItem("githubToken", token);
+    localStorage.setItem("githubFilename", filename);
 
     const url = `https://api.github.com/repos/${defaultUser}/${defaultRepo}/contents/${filename}`;
+
+    let sha = null;
+    try {
+        const r = await fetch(url, {
+            headers: { "Authorization": `token ${token}` }
+        });
+        if (r.ok) {
+            const j = await r.json();
+            sha = j.sha;
+        }
+    } catch {}
+
+    const content = btoa(unescape(encodeURIComponent(currentRawText)));
+
+    const body = {
+        message: "更新订阅",
+        content
+    };
+    if (sha) body.sha = sha;
 
     const res = await fetch(url, {
         method: "PUT",
@@ -339,10 +438,7 @@ document.getElementById("pushToGithubBtn").onclick = async () => {
             "Authorization": `token ${token}`,
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-            message: "更新订阅",
-            content
-        })
+        body: JSON.stringify(body)
     });
 
     if (res.ok) {
@@ -353,8 +449,58 @@ document.getElementById("pushToGithubBtn").onclick = async () => {
         alert("推送失败");
     }
 };
+
+/* -----------------------------
+   Token 显示/隐藏/锁定
+----------------------------- */
+function lockTokenField(lock) {
+    const input = document.getElementById("githubToken");
+    const toggle = document.getElementById("toggleToken");
+    const lockBtn = document.getElementById("lockToken");
+
+    if (lock) {
+        input.type = "password";
+        input.readOnly = true;
+        lockBtn.textContent = "已锁定";
+        toggle.textContent = "显示";
+        localStorage.setItem("tokenLocked", "1");
+    } else {
+        input.readOnly = false;
+        lockBtn.textContent = "锁定";
+        localStorage.setItem("tokenLocked", "0");
+    }
+}
+
+document.getElementById("toggleToken").onclick = () => {
+    const input = document.getElementById("githubToken");
+    if (input.readOnly) return;
+
+    if (input.type === "password") {
+        input.type = "text";
+        document.getElementById("toggleToken").textContent = "隐藏";
+    } else {
+        input.type = "password";
+        document.getElementById("toggleToken").textContent = "显示";
+    }
+};
+
+document.getElementById("lockToken").onclick = () => {
+    const locked = localStorage.getItem("tokenLocked") === "1";
+    lockTokenField(!locked);
+};
+
+/* -----------------------------
+   推送结果复制按钮
+----------------------------- */
+document.getElementById("copyResult").onclick = () => {
+    const text = document.getElementById("pushResultBox").value;
+    navigator.clipboard.writeText(text);
+    document.getElementById("copyResult").textContent = "已复制";
+    setTimeout(() => {
+        document.getElementById("copyResult").textContent = "复制";
+    }, 1000);
+};
 </script>
 
 </body>
 </html>
-
