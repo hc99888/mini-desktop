@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App 工厂</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="container">
+
+    <div class="card">
+      <h1>App 工厂</h1>
+
+      <p>在下面输入你的 App 名称：</p>
+      <input id="appNameInput" type="text" placeholder="例如：订阅管理" />
+
+      <p>选择模板类型：</p>
+      <select id="templateType">
+        <option value="tool">工具类模板</option>
+        <option value="page">页面类模板</option>
+        <option value="system">系统类模板</option>
+        <option value="form">表单模板</option>
+        <option value="list">列表模板</option>
+      </select>
+
+      <p>选择图标风格：</p>
+      <select id="iconStyle">
+        <option value="blue">蓝科技风</option>
+        <option value="blackgold">黑金风</option>
+        <option value="circle">圆形图标</option>
+        <option value="gradientCircle">渐变圆形</option>
+      </select>
+
+      <div class="btn-row">
+        <button id="generateBtn">生成并下载 App 模板</button>
+        <button id="previewBtn" class="secondary">预览模板</button>
+      </div>
+
+      <label class="github-row">
+        <input type="checkbox" id="uploadGithub" />
+        同时尝试上传到 GitHub（需在 app.js 中配置 Token）
+      </label>
+    </div>
+
+    <div id="result"></div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
