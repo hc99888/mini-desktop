@@ -1,0 +1,10 @@
+[
+  {
+    "id": "app-factory",
+    "name": "App 工厂",
+    "icon": "apps/app-factory/icon.svg",
+    "entry": "apps/app-factory/index.html",
+    "category": "tools",
+    "description": "用于在手机上生成新 App 模板"
+  }
+]
