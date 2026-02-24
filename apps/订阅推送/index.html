@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>订阅抓取器-自动推送</title>
+
+<!-- 外部 CSS -->
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h2>📡 订阅抓取器 - 自动推送</h2>
+
+<!-- 进入多源节点页面按钮（新增） -->
+<div class="card">
+    <button id="goMultiPage" style="background:#ff9800;">🌐 进入多源节点页面</button>
+</div>
+
+<!-- 抓取订阅 -->
+<div class="card">
+    <h3>抓取订阅</h3>
+
+    <button id="fetchBtn">🚀 一键抓取订阅</button>
+
+    <p>最近更新：<span id="lastUpdate">无</span></p>
+
+    <label class="check-row">
+        <input type="checkbox" id="autoUpdate">
+        <span>🚀 自动更新（每 6 小时）</span>
+    </label>
+
+    <h4>统计：</h4>
+    <div class="stats-grid">
+        <div class="stats-box">总行数：<span id="rawLines">0</span></div>
+        <div class="stats-box">有效：<span id="validCount">0</span></div>
+        <div class="stats-box">无效：<span id="invalidCount">0</span></div>
+    </div>
+
+    <h4>协议统计：</h4>
+    <div class="proto-grid">
+        <div class="proto-box">vmess<br><span id="vmessCount">0</span></div>
+        <div class="proto-box">vless<br><span id="vlessCount">0</span></div>
+        <div class="proto-box">trojan<br><span id="trojanCount">0</span></div>
+        <div class="proto-box">ss<br><span id="ssCount">0</span></div>
+        <div class="proto-box">ssr<br><span id="ssrCount">0</span></div>
+    </div>
+</div>
+
+<!-- GitHub 推送 -->
+<div class="card">
+    <h3>GitHub 推送</h3>
+
+    <label>文件名（可编辑）：</label>
+    <input type="text" id="githubFilename" placeholder="subscribe.txt">
+
+    <label>Token：</label>
+    <div class="input-row">
+        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxx">
+        <div class="token-btn" id="toggleToken">显示</div>
+        <div class="token-btn" id="lockToken">锁定</div>
+    </div>
+
+    <button id="pushToGithubBtn" style="background:#6f42c1;">📤 推送到 GitHub</button>
+
+    <h4>推送结果：</h4>
+    <div class="result-row">
+        <textarea id="pushResultBox" readonly>暂无推送</textarea>
+        <div class="copy-btn" id="copyResult">复制</div>
+    </div>
+</div>
+
+<!-- 按国家复制（新增完整模块） -->
+<div class="card">
+    <h3>按国家复制</h3>
+    <div id="countryButtons" class="segment-buttons"></div>
+</div>
+
+<!-- 分段复制 -->
+<div class="card">
+    <h3>分段复制</h3>
+    <div id="segmentButtons" class="segment-buttons"></div>
+</div>
+
+<!-- ========================= -->
+<!-- Page 2：多源节点页面（新增） -->
+<!-- ========================= -->
+<div id="page2" style="display:none;">
+
+<h2>🌐 多源节点输入页面</h2>
+
+<div class="card">
+    <button id="backToMain" style="background:#6c757d;">⬅ 返回首页</button>
+</div>
+
+<div class="card">
+    <button id="fetchAllSources" style="background:#0078ff;">🚀 抓取所有链接</button>
+</div>
+
+<div class="card">
+    <h3>多网站订阅链接</h3>
+    <div id="sourceList"></div>
+    <button id="addSourceBtn" style="background:#28a745;">+ 添加一行</button>
+</div>
+
+<div class="card">
+    <h3>抓取结果（按网站分组）</h3>
+    <div id="multiResults"></div>
+</div>
+
+<div class="card">
+    <h3>按国家分类复制（合并所有网站节点）</h3>
+    <div id="multiCountryButtons" class="segment-buttons"></div>
+</div>
+
+</div>
+
+<!-- 外部 JS -->
+<script src="app.js"></script>
+
+</body>
+</html>
