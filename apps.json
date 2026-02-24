@@ -6,8 +6,8 @@
   },
   {
     "name": "空白模板",
-    "icon": "apps/空白模板/icon.png",
-    "url": "apps/空白模板/"
+    "icon": "apps/_template/icon.png",
+    "url": "apps/_template/"
   },
   {
     "name": "书签应用",
@@ -26,6 +26,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
