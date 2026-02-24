@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>我的 App</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+  }
+  header {
+    background: #4a90e2;
+    color: white;
+    padding: 14px;
+    font-size: 20px;
+    text-align: center;
+  }
+  #app {
+    padding: 16px;
+  }
+  button {
+    padding: 10px 16px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+  }
+</style>
+</head>
+
+<body>
+
+<header>我的 App</header>
+
+<div id="app">
+  <p>这是一个可以直接运行的单文件 App 模板。</p>
+  <button onclick="hello()">点我测试 JS</button>
+</div>
+
+<script>
+function hello() {
+  alert("JS 正常运行！");
+}
+console.log("App 已加载");
+</script>
+
+</body>
+</html>
