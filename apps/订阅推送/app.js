@@ -1,18 +1,20 @@
 /* -----------------------------
-   默认配置（保留你的原逻辑）
+   默认配置
 ----------------------------- */
 const defaultUser = "hc99888";
 const defaultRepo = "subscription-auto-push";
 const defaultFilename = "subscribe.txt";
 
-const SUB = "https://api.allorigins.win/raw?url=https://openproxylist.com/v2ray/rawlist/subscribe";
+/* 修复抓取失败：使用稳定代理 */
+const SUB = "https://cors.isteed.cc/https://openproxylist.com/v2ray/rawlist/subscribe";
+
 const VALID_PREFIXES = ["vmess://", "vless://", "trojan://", "ss://", "ssr://"];
 
 let currentRawText = "";
 let currentValidNodes = [];
 
 /* -----------------------------
-   页面加载（保留 + 扩展）
+   页面加载
 ----------------------------- */
 window.onload = () => {
     document.getElementById("githubFilename").value =
@@ -31,18 +33,18 @@ window.onload = () => {
         currentValidNodes = parsed.valid;
         updateDisplay(parsed);
         renderSegmentButtons(parsed.valid);
-        renderCountryButtons(parsed.valid); // ← 新增：国家复制
+        renderCountryButtons(parsed.valid);
     }
 
     document.getElementById("lastUpdate").innerText =
         localStorage.getItem("lastUpdate") || "无";
 
-    initPageSwitch();      // ← 新增：页面切换
-    initMultiSourcePage(); // ← 新增：多源页面初始化
+    initPageSwitch();
+    initMultiSourcePage();
 };
 
 /* -----------------------------
-   Base64 解码（保留）
+   Base64 解码
 ----------------------------- */
 function tryDecodeBase64(str) {
     try {
@@ -54,7 +56,7 @@ function tryDecodeBase64(str) {
 }
 
 /* -----------------------------
-   解析节点（保留）
+   解析节点
 ----------------------------- */
 function parseNodes(rawText) {
     const decoded = tryDecodeBase64(rawText);
@@ -87,7 +89,7 @@ function parseNodes(rawText) {
 }
 
 /* -----------------------------
-   更新 UI（保留）
+   更新 UI
 ----------------------------- */
 function updateDisplay(p) {
     document.getElementById("rawLines").innerText = p.rawLines;
@@ -102,7 +104,7 @@ function updateDisplay(p) {
 }
 
 /* -----------------------------
-   分段复制（保留）
+   分段复制
 ----------------------------- */
 function renderSegmentButtons(nodes) {
     const box = document.getElementById("segmentButtons");
@@ -134,7 +136,7 @@ function renderSegmentButtons(nodes) {
 }
 
 /* -----------------------------
-   抓取订阅（保留 + 扩展国家复制）
+   抓取订阅（修复代理）
 ----------------------------- */
 document.getElementById("fetchBtn").onclick = async () => {
     const btn = document.getElementById("fetchBtn");
@@ -153,14 +155,14 @@ document.getElementById("fetchBtn").onclick = async () => {
 
         updateDisplay(parsed);
         renderSegmentButtons(parsed.valid);
-        renderCountryButtons(parsed.valid); // ← 新增
+        renderCountryButtons(parsed.valid);
 
         document.getElementById("lastUpdate").innerText =
             localStorage.getItem("lastUpdate");
 
         alert("抓取成功！");
     } catch {
-        alert("抓取失败");
+        alert("抓取失败（代理不可用）");
     }
 
     btn.innerText = "🚀 一键抓取订阅";
@@ -168,7 +170,7 @@ document.getElementById("fetchBtn").onclick = async () => {
 };
 
 /* -----------------------------
-   国家识别（新增）
+   国家识别
 ----------------------------- */
 function detectCountry(node) {
     const name = node.toLowerCase();
@@ -191,7 +193,7 @@ function detectCountry(node) {
 }
 
 /* -----------------------------
-   国家分组（新增）
+   国家分组
 ----------------------------- */
 function groupNodesByCountry(nodes) {
     const groups = {};
@@ -204,7 +206,7 @@ function groupNodesByCountry(nodes) {
 }
 
 /* -----------------------------
-   国家复制按钮（新增）
+   国家复制按钮
 ----------------------------- */
 function renderCountryButtons(nodes) {
     const box = document.getElementById("countryButtons");
@@ -347,137 +349,10 @@ document.getElementById("copyResult").onclick = () => {
 };
 
 /* =====================================================
-   Page1 ↔ Page2 页面切换（新增）
+   Page1 ↔ Page2 页面切换（修复）
 ===================================================== */
 function initPageSwitch() {
-    const page1 = document.body;
+    const page1 = document.getElementById("page1");
     const page2 = document.getElementById("page2");
 
-    document.getElementById("goMultiPage").onclick = () => {
-        page1.style.display = "none";
-        page2.style.display = "block";
-    };
-
-    document.getElementById("backToMain").onclick = () => {
-        page2.style.display = "none";
-        page1.style.display = "block";
-    };
-}
-
-/* =====================================================
-   Page2：多源节点页面逻辑（新增）
-===================================================== */
-function initMultiSourcePage() {
-    const sourceList = document.getElementById("sourceList");
-
-    /* 添加一行 */
-    document.getElementById("addSourceBtn").onclick = () => {
-        addSourceRow("");
-    };
-
-    /* 抓取所有链接 */
-    document.getElementById("fetchAllSources").onclick = async () => {
-        const rows = [...document.querySelectorAll(".source-row input")];
-        const urls = rows.map(r => r.value.trim()).filter(v => v);
-
-        if (!urls.length) return alert("请输入至少一个链接");
-
-        const allNodes = [];
-
-        const resultBox = document.getElementById("multiResults");
-        resultBox.innerHTML = "";
-
-        for (let i = 0; i < urls.length; i++) {
-            const url = urls[i];
-
-            let text = "";
-            try {
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-                text = await res.text();
-            } catch {
-                text = "";
-            }
-
-            const parsed = parseNodes(text);
-            allNodes.push(...parsed.valid);
-
-            renderSingleSourceResult(i + 1, url, parsed.valid);
-        }
-
-        renderMultiCountryButtons(allNodes);
-    };
-}
-
-/* 添加输入行（新增） */
-function addSourceRow(value) {
-    const row = document.createElement("div");
-    row.className = "source-row";
-
-    row.innerHTML = `
-        <input type="text" placeholder="输入订阅链接" value="${value}">
-        <div class="del-btn">X</div>
-    `;
-
-    row.querySelector(".del-btn").onclick = () => row.remove();
-
-    document.getElementById("sourceList").appendChild(row);
-}
-
-/* 单个网站结果（新增） */
-function renderSingleSourceResult(index, url, nodes) {
-    const box = document.getElementById("multiResults");
-
-    const card = document.createElement("div");
-    card.className = "result-card";
-
-    card.innerHTML = `
-        <h4>来源：网站 ${index}</h4>
-        <div>${nodes.join("<br>") || "无有效节点"}</div>
-        <div class="copy-small">复制全部节点</div>
-    `;
-
-    card.querySelector(".copy-small").onclick = () => {
-        navigator.clipboard.writeText(nodes.join("\n"));
-    };
-
-    box.appendChild(card);
-}
-
-/* 多源国家复制（新增） */
-function renderMultiCountryButtons(nodes) {
-    const box = document.getElementById("multiCountryButtons");
-    box.innerHTML = "";
-    if (!nodes.length) return;
-
-    const flag = {
-        "美国": "🇺🇸",
-        "日本": "🇯🇵",
-        "香港": "🇭🇰",
-        "台湾": "🇹🇼",
-        "新加坡": "🇸🇬",
-        "韩国": "🇰🇷",
-        "英国": "🇬🇧",
-        "德国": "🇩🇪",
-        "其他": "🌐"
-    };
-
-    const groups = groupNodesByCountry(nodes);
-
-    Object.keys(groups).forEach(country => {
-        const list = groups[country];
-
-        const btn = document.createElement("button");
-        btn.className = "country-btn";
-        btn.innerHTML = `<span class="country-flag">${flag[country] || "🌐"}</span> ${country}（${list.length}）`;
-
-        btn.onclick = () => {
-            navigator.clipboard.writeText(list.join("\n"));
-            btn.innerHTML = `✔ 已复制`;
-            setTimeout(() => {
-                btn.innerHTML = `<span class="country-flag">${flag[country] || "🌐"}</span> ${country}（${list.length}）`;
-            }, 1000);
-        };
-
-        box.appendChild(btn);
-    });
-}
+    document.getElementBy
