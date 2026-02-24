@@ -19,13 +19,21 @@
     "icon": "apps/仓库资源/icon.webp",
     "url": "apps/仓库资源/"
   },
-
+  {
+    "id": "demo-app",
+    "name": "示例 App",
+    "icon": "apps/demo-app/icon.svg",
+    "entry": "apps/demo-app/index.html",
+    "category": "tools",
+    "description": "这是一个示例应用"
+  }
   {
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
