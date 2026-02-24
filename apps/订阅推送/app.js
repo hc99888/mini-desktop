@@ -31,12 +31,14 @@ window.onload = () => {
         currentValidNodes = parsed.valid;
         updateDisplay(parsed);
 
-        renderCountryButtons(parsed.valid);   // ← 新增：国家分段复制
-        renderSegmentButtons(parsed.valid);   // ← 原有：80 行分段复制
+        renderCountryButtons(parsed.valid);
+        renderSegmentButtons(parsed.valid);
     }
 
     document.getElementById("lastUpdate").innerText =
         localStorage.getItem("lastUpdate") || "无";
+
+    initMultiSourcePage();
 };
 
 /* -----------------------------
@@ -52,7 +54,7 @@ function tryDecodeBase64(str) {
 }
 
 /* -----------------------------
-   解析节点 + 协议统计
+   解析节点
 ----------------------------- */
 function parseNodes(rawText) {
     const decoded = tryDecodeBase64(rawText);
@@ -100,7 +102,7 @@ function updateDisplay(p) {
 }
 
 /* -----------------------------
-   国家识别（智能）
+   国家识别
 ----------------------------- */
 function detectCountry(node) {
     const name = node.toLowerCase();
@@ -123,7 +125,7 @@ function detectCountry(node) {
 }
 
 /* -----------------------------
-   按国家分组节点
+   国家分组
 ----------------------------- */
 function groupNodesByCountry(nodes) {
     const groups = {};
@@ -136,7 +138,7 @@ function groupNodesByCountry(nodes) {
 }
 
 /* -----------------------------
-   渲染国家分段复制按钮（新增）
+   渲染国家按钮
 ----------------------------- */
 function renderCountryButtons(nodes) {
     const box = document.getElementById("countryButtons");
@@ -164,7 +166,7 @@ function renderCountryButtons(nodes) {
 }
 
 /* -----------------------------
-   渲染分段复制按钮（原版）
+   渲染 80 行分段按钮
 ----------------------------- */
 function renderSegmentButtons(nodes) {
     const box = document.getElementById("segmentButtons");
@@ -196,7 +198,7 @@ function renderSegmentButtons(nodes) {
 }
 
 /* -----------------------------
-   抓取订阅
+   抓取订阅（首页）
 ----------------------------- */
 document.getElementById("fetchBtn").onclick = async () => {
     const btn = document.getElementById("fetchBtn");
@@ -215,8 +217,8 @@ document.getElementById("fetchBtn").onclick = async () => {
 
         updateDisplay(parsed);
 
-        renderCountryButtons(parsed.valid);   // ← 新增
-        renderSegmentButtons(parsed.valid);   // ← 原有
+        renderCountryButtons(parsed.valid);
+        renderSegmentButtons(parsed.valid);
 
         document.getElementById("lastUpdate").innerText =
             localStorage.getItem("lastUpdate");
@@ -231,7 +233,7 @@ document.getElementById("fetchBtn").onclick = async () => {
 };
 
 /* -----------------------------
-   推送到 GitHub（含 sha 修复）
+   GitHub 推送
 ----------------------------- */
 document.getElementById("pushToGithubBtn").onclick = async () => {
     const token = document.getElementById("githubToken").value;
@@ -282,7 +284,7 @@ document.getElementById("pushToGithubBtn").onclick = async () => {
 };
 
 /* -----------------------------
-   Token 显示/隐藏/锁定
+   Token 控制
 ----------------------------- */
 function lockTokenField(lock) {
     const input = document.getElementById("githubToken");
@@ -306,28 +308,4 @@ document.getElementById("toggleToken").onclick = () => {
     const input = document.getElementById("githubToken");
     if (input.readOnly) return;
 
-    if (input.type === "password") {
-        input.type = "text";
-        document.getElementById("toggleToken").textContent = "隐藏";
-    } else {
-        input.type = "password";
-        document.getElementById("toggleToken").textContent = "显示";
-    }
-};
-
-document.getElementById("lockToken").onclick = () => {
-    const locked = localStorage.getItem("tokenLocked") === "1";
-    lockTokenField(!locked);
-};
-
-/* -----------------------------
-   推送结果复制按钮
------------------------------ */
-document.getElementById("copyResult").onclick = () => {
-    const text = document.getElementById("pushResultBox").value;
-    navigator.clipboard.writeText(text);
-    document.getElementById("copyResult").textContent = "已复制";
-    setTimeout(() => {
-        document.getElementById("copyResult").textContent = "复制";
-    }, 1000);
-};
+    if (

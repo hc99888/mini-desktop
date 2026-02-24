@@ -9,6 +9,12 @@
 </head>
 
 <body>
+
+<!-- ========================= -->
+<!-- Page 1：订阅抓取器首页     -->
+<!-- ========================= -->
+<div id="page1">
+
 <h2>📡 订阅抓取器 - 自动推送</h2>
 
 <!-- 抓取订阅 -->
@@ -74,6 +80,51 @@
     <h4>按数量分段复制（80 行）：</h4>
     <div id="segmentButtons" class="segment-buttons"></div>
 </div>
+
+<!-- 切换到多源节点页面 -->
+<div class="card">
+    <button id="goMultiPage" style="background:#ff9800;">🌐 进入多源节点页面</button>
+</div>
+
+</div> <!-- END page1 -->
+
+
+
+<!-- ========================= -->
+<!-- Page 2：多源节点输入页面   -->
+<!-- ========================= -->
+<div id="page2" style="display:none;">
+
+<h2>🌐 多源节点输入页面</h2>
+
+<div class="card">
+    <button id="backToMain" style="background:#6c757d;">⬅ 返回首页</button>
+</div>
+
+<div class="card">
+    <button id="fetchAllSources" style="background:#0078ff;">🚀 抓取所有链接</button>
+</div>
+
+<!-- 输入框区域 -->
+<div class="card">
+    <h3>多网站订阅链接</h3>
+    <div id="sourceList"></div>
+    <button id="addSourceBtn" style="background:#28a745;">+ 添加一行</button>
+</div>
+
+<!-- 抓取结果 -->
+<div class="card">
+    <h3>抓取结果（按网站分组）</h3>
+    <div id="multiResults"></div>
+</div>
+
+<!-- 国家分类复制 -->
+<div class="card">
+    <h3>按国家分类复制（合并所有网站节点）</h3>
+    <div id="multiCountryButtons" class="segment-buttons"></div>
+</div>
+
+</div> <!-- END page2 -->
 
 <script src="app.js"></script>
 </body>
