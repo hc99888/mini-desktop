@@ -6,8 +6,7 @@ const defaultRepo = "subscription-auto-push";
 const defaultFilename = "subscribe.txt";
 
 /* 修复抓取失败：使用稳定代理 */
-const SUB = "https://cors.isteed.cc/https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt";
-
+const SUB = "https://api.allorigins.win/raw?url=https://openproxylist.com/v2ray/rawlist/subscribe";
 const VALID_PREFIXES = ["vmess://", "vless://", "trojan://", "ss://", "ssr://"];
 
 let currentRawText = "";
@@ -357,3 +356,4 @@ function initPageSwitch() {
 
 
     document.getElementBy
+
