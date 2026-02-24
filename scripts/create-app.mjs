@@ -1,115 +1,96 @@
 import fs from "fs";
 import path from "path";
 import readline from "readline";
-import { createCanvas } from "canvas";
 
-const __dirname = path.resolve();
+const rootDir = process.cwd();
+const appsDir = path.join(rootDir, "apps");
+const templateDir = path.join(appsDir, "_template");
+const appsJsonPath = path.join(rootDir, "apps.json");
 
-// 路径
-const APPS_DIR = path.join(__dirname, "apps");
-const APPS_JSON = path.join(__dirname, "apps.json");
+// 终端输入
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-// 输入工具
-function ask(q) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(q, (ans) => { rl.close(); resolve(ans.trim()); }));
-}
-
-// 自动生成图标（简单纯色 PNG）
-function generateIcon(filePath, text = "") {
-  const size = 256;
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#3A7AFE"; // 蓝色背景
-  ctx.fillRect(0, 0, size, size);
-
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 120px sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text.slice(0, 1).toUpperCase(), size / 2, size / 2);
-
-  const buffer = canvas.toBuffer("image/png");
-  fs.writeFileSync(filePath, buffer);
-}
-
-// 写入 apps.json
-function updateAppsJson(appId, title) {
-  let data = [];
-  if (fs.existsSync(APPS_JSON)) {
-    data = JSON.parse(fs.readFileSync(APPS_JSON, "utf-8"));
-  }
-
-  data.push({
-    id: appId,
-    title,
-    icon: `apps/${appId}/icon.png`,
-    entry: `apps/${appId}/index.html`
-  });
-
-  fs.writeFileSync(APPS_JSON, JSON.stringify(data, null, 2), "utf-8");
+function ask(question) {
+  return new Promise((resolve) => rl.question(question, resolve));
 }
 
 async function main() {
-  const appId = await ask("请输入 App 英文名称（文件夹名，例如: notes）：");
-  const title = await ask("请输入 App 显示名称（例如: 记事本）：");
+  // 1. 输入英文文件夹名 & 中文显示名
+  const appId = (await ask("请输入 App 文件夹名（英文，例如 notes）：")).trim();
+  const appName = (await ask("请输入 App 显示名称（中文，例如 记事本）：")).trim();
+  rl.close();
 
-  if (!appId) return console.error("❌ App 名称不能为空");
+  if (!appId || !appName) {
+    console.error("App 名称不能为空");
+    process.exit(1);
+  }
 
-  const appDir = path.join(APPS_DIR, appId);
-  if (fs.existsSync(appDir)) return console.error("❌ 该 App 已存在");
+  const newAppDir = path.join(appsDir, appId);
+  if (fs.existsSync(newAppDir)) {
+    console.error(`apps/${appId} 已存在，取消生成。`);
+    process.exit(1);
+  }
 
-  fs.mkdirSync(appDir, { recursive: true });
+  // 2. 复制模板文件
+  fs.mkdirSync(newAppDir, { recursive: true });
 
-  // index.html
-  fs.writeFileSync(
-    path.join(appDir, "index.html"),
-    `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <title>${title}</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div id="app">
-    <h1>${title}</h1>
-  </div>
-  <script src="app.js"></script>
-</body>
-</html>`
-  );
+  const filesToCopy = ["index.html", "style.css", "app.js", "icon.png"];
 
-  // style.css
-  fs.writeFileSync(
-    path.join(appDir, "style.css"),
-    `body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f5f5f5;
+  for (const file of filesToCopy) {
+    const src = path.join(templateDir, file);
+    const dest = path.join(newAppDir, file);
+
+    if (!fs.existsSync(src)) {
+      console.error(`模板缺少文件：${src}`);
+      process.exit(1);
+    }
+
+    if (file.endsWith(".png")) {
+      // 图标直接复制
+      fs.copyFileSync(src, dest);
+    } else {
+      // 文本文件：替换 {{APP_NAME}}
+      const content = fs.readFileSync(src, "utf-8");
+      const replaced = content.replace(/{{APP_NAME}}/g, appName);
+      fs.writeFileSync(dest, replaced, "utf-8");
+    }
+  }
+
+  // 3. 更新 apps.json
+  let apps = [];
+  if (fs.existsSync(appsJsonPath)) {
+    const raw = fs.readFileSync(appsJsonPath, "utf-8").trim();
+    if (raw) {
+      try {
+        apps = JSON.parse(raw);
+      } catch (e) {
+        console.error("apps.json 解析失败，请检查格式。");
+        process.exit(1);
+      }
+    }
+  }
+
+  if (!Array.isArray(apps)) {
+    console.error("apps.json 必须是数组。");
+    process.exit(1);
+  }
+
+  apps.push({
+    name: appName,
+    icon: `apps/${appId}/icon.png`,
+    url: `apps/${appId}/`,
+  });
+
+  fs.writeFileSync(appsJsonPath, JSON.stringify(apps, null, 2), "utf-8");
+
+  console.log(`✅ 已生成 App：apps/${appId}/`);
+  console.log(`✅ 已写入 apps.json`);
 }
 
-#app {
-  padding: 20px;
-}`
-  );
-
-  // app.js
-  fs.writeFileSync(
-    path.join(appDir, "app.js"),
-    `console.log("${title} 已加载");`
-  );
-
-  // icon.png
-  generateIcon(path.join(appDir, "icon.png"), title);
-
-  // 写入 apps.json
-  updateAppsJson(appId, title);
-
-  console.log(`\n✅ 新 App 已生成：apps/${appId}`);
-  console.log(`📌 已写入 apps.json`);
-  console.log(`📌 已生成图标 icon.png`);
-}
-
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
