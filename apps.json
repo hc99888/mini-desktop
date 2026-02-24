@@ -6,7 +6,7 @@
   },
   {
     "name": "空白模板",
-    "icon": "apps/空白模板/app2.webp",
+    "icon": "apps/空白模板/icon.png",
     "url": "apps/空白模板/"
   },
   {
@@ -26,6 +26,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
