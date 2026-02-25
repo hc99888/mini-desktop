@@ -30,21 +30,38 @@ html,body{
   overflow:hidden;
 }
 
-/* 顶部按钮区 */
+/* 顶部按钮区（左右滑动） */
 .header{
   height:52px;
   display:flex;
   align-items:center;
-  justify-content:flex-end;
-  padding:0 12px;
   background:#020617;
   border-bottom:1px solid #1f2937;
 }
 
-.header-right{
+.top-scroll{
+  width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+}
+.top-scroll::-webkit-scrollbar{display:none;}
+
+.top-scroll-inner{
   display:flex;
   align-items:center;
-  gap:16px;
+  gap:12px;
+  padding:0 12px;
+}
+
+/* 按钮点击反馈 */
+.btn{
+  transition:all .15s ease;
+}
+.btn:active{
+  transform:scale(0.92);
+  background:#1e3a8a !important;
+  color:#fff !important;
 }
 
 /* 运行按钮 */
@@ -56,7 +73,7 @@ html,body{
   background:#0ea5e9;
   color:white;
   font-weight:600;
-  box-shadow:0 0 10px rgba(56,189,248,0.45);
+  white-space:nowrap;
 }
 
 /* 顶部普通按钮 */
@@ -67,6 +84,7 @@ html,body{
   border:1px solid #1f2937;
   background:#020617;
   color:#9ca3af;
+  white-space:nowrap;
 }
 
 /* 模式切换按钮 */
@@ -78,6 +96,7 @@ html,body{
   background:#020617;
   color:#9ca3af;
   min-width:70px;
+  white-space:nowrap;
 }
 .mode-btn.active{
   border-color:#38bdf8;
@@ -86,26 +105,40 @@ html,body{
   box-shadow:0 0 8px rgba(56,189,248,0.35);
 }
 
-/* 导出菜单 */
-.export-menu{
-  position:absolute;
-  top:60px;
-  right:12px;
-  background:#1e293b;
-  border:1px solid #334155;
-  border-radius:8px;
-  overflow:hidden;
-  z-index:20;
+/* 居中弹窗 */
+.mask{
+  position:fixed;
+  top:0;left:0;
+  width:100vw;height:100vh;
+  background:rgba(0,0,0,0.4);
+  z-index:50;
 }
-.export-item{
-  padding:10px 16px;
-  font-size:14px;
-  color:#e5e7eb;
+
+.export-popup{
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:260px;
+  background:#1e293b;
+  border-radius:10px;
+  border:1px solid #334155;
+  z-index:60;
+  overflow:hidden;
+}
+
+.export-title{
+  padding:12px;
+  font-size:16px;
+  text-align:center;
   border-bottom:1px solid #334155;
 }
-.export-item:last-child{
-  border-bottom:none;
+
+.export-item{
+  padding:12px;
+  font-size:14px;
+  border-bottom:1px solid #334155;
 }
+.export-item:last-child{border-bottom:none;}
 .export-item:hover{
   background:#334155;
 }
@@ -154,7 +187,7 @@ html,body{
   gap:10px;
 }
 
-/* 小按钮：复制 / 删除 */
+/* 小按钮 */
 .small-btn{
   padding:4px 10px;
   font-size:12px;

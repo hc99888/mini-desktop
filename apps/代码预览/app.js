@@ -109,12 +109,19 @@ document.getElementById("clearBtn").onclick = ()=>{
   });
 };
 
-/* 导出菜单 */
+/* 导出弹窗 */
 const exportBtn = document.getElementById("exportBtn");
 const exportMenu = document.getElementById("exportMenu");
+const exportMask = document.getElementById("exportMask");
 
 exportBtn.onclick = ()=>{
-  exportMenu.style.display = exportMenu.style.display === "none" ? "block" : "none";
+  exportMenu.style.display = "block";
+  exportMask.style.display = "block";
+};
+
+exportMask.onclick = ()=>{
+  exportMenu.style.display = "none";
+  exportMask.style.display = "none";
 };
 
 /* 导出 HTML / ZIP */
@@ -139,6 +146,7 @@ document.querySelectorAll(".export-item").forEach(item=>{
     }
 
     exportMenu.style.display = "none";
+    exportMask.style.display = "none";
   };
 });
 
