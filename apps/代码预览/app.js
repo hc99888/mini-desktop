@@ -1,4 +1,4 @@
-/* 翻页按钮 */
+/* ==================== 翻页按钮 ==================== */
 const pages = document.getElementById("pages");
 const btnPreview = document.getElementById("toPreview");
 const btnEditor = document.getElementById("toEditor");
@@ -17,7 +17,7 @@ function goEditor(){
 btnPreview.onclick = goPreview;
 btnEditor.onclick = goEditor;
 
-/* 手势滑动 */
+/* ==================== 手势滑动 ==================== */
 let startX = 0;
 document.addEventListener("touchstart", e=>{
   startX = e.touches[0].clientX;
@@ -28,7 +28,7 @@ document.addEventListener("touchend", e=>{
   if(diff > 80) goEditor();
 });
 
-/* 模式切换 */
+/* ==================== 模式切换 ==================== */
 const modeBtns = document.querySelectorAll(".mode-btn");
 const columnMode = document.getElementById("columnMode");
 const singleMode = document.getElementById("singleMode");
@@ -53,7 +53,7 @@ modeBtns.forEach(btn=>{
   });
 });
 
-/* 单文件切换 */
+/* ==================== 单文件切换 ==================== */
 const tabBtns = document.querySelectorAll(".tab-btn");
 const singleHtml = document.getElementById("single-html");
 const singleCss  = document.getElementById("single-css");
@@ -67,6 +67,13 @@ function showSingle(type){
   tabBtns.forEach(btn=>{
     btn.classList.toggle("active", btn.dataset.target === type);
   });
+
+  // 延迟调整高度，确保元素显示后正确计算 scrollHeight
+  setTimeout(() => {
+    if (type === "html") autoResize(document.getElementById("htmlCode_single"));
+    if (type === "css") autoResize(document.getElementById("cssCode_single"));
+    if (type === "js") autoResize(document.getElementById("jsCode_single"));
+  }, 10);
 }
 
 tabBtns.forEach(btn=>{
@@ -75,16 +82,24 @@ tabBtns.forEach(btn=>{
   });
 });
 
-/* 自动高度适配 */
+/* ==================== 自动高度适配（增强版）==================== */
 function autoResize(el){
-  el.style.height = "auto";
-  el.style.height = el.scrollHeight + "px";
+  if (!el) return;
+  // 重置高度以获取正确的 scrollHeight
+  el.style.height = 'auto';
+  // 计算新高度：内容高度 + 上下边框高度
+  let newHeight = el.scrollHeight;
+  // 如果元素有边框，加上边框高度（scrollHeight 不包括边框）
+  const computed = getComputedStyle(el);
+  const borderTop = parseFloat(computed.borderTopWidth) || 0;
+  const borderBottom = parseFloat(computed.borderBottomWidth) || 0;
+  newHeight += borderTop + borderBottom;
+  el.style.height = newHeight + 'px';
 }
 
-/* ========== 缓存功能 ========== */
+/* ==================== 缓存功能 ==================== */
 const STORAGE_KEY = "codePreviewer";
 
-// 保存所有代码到 localStorage
 function saveToStorage() {
   const data = {
     column: {
@@ -101,7 +116,6 @@ function saveToStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-// 从 localStorage 加载代码
 function loadFromStorage() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -121,15 +135,14 @@ function loadFromStorage() {
   document.querySelectorAll("textarea").forEach(el => autoResize(el));
 }
 
-/* ========== 自动运行（实时预览） ========== */
+/* ==================== 自动运行（实时预览） ==================== */
 let previewTimer;
 function setupRealtimePreview() {
   const textareas = document.querySelectorAll("textarea");
   textareas.forEach(ta => {
     ta.addEventListener("input", () => {
-      // 先保存到缓存
-      saveToStorage();
-      // 再触发预览（防抖）
+      autoResize(ta);          // 高度自适应
+      saveToStorage();          // 保存到缓存
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
         runCode();
@@ -138,7 +151,7 @@ function setupRealtimePreview() {
   });
 }
 
-/* 复制按钮 */
+/* ==================== 复制按钮 ==================== */
 document.querySelectorAll(".copy-btn").forEach(btn=>{
   btn.onclick = ()=>{
     const id = btn.dataset.target;
@@ -152,19 +165,19 @@ document.querySelectorAll(".copy-btn").forEach(btn=>{
   };
 });
 
-/* 删除按钮 */
+/* ==================== 删除按钮 ==================== */
 document.querySelectorAll(".del-btn").forEach(btn=>{
   btn.onclick = ()=>{
     const id = btn.dataset.target;
     const el = document.getElementById(id);
     el.value = "";
     autoResize(el);
-    saveToStorage();      // 更新缓存
-    runCode();            // 立即预览（删除后显示空效果）
+    saveToStorage();
+    runCode();
   };
 });
 
-/* 清空全部代码 */
+/* ==================== 清空全部代码 ==================== */
 document.getElementById("clearBtn").onclick = ()=>{
   [
     "htmlCode_column","cssCode_column","jsCode_column",
@@ -176,7 +189,7 @@ document.getElementById("clearBtn").onclick = ()=>{
   });
   
   saveToStorage();
-  runCode();  // 清空后立即预览
+  runCode();
 
   const clearBtn = document.getElementById("clearBtn");
   const originalText = clearBtn.textContent;
@@ -186,7 +199,7 @@ document.getElementById("clearBtn").onclick = ()=>{
   }, 1000);
 };
 
-/* 弹窗控制 */
+/* ==================== 弹窗控制 ==================== */
 const mask = document.getElementById("mask");
 const exportBtn = document.getElementById("exportBtn");
 const exportMenu = document.getElementById("exportMenu");
@@ -260,7 +273,7 @@ confirmOk.onclick = ()=>{
   closeAllPopups();
 };
 
-/* 构建完整 HTML */
+/* ==================== 构建完整 HTML ==================== */
 function buildDocument(html, css, js){
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -276,7 +289,7 @@ ${html}
 </html>`;
 }
 
-/* 运行代码到预览 */
+/* ==================== 运行代码到预览 ==================== */
 function runCode(){
   const isColumnMode = columnMode.style.display !== "none";
   
@@ -298,9 +311,6 @@ function runCode(){
   doc.open();
   doc.write(buildDocument(html, css, js));
   doc.close();
-
-  // 如果当前在编辑页，自动跳转到预览（可选，为了用户体验）
-  // 不自动跳转，让用户自己决定
 }
 
 document.getElementById("runBtn").onclick = ()=>{
@@ -308,7 +318,7 @@ document.getElementById("runBtn").onclick = ()=>{
   goPreview(); // 点击运行后跳转到预览页
 };
 
-/* 全屏预览 */
+/* ==================== 全屏预览 ==================== */
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const previewFrame = document.getElementById("previewFrame");
 
@@ -326,10 +336,33 @@ fullscreenBtn.onclick = ()=>{
   }
 };
 
-/* ========== 初始化 ========== */
+/* ==================== 新增：处理移动端键盘遮挡 ==================== */
+let keyboardTimer;
+function handleResize() {
+  const activeEl = document.activeElement;
+  if (activeEl && activeEl.tagName === 'TEXTAREA') {
+    clearTimeout(keyboardTimer);
+    keyboardTimer = setTimeout(() => {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+}
+window.addEventListener('resize', handleResize);
+
+/* ==================== 初始化 ==================== */
 window.onload = ()=>{
-  loadFromStorage();           // 读取缓存
-  setupRealtimePreview();      // 开启自动预览+保存
-  showSingle("html");          // 单文件默认显示HTML
-  runCode();                   // 加载后立即预览一次（显示当前代码效果）
+  // 移除所有 textarea 的内联 oninput（如果有）
+  document.querySelectorAll("textarea").forEach(ta => {
+    ta.removeAttribute("oninput");
+  });
+
+  loadFromStorage();           // 读取缓存（自动调整高度）
+  setupRealtimePreview();      // 开启自动预览+保存（内部已包含 input 监听）
+  showSingle("html");          // 单文件默认显示HTML（内部会 autoResize 对应框）
+  runCode();                   // 加载后立即预览一次
+
+  // 额外确保所有 textarea 高度正确（尤其是单文件刚显示时）
+  setTimeout(() => {
+    document.querySelectorAll("textarea").forEach(el => autoResize(el));
+  }, 50);
 };
