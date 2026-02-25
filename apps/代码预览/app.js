@@ -81,13 +81,69 @@ function autoResize(el){
   el.style.height = el.scrollHeight + "px";
 }
 
+/* ========== 缓存功能 ========== */
+const STORAGE_KEY = "codePreviewer";
+
+// 保存所有代码到 localStorage
+function saveToStorage() {
+  const data = {
+    column: {
+      html: document.getElementById("htmlCode_column").value,
+      css: document.getElementById("cssCode_column").value,
+      js: document.getElementById("jsCode_column").value
+    },
+    single: {
+      html: document.getElementById("htmlCode_single").value,
+      css: document.getElementById("cssCode_single").value,
+      js: document.getElementById("jsCode_single").value
+    }
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// 从 localStorage 加载代码
+function loadFromStorage() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      document.getElementById("htmlCode_column").value = data.column?.html || "";
+      document.getElementById("cssCode_column").value = data.column?.css || "";
+      document.getElementById("jsCode_column").value = data.column?.js || "";
+      document.getElementById("htmlCode_single").value = data.single?.html || "";
+      document.getElementById("cssCode_single").value = data.single?.css || "";
+      document.getElementById("jsCode_single").value = data.single?.js || "";
+    } catch (e) {
+      console.warn("读取缓存失败", e);
+    }
+  }
+  // 调整所有文本框高度
+  document.querySelectorAll("textarea").forEach(el => autoResize(el));
+}
+
+/* ========== 自动运行（实时预览） ========== */
+let previewTimer;
+function setupRealtimePreview() {
+  const textareas = document.querySelectorAll("textarea");
+  textareas.forEach(ta => {
+    ta.addEventListener("input", () => {
+      // 先保存到缓存
+      saveToStorage();
+      // 再触发预览（防抖）
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => {
+        runCode();
+      }, 500);
+    });
+  });
+}
+
 /* 复制按钮 */
 document.querySelectorAll(".copy-btn").forEach(btn=>{
   btn.onclick = ()=>{
     const id = btn.dataset.target;
     const el = document.getElementById(id);
     navigator.clipboard.writeText(el.value);
-    // 添加复制成功的视觉反馈
     const originalText = btn.textContent;
     btn.textContent = "✓ 已复制";
     setTimeout(() => {
@@ -103,6 +159,8 @@ document.querySelectorAll(".del-btn").forEach(btn=>{
     const el = document.getElementById(id);
     el.value = "";
     autoResize(el);
+    saveToStorage();      // 更新缓存
+    runCode();            // 立即预览（删除后显示空效果）
   };
 });
 
@@ -117,7 +175,9 @@ document.getElementById("clearBtn").onclick = ()=>{
     autoResize(el);
   });
   
-  // 添加清空反馈
+  saveToStorage();
+  runCode();  // 清空后立即预览
+
   const clearBtn = document.getElementById("clearBtn");
   const originalText = clearBtn.textContent;
   clearBtn.textContent = "✓ 已清空";
@@ -151,31 +211,24 @@ function closeAllPopups(){
   confirmMenu.style.display = "none";
 }
 
-/* 阻止弹窗点击事件冒泡到遮罩层 */
 exportMenu.onclick = (e) => e.stopPropagation();
 confirmMenu.onclick = (e) => e.stopPropagation();
 
-/* 选择导出类型 */
 document.querySelectorAll(".popup-item").forEach(item=>{
   item.onclick = ()=>{
     exportType = item.dataset.type;
-
     confirmText.textContent =
       exportType === "html"
       ? "确认导出 HTML 文件？"
       : "确认导出 ZIP 压缩包？";
-
     exportMenu.style.display = "none";
     confirmMenu.style.display = "block";
   };
 });
 
-/* 取消 */
 confirmCancel.onclick = closeAllPopups;
 
-/* 确认导出 */
 confirmOk.onclick = ()=>{
-  // 获取当前模式下的代码
   const isColumnMode = columnMode.style.display !== "none";
   
   let html, css, js;
@@ -207,7 +260,7 @@ confirmOk.onclick = ()=>{
   closeAllPopups();
 };
 
-/* 运行代码 */
+/* 构建完整 HTML */
 function buildDocument(html, css, js){
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -223,8 +276,8 @@ ${html}
 </html>`;
 }
 
+/* 运行代码到预览 */
 function runCode(){
-  // 获取当前模式下的代码
   const isColumnMode = columnMode.style.display !== "none";
   
   let html, css, js;
@@ -246,10 +299,14 @@ function runCode(){
   doc.write(buildDocument(html, css, js));
   doc.close();
 
-  goPreview();
+  // 如果当前在编辑页，自动跳转到预览（可选，为了用户体验）
+  // 不自动跳转，让用户自己决定
 }
 
-document.getElementById("runBtn").onclick = runCode;
+document.getElementById("runBtn").onclick = ()=>{
+  runCode();
+  goPreview(); // 点击运行后跳转到预览页
+};
 
 /* 全屏预览 */
 const fullscreenBtn = document.getElementById("fullscreenBtn");
@@ -269,10 +326,10 @@ fullscreenBtn.onclick = ()=>{
   }
 };
 
-/* 初始化文本框自动高度 */
+/* ========== 初始化 ========== */
 window.onload = ()=>{
-  document.querySelectorAll("textarea").forEach(el => autoResize(el));
-  
-  // 默认显示竖列模式
-  showSingle("html");
+  loadFromStorage();           // 读取缓存
+  setupRealtimePreview();      // 开启自动预览+保存
+  showSingle("html");          // 单文件默认显示HTML
+  runCode();                   // 加载后立即预览一次（显示当前代码效果）
 };

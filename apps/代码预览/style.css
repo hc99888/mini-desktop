@@ -116,7 +116,7 @@ html,body{
   backdrop-filter: blur(2px);
 }
 
-/* 弹窗通用样式 - 修复类名匹配和定位 */
+/* 弹窗通用样式 */
 .popup{
   position:fixed;
   top:50%;
@@ -168,7 +168,6 @@ html,body{
   color:#ffffff;
   padding-left:20px;
 }
-
 .popup-item:active{
   background:#3b4b5f;
   transform:scale(0.98);
@@ -192,11 +191,9 @@ html,body{
   cursor: pointer;
   transition:all 0.15s ease;
 }
-
 .popup-btn:hover{
   background:#1e293b;
 }
-
 .popup-btn:active{
   transform:scale(0.95);
   background:#334155;
@@ -216,14 +213,24 @@ html,body{
   border-radius:8px;
   border:1px solid #1f2937;
   background:#020617;
-  color:#9ca3af;
   cursor: pointer;
   transition:all 0.15s ease;
+}
+/* 不同语言标签的文字颜色 */
+.tab-btn[data-target="html"]{
+  color:#f97316; /* 橙色 */
+}
+.tab-btn[data-target="css"]{
+  color:#3b82f6; /* 蓝色 */
+}
+.tab-btn[data-target="js"]{
+  color:#eab308; /* 黄色 */
 }
 .tab-btn.active{
   border-color:#38bdf8;
   background:#0f172a;
-  color:#e5e7eb;
+  color:#e5e7eb !important; /* 激活时强制白色 */
+  box-shadow:0 0 8px rgba(56,189,248,0.35);
 }
 
 /* 编辑区 */
@@ -259,12 +266,12 @@ html,body{
   cursor: pointer;
 }
 
-/* 文本框 */
+/* 文本框 - 默认高亮（浅色边框）+ 聚焦高亮 */
 textarea{
   width:100%;
   min-height:80px;
   padding:10px;
-  border:none;
+  border:2px solid #334155;  /* 默认边框可见 */
   resize:none;
   border-radius:8px;
   background:#1e293b;
@@ -272,6 +279,12 @@ textarea{
   font-family:"JetBrains Mono","Fira Code",Consolas,monospace;
   font-size:14px;
   overflow:hidden;
+  outline:none;
+  transition:border 0.15s ease;
+}
+textarea:focus{
+  border-color:#38bdf8;
+  box-shadow:0 0 0 2px rgba(56,189,248,0.2);
 }
 
 /* 单文件模式 */

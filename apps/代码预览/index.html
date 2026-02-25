@@ -2,24 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>代码预览器</title>
+<title>代码预览器 - 可运行预览</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-  <!-- 弹窗遮罩（必须在 app 外） -->
+  <!-- 弹窗遮罩 -->
   <div id="mask" class="mask" style="display:none;"></div>
 
-  <!-- 导出类型选择（必须在 app 外） -->
+  <!-- 导出类型选择 -->
   <div id="exportMenu" class="popup" style="display:none;">
     <div class="popup-title">导出选项</div>
     <div class="popup-item" data-type="html">导出 HTML 文件</div>
     <div class="popup-item" data-type="zip">导出 ZIP 压缩包</div>
   </div>
 
-  <!-- 二次确认弹窗（必须在 app 外） -->
+  <!-- 二次确认弹窗 -->
   <div id="confirmMenu" class="popup" style="display:none;">
     <div id="confirmText" class="popup-title"></div>
     <div class="popup-btn-row">
@@ -28,7 +27,7 @@
     </div>
   </div>
 
-  <!-- 你的 app 才开始 -->
+  <!-- 主应用 -->
   <div class="app">
 
     <!-- 翻页按钮 -->
