@@ -5,6 +5,11 @@
     "url": "apps/订阅推送/"
   },
   {
+    "name": "预览运行",
+    "icon": "apps/代码预览运行/icon.png",
+    "url": "apps/代码预览运作/"
+  },
+  {
     "name": "空白模板",
     "icon": "apps/app-factory/icon.png",
     "url": "apps/app-factory/"
@@ -26,6 +31,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
