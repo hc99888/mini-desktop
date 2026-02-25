@@ -10,6 +10,14 @@
 
 <div class="app">
 
+      <!-- 导出弹窗（居中） -->
+      <div id="exportMask" class="mask" style="display:none;"></div>
+      <div id="exportMenu" class="export-popup" style="display:none;">
+        <div class="export-title">导出选项</div>
+        <div class="export-item" data-type="html">导出 HTML 文件</div>
+        <div class="export-item" data-type="zip">导出 ZIP 压缩包</div>
+      </div>
+
   <!-- 翻页按钮 -->
   <button id="toPreview" class="nav-btn">预览 →</button>
   <button id="toEditor" class="nav-btn">← 编辑</button>
@@ -32,14 +40,6 @@
 
           </div>
         </div>
-      </div>
-
-      <!-- 导出弹窗（居中） -->
-      <div id="exportMask" class="mask" style="display:none;"></div>
-      <div id="exportMenu" class="export-popup" style="display:none;">
-        <div class="export-title">导出选项</div>
-        <div class="export-item" data-type="html">导出 HTML 文件</div>
-        <div class="export-item" data-type="zip">导出 ZIP 压缩包</div>
       </div>
 
       <!-- 单文件模式切换条 -->
