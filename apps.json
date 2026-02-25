@@ -7,7 +7,7 @@
   {
     "name": "预览运行",
     "icon": "apps/代码预览运行/icon.png",
-    "url": "apps/代码预览运作/index.html",
+    "url": "apps/代码预览运行/index.html",
   },
   {
     "name": "空白模板",
@@ -31,6 +31,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
