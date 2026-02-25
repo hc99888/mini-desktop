@@ -57,6 +57,7 @@ html,body{
 /* 按钮点击反馈 */
 .btn{
   transition:all .15s ease;
+  cursor: pointer;
 }
 .btn:active{
   transform:scale(0.92);
@@ -105,41 +106,99 @@ html,body{
   box-shadow:0 0 8px rgba(56,189,248,0.35);
 }
 
-/* 居中弹窗 */
+/* 遮罩层 */
 .mask{
   position:fixed;
   top:0;left:0;
   width:100vw;height:100vh;
-  background:rgba(0,0,0,0.4);
-  z-index:50;
+  background:rgba(0,0,0,0.5);
+  z-index:999;
+  backdrop-filter: blur(2px);
 }
 
-.export-popup{
+/* 弹窗通用样式 - 修复类名匹配和定位 */
+.popup{
   position:fixed;
-  top:50%;left:50%;
+  top:50%;
+  left:50%;
   transform:translate(-50%,-50%);
-  width:260px;
+  width:280px;
   background:#1e293b;
-  border-radius:10px;
+  border-radius:12px;
   border:1px solid #334155;
-  z-index:60;
+  z-index:1000;
   overflow:hidden;
+  box-shadow:0 10px 25px rgba(0,0,0,0.5);
+  animation: popupShow 0.2s ease;
 }
 
-.export-title{
-  padding:12px;
+@keyframes popupShow{
+  from{
+    opacity:0;
+    transform:translate(-50%,-48%);
+  }
+  to{
+    opacity:1;
+    transform:translate(-50%,-50%);
+  }
+}
+
+.popup-title{
+  padding:16px;
   font-size:16px;
+  font-weight:500;
   text-align:center;
   border-bottom:1px solid #334155;
+  color:#e5e7eb;
 }
 
-.export-item{
-  padding:12px;
+.popup-item{
+  padding:14px 16px;
   font-size:14px;
   border-bottom:1px solid #334155;
+  color:#cbd5e1;
+  transition:all 0.15s ease;
+  cursor: pointer;
 }
-.export-item:last-child{border-bottom:none;}
-.export-item:hover{
+.popup-item:last-child{
+  border-bottom:none;
+}
+.popup-item:hover{
+  background:#334155;
+  color:#ffffff;
+  padding-left:20px;
+}
+
+.popup-item:active{
+  background:#3b4b5f;
+  transform:scale(0.98);
+}
+
+/* 二次确认弹窗按钮行 */
+.popup-btn-row{
+  display:flex;
+  padding:12px;
+  gap:8px;
+}
+
+.popup-btn{
+  flex:1;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #334155;
+  background:#0f172a;
+  color:#e5e7eb;
+  font-size:14px;
+  cursor: pointer;
+  transition:all 0.15s ease;
+}
+
+.popup-btn:hover{
+  background:#1e293b;
+}
+
+.popup-btn:active{
+  transform:scale(0.95);
   background:#334155;
 }
 
@@ -158,6 +217,8 @@ html,body{
   border:1px solid #1f2937;
   background:#020617;
   color:#9ca3af;
+  cursor: pointer;
+  transition:all 0.15s ease;
 }
 .tab-btn.active{
   border-color:#38bdf8;
@@ -195,6 +256,7 @@ html,body{
   border:1px solid #334155;
   background:#1e293b;
   color:#cbd5e1;
+  cursor: pointer;
 }
 
 /* 文本框 */
@@ -236,7 +298,7 @@ textarea{
   width:100vw !important;
   height:100vh !important;
   border-radius:0 !important;
-  z-index:999 !important;
+  z-index:1001 !important;
 }
 
 /* 翻页按钮 */
@@ -251,6 +313,14 @@ textarea{
   border-radius:8px;
   font-size:14px;
   z-index:10;
+  cursor: pointer;
+  transition:all 0.15s ease;
+}
+.nav-btn:hover{
+  background:#334155;
+}
+.nav-btn:active{
+  transform:translateY(-50%) scale(0.92);
 }
 #toPreview{right:10px;}
 #toEditor{left:10px;display:none;}

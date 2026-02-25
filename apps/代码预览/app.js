@@ -87,6 +87,12 @@ document.querySelectorAll(".copy-btn").forEach(btn=>{
     const id = btn.dataset.target;
     const el = document.getElementById(id);
     navigator.clipboard.writeText(el.value);
+    // 添加复制成功的视觉反馈
+    const originalText = btn.textContent;
+    btn.textContent = "✓ 已复制";
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 1000);
   };
 });
 
@@ -110,6 +116,14 @@ document.getElementById("clearBtn").onclick = ()=>{
     el.value = "";
     autoResize(el);
   });
+  
+  // 添加清空反馈
+  const clearBtn = document.getElementById("clearBtn");
+  const originalText = clearBtn.textContent;
+  clearBtn.textContent = "✓ 已清空";
+  setTimeout(() => {
+    clearBtn.textContent = originalText;
+  }, 1000);
 };
 
 /* 弹窗控制 */
@@ -123,7 +137,8 @@ const confirmOk = document.getElementById("confirmOk");
 
 let exportType = null;
 
-exportBtn.onclick = ()=>{
+exportBtn.onclick = (e)=>{
+  e.stopPropagation();
   mask.style.display = "block";
   exportMenu.style.display = "block";
 };
@@ -135,6 +150,10 @@ function closeAllPopups(){
   exportMenu.style.display = "none";
   confirmMenu.style.display = "none";
 }
+
+/* 阻止弹窗点击事件冒泡到遮罩层 */
+exportMenu.onclick = (e) => e.stopPropagation();
+confirmMenu.onclick = (e) => e.stopPropagation();
 
 /* 选择导出类型 */
 document.querySelectorAll(".popup-item").forEach(item=>{
@@ -156,20 +175,33 @@ confirmCancel.onclick = closeAllPopups;
 
 /* 确认导出 */
 confirmOk.onclick = ()=>{
-  const html = document.getElementById("htmlCode_column").value;
-  const css  = document.getElementById("cssCode_column").value;
-  const js   = document.getElementById("jsCode_column").value;
+  // 获取当前模式下的代码
+  const isColumnMode = columnMode.style.display !== "none";
+  
+  let html, css, js;
+  
+  if(isColumnMode) {
+    html = document.getElementById("htmlCode_column").value;
+    css = document.getElementById("cssCode_column").value;
+    js = document.getElementById("jsCode_column").value;
+  } else {
+    html = document.getElementById("htmlCode_single").value;
+    css = document.getElementById("cssCode_single").value;
+    js = document.getElementById("jsCode_single").value;
+  }
 
   if(exportType === "html"){
-    const blob = new Blob([html], {type:"text/html"});
+    const fullHtml = buildDocument(html, css, js);
+    const blob = new Blob([fullHtml], {type:"text/html"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "index.html";
     a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   if(exportType === "zip"){
-    alert("ZIP 导出功能可扩展（JSZip）");
+    alert("ZIP 导出功能需要添加 JSZip 库，当前为演示效果");
   }
 
   closeAllPopups();
@@ -177,11 +209,11 @@ confirmOk.onclick = ()=>{
 
 /* 运行代码 */
 function buildDocument(html, css, js){
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>${css}</style>
 </head>
 <body>
@@ -192,9 +224,20 @@ ${html}
 }
 
 function runCode(){
-  const html = document.getElementById("htmlCode_column").value;
-  const css  = document.getElementById("cssCode_column").value;
-  const js   = document.getElementById("jsCode_column").value;
+  // 获取当前模式下的代码
+  const isColumnMode = columnMode.style.display !== "none";
+  
+  let html, css, js;
+  
+  if(isColumnMode) {
+    html = document.getElementById("htmlCode_column").value;
+    css = document.getElementById("cssCode_column").value;
+    js = document.getElementById("jsCode_column").value;
+  } else {
+    html = document.getElementById("htmlCode_single").value;
+    css = document.getElementById("cssCode_single").value;
+    js = document.getElementById("jsCode_single").value;
+  }
 
   const iframe = document.getElementById("previewFrame");
   const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -224,4 +267,12 @@ fullscreenBtn.onclick = ()=>{
     fullscreenBtn.textContent = "全屏预览";
     isFull = false;
   }
+};
+
+/* 初始化文本框自动高度 */
+window.onload = ()=>{
+  document.querySelectorAll("textarea").forEach(el => autoResize(el));
+  
+  // 默认显示竖列模式
+  showSingle("html");
 };
