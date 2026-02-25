@@ -10,13 +10,24 @@
 
 <div class="app">
 
-      <!-- 导出弹窗（居中） -->
-      <div id="exportMask" class="mask" style="display:none;"></div>
-      <div id="exportMenu" class="export-popup" style="display:none;">
-        <div class="export-title">导出选项</div>
-        <div class="export-item" data-type="html">导出 HTML 文件</div>
-        <div class="export-item" data-type="zip">导出 ZIP 压缩包</div>
-      </div>
+  <!-- 弹窗遮罩 -->
+  <div id="mask" class="mask" style="display:none;"></div>
+
+  <!-- 导出类型选择 -->
+  <div id="exportMenu" class="popup" style="display:none;">
+    <div class="popup-title">导出选项</div>
+    <div class="popup-item" data-type="html">导出 HTML 文件</div>
+    <div class="popup-item" data-type="zip">导出 ZIP 压缩包</div>
+  </div>
+
+  <!-- 二次确认弹窗 -->
+  <div id="confirmMenu" class="popup" style="display:none;">
+    <div id="confirmText" class="popup-title"></div>
+    <div class="popup-btn-row">
+      <button id="confirmCancel" class="popup-btn">取消</button>
+      <button id="confirmOk" class="popup-btn">确认</button>
+    </div>
+  </div>
 
   <!-- 翻页按钮 -->
   <button id="toPreview" class="nav-btn">预览 →</button>
@@ -58,28 +69,28 @@
           <div class="editor-block">
             <div class="editor-title">
               HTML
-              <button class="small-btn copy-btn btn" data-target="htmlCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="htmlCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="htmlCode_column">复制</button>
+              <button class="small-btn del-btn btn" data-target="htmlCode_column">删除</button>
             </div>
-            <textarea id="htmlCode" oninput="autoResize(this)"></textarea>
+            <textarea id="htmlCode_column" oninput="autoResize(this)"></textarea>
           </div>
 
           <div class="editor-block">
             <div class="editor-title">
               CSS
-              <button class="small-btn copy-btn btn" data-target="cssCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="cssCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="cssCode_column">复制</button>
+              <button class="small-btn del-btn btn" data-target="cssCode_column">删除</button>
             </div>
-            <textarea id="cssCode" oninput="autoResize(this)"></textarea>
+            <textarea id="cssCode_column" oninput="autoResize(this)"></textarea>
           </div>
 
           <div class="editor-block">
             <div class="editor-title">
               JavaScript
-              <button class="small-btn copy-btn btn" data-target="jsCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="jsCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="jsCode_column">复制</button>
+              <button class="small-btn del-btn btn" data-target="jsCode_column">删除</button>
             </div>
-            <textarea id="jsCode" oninput="autoResize(this)"></textarea>
+            <textarea id="jsCode_column" oninput="autoResize(this)"></textarea>
           </div>
 
         </div>
@@ -90,28 +101,28 @@
           <div class="single-block" id="single-html" style="display:flex;">
             <div class="editor-title">
               HTML
-              <button class="small-btn copy-btn btn" data-target="htmlCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="htmlCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="htmlCode_single">复制</button>
+              <button class="small-btn del-btn btn" data-target="htmlCode_single">删除</button>
             </div>
-            <textarea id="htmlCode" oninput="autoResize(this)"></textarea>
+            <textarea id="htmlCode_single" oninput="autoResize(this)"></textarea>
           </div>
 
           <div class="single-block" id="single-css">
             <div class="editor-title">
               CSS
-              <button class="small-btn copy-btn btn" data-target="cssCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="cssCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="cssCode_single">复制</button>
+              <button class="small-btn del-btn btn" data-target="cssCode_single">删除</button>
             </div>
-            <textarea id="cssCode" oninput="autoResize(this)"></textarea>
+            <textarea id="cssCode_single" oninput="autoResize(this)"></textarea>
           </div>
 
           <div class="single-block" id="single-js">
             <div class="editor-title">
               JavaScript
-              <button class="small-btn copy-btn btn" data-target="jsCode">复制</button>
-              <button class="small-btn del-btn btn" data-target="jsCode">删除</button>
+              <button class="small-btn copy-btn btn" data-target="jsCode_single">复制</button>
+              <button class="small-btn del-btn btn" data-target="jsCode_single">删除</button>
             </div>
-            <textarea id="jsCode" oninput="autoResize(this)"></textarea>
+            <textarea id="jsCode_single" oninput="autoResize(this)"></textarea>
           </div>
 
         </div>

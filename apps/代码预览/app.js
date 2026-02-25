@@ -102,53 +102,78 @@ document.querySelectorAll(".del-btn").forEach(btn=>{
 
 /* 清空全部代码 */
 document.getElementById("clearBtn").onclick = ()=>{
-  ["htmlCode","cssCode","jsCode"].forEach(id=>{
+  [
+    "htmlCode_column","cssCode_column","jsCode_column",
+    "htmlCode_single","cssCode_single","jsCode_single"
+  ].forEach(id=>{
     const el = document.getElementById(id);
     el.value = "";
     autoResize(el);
   });
 };
 
-/* 导出弹窗 */
+/* 弹窗控制 */
+const mask = document.getElementById("mask");
 const exportBtn = document.getElementById("exportBtn");
 const exportMenu = document.getElementById("exportMenu");
-const exportMask = document.getElementById("exportMask");
+const confirmMenu = document.getElementById("confirmMenu");
+const confirmText = document.getElementById("confirmText");
+const confirmCancel = document.getElementById("confirmCancel");
+const confirmOk = document.getElementById("confirmOk");
+
+let exportType = null;
 
 exportBtn.onclick = ()=>{
+  mask.style.display = "block";
   exportMenu.style.display = "block";
-  exportMask.style.display = "block";
 };
 
-exportMask.onclick = ()=>{
+mask.onclick = closeAllPopups;
+
+function closeAllPopups(){
+  mask.style.display = "none";
   exportMenu.style.display = "none";
-  exportMask.style.display = "none";
-};
+  confirmMenu.style.display = "none";
+}
 
-/* 导出 HTML / ZIP */
-document.querySelectorAll(".export-item").forEach(item=>{
+/* 选择导出类型 */
+document.querySelectorAll(".popup-item").forEach(item=>{
   item.onclick = ()=>{
-    const type = item.dataset.type;
+    exportType = item.dataset.type;
 
-    const html = document.getElementById("htmlCode").value;
-    const css  = document.getElementById("cssCode").value;
-    const js   = document.getElementById("jsCode").value;
-
-    if(type === "html"){
-      const blob = new Blob([html], {type:"text/html"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "index.html";
-      a.click();
-    }
-
-    if(type === "zip"){
-      alert("ZIP 导出功能可扩展（JSZip）");
-    }
+    confirmText.textContent =
+      exportType === "html"
+      ? "确认导出 HTML 文件？"
+      : "确认导出 ZIP 压缩包？";
 
     exportMenu.style.display = "none";
-    exportMask.style.display = "none";
+    confirmMenu.style.display = "block";
   };
 });
+
+/* 取消 */
+confirmCancel.onclick = closeAllPopups;
+
+/* 确认导出 */
+confirmOk.onclick = ()=>{
+  const html = document.getElementById("htmlCode_column").value;
+  const css  = document.getElementById("cssCode_column").value;
+  const js   = document.getElementById("jsCode_column").value;
+
+  if(exportType === "html"){
+    const blob = new Blob([html], {type:"text/html"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "index.html";
+    a.click();
+  }
+
+  if(exportType === "zip"){
+    alert("ZIP 导出功能可扩展（JSZip）");
+  }
+
+  closeAllPopups();
+};
 
 /* 运行代码 */
 function buildDocument(html, css, js){
@@ -167,9 +192,9 @@ ${html}
 }
 
 function runCode(){
-  const html = document.getElementById("htmlCode").value;
-  const css  = document.getElementById("cssCode").value;
-  const js   = document.getElementById("jsCode").value;
+  const html = document.getElementById("htmlCode_column").value;
+  const css  = document.getElementById("cssCode_column").value;
+  const js   = document.getElementById("jsCode_column").value;
 
   const iframe = document.getElementById("previewFrame");
   const doc = iframe.contentDocument || iframe.contentWindow.document;
