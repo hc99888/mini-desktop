@@ -10,6 +10,11 @@
     "url": "apps/代码预览/"
   },
   {
+    "name": "代码沙盒",
+    "icon": "apps/代码沙盒/icon.png",
+    "url": "apps/代码沙盒/"
+  },
+  {
     "name": "空白模板",
     "icon": "apps/app-factory/icon.png",
     "url": "apps/app-factory/"
@@ -31,6 +36,7 @@
     "url": "apps/解析双色球/"
   }
 ]
+
 
 
 
