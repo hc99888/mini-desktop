@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>✅ 修复：多页面切换功能</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0a0a12;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #eee;
+            overflow: hidden;
+            touch-action: pan-x pan-y;
+        }
+
+        .page-container {
+            display: flex;
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            background: #080810;
+            scroll-behavior: smooth;
+        }
+        .page-container::-webkit-scrollbar {
+            height: 2px;
+            background: #1e1e30;
+        }
+        .page-container::-webkit-scrollbar-thumb {
+            background: #5a5a9a;
+            border-radius: 0;
+        }
+        .page-container {
+            scrollbar-color: #5a5a9a #1e1e30;
+        }
+
+        .page {
+            flex: 0 0 100vw;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .editor-page { background: #141422; }
+        .preview-page { background: #0c0c18; padding: 0; }
+
+        .editor-toolbar {
+            background: #1c1c30;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #3d3d66;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            flex-shrink: 0;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 1px 4px #00000080;
+            min-height: 44px;
+        }
+        .editor-toolbar button {
+            background: #2a2a48;
+            border: 1px solid #5d5d92;
+            color: #f0eefc;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mode-tabs {
+            display: flex;
+            background: #16162a;
+            border-radius: 40px;
+            margin: 3px 8px;
+            padding: 2px;
+            border: 1px solid #4a4a78;
+            flex-shrink: 0;
+        }
+        .mode-tab {
+            flex: 1;
+            text-align: center;
+            padding: 1px 0;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #b0b0e0;
+            background: transparent;
+            transition: 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mode-tab.active {
+            background: #3d3d6b;
+            color: white;
+        }
+
+        .action-bar {
+            background: #1a1a30;
+            padding: 3px 8px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            border-top: 1px solid #3b3b60;
+            border-bottom: 1px solid #3b3b60;
+            flex-shrink: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            scrollbar-width: thin;
+            min-height: 30px;
+        }
+        .action-bar button {
+            background: #2e2e52;
+            border: 1px solid #63639f;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            margin: 2px;
+            transition: all 0.2s;
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: #11111d;
+            padding: 3px;      
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .full-textarea {
+            width: 100%;
+            min-height: 100%;
+            height: auto;
+            background: #0a0a14;
+            border: 1px solid #313158;
+            color: #f0f0ff;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 16px;
+            resize: none;
+            outline: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border-radius: 12px;
+            display: block;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        .split-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #0d0d1a;
+            border-radius: 12px;
+            border: 1px solid #32325a;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .split-tabs {
+            display: flex;
+            background: #1a1a32;
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid #4f4f88;
+            flex-shrink: 0;
+        }
+        .split-tab {
+            flex: 1;
+            text-align: center;
+            padding: 3px 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #b1b1e6;
+            cursor: pointer;
+            background: #232342;
+            border-right: 1px solid #3f3f6e;
+            transition: 0.1s;
+        }
+        .split-tab:last-child { border-right: none; }
+        .split-tab.active {
+            background: #2f2f60;
+            color: white;
+            border-bottom: 1px solid #b59eff;
+        }
+        .split-content {
+            flex: 1;
+            overflow-y: hidden;
+            background: #0a0a16;
+            border-radius: 0 0 12px 12px;
+            min-height: 0;
+        }
+        .split-pane {
+            display: none;
+            height: 100%;
+        }
+        .split-pane.active-pane {
+            display: block;
+            height: 100%;
+        }
+        .split-textarea {
+            width: 100%;
+            height: 100%;
+            background: #0a0a16;
+            border: none;
+            color: #f0f0ff;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 16px;
+            resize: none;
+            outline: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border: none;
+            display: block;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: #20203a;
+            border: 2px solid #6a6ab0;
+            border-radius: 24px;
+            padding: 20px;
+            width: 300px;
+            color: white;
+            box-shadow: 0 10px 30px #000;
+        }
+        .modal-box h3 { margin-bottom: 16px; color: #c8b9ff; }
+        .modal-option {
+            background: #2c2c50;
+            border: 1px solid #7d7dcc;
+            padding: 12px 16px;
+            border-radius: 40px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .modal-option input[type="radio"] { width: 18px; height: 18px; accent-color: #a394ff; }
+        .zip-checkbox {
+            margin: 12px 0 8px 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #1e1e38;
+            padding: 8px 16px;
+            border-radius: 40px;
+        }
+        .zip-checkbox input { width: 18px; height: 18px; accent-color: #a394ff; }
+        .close-btn {
+            background: #52529e;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            margin-top: 12px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .btn-group button { flex:1; }
+        
+        /* 预览页控制按钮 */
+        .preview-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 1000;
+        }
+        .preview-controls button {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 1px solid #666;
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+/* ========== 亮色模式完整主题 ========== */
+body.light-mode {
+    background: #f5f5f7;
+    color: #333;
+}
+
+/* 顶部工具栏 */
+body.light-mode .editor-toolbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+body.light-mode .editor-toolbar button {
+    background: #d0d0d0;
+    border: 1px solid #999;
+    color: #222;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* 模式切换标签 */
+body.light-mode .mode-tabs {
+    background: #e8e8e8;
+    border: 1px solid #ccc;
+}
+
+body.light-mode .mode-tab {
+    color: #555;
+}
+
+body.light-mode .mode-tab.active {
+    background: #4a90e2;
+    color: white;
+}
+
+/* 操作栏 */
+body.light-mode .action-bar {
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+body.light-mode .action-bar button {
+    background: #e0e0e0;
+    border: 1px solid #aaa;
+    color: #222;
+}
+
+/* 滚动区域 */
+body.light-mode .scroll-area {
+    background: #f5f5f7;
+}
+
+/* 完整模式编辑框 */
+body.light-mode .full-textarea {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #333;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);
+}
+
+/* 拆分模式容器 */
+body.light-mode .split-container {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.02);
+}
+
+/* 拆分模式标签栏 */
+body.light-mode .split-tabs {
+    background: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+}
+
+body.light-mode .split-tab {
+    background: #e0e0e0;
+    color: #333;
+    border-right: 1px solid #ddd;
+}
+
+body.light-mode .split-tab.active {
+    background: #2a6fb0;
+    color: white;
+    border-bottom: 2px solid #2a6fb0;
+}
+
+/* 拆分模式内容区 */
+body.light-mode .split-content {
+    background: #ffffff;
+}
+
+body.light-mode .split-textarea {
+    background: #ffffff;
+    color: #333;
+}
+
+/* 预览页 */
+body.light-mode .preview-page {
+    background: #ffffff;
+}
+
+/* 预览页控制按钮 */
+body.light-mode .preview-controls button {
+    background: rgba(220,220,220,0.95);
+    color: #222;
+    border: 1px solid #999;
+    backdrop-filter: blur(5px);
+}
+
+/* 弹窗 */
+body.light-mode .modal-box {
+    background: #ffffff;
+    border: 2px solid #4a90e2;
+    color: #333;
+}
+
+body.light-mode .modal-option {
+    background: #e0e0e0;
+    border: 1px solid #4a90e2;
+    color: #222;
+}
+
+body.light-mode .zip-checkbox {
+    background: #f0f0f0;
+    color: #333;
+}
+
+body.light-mode .close-btn {
+    background: #4a90e2;
+    color: white;
+}
+
+body.light-mode .close-btn#cancelExport {
+    background: #aaa !important;
+    color: white;
+}
+
+/* 滚动条 - 亮色模式 */
+body.light-mode .scroll-area::-webkit-scrollbar-track {
+    background: #e0e0e0;
+}
+
+body.light-mode .scroll-area::-webkit-scrollbar-thumb {
+    background: #aaa;
+}
+
+body.light-mode .page-container::-webkit-scrollbar {
+    background: #e0e0e0;
+}
+
+body.light-mode .page-container::-webkit-scrollbar-thumb {
+    background: #aaa;
+}
+
+/* 火狐滚动条 */
+body.light-mode .scroll-area {
+    scrollbar-color: #aaa #e0e0e0;
+}
+
+body.light-mode .page-container {
+    scrollbar-color: #aaa #e0e0e0;
+}
+    </style>
+</head>
+<body>
+    <div class="page-container" id="pageContainer">
+        <div class="page editor-page">
+            <div class="editor-toolbar">
+                <button id="runBtn">▶ 运行</button>
+                <button id="exportBtn">📦 导出</button>
+                <button id="batchImportBtn">📎 批量导入</button>
+                <button id="clearBtn">🗑️ 清空</button>
+                <button id="themeToggleBtn">🌙 主题</button>
+            </div>
+
+            <div class="mode-tabs">
+                <div class="mode-tab active" id="fullModeTab">📄 HTML完整</div>
+                <div class="mode-tab" id="splitModeTab">📁 三文件区</div>
+            </div>
+
+            <div class="action-bar">
+                <button id="copyBtn">📋 复制</button>
+                <button id="deleteBtn">❌ 删除</button>
+                <button id="pasteBtn">📎 粘贴</button>
+                <button id="parseToSplitBtn" style="display: inline-block;">🔍 解析→拆分</button>
+                <button id="mergeToFullBtn" style="display: none;">🔗 合并→完整</button>
+            </div>
+
+            <div class="scroll-area" id="mainScrollArea">
+                <div id="editorFullMode" style="height:100%;">
+                    <textarea id="fullCodeTextarea" class="full-textarea" placeholder="<!-- 完整HTML -->" spellcheck="false"></textarea>
+                </div>
+                <div id="editorSplitMode" style="height:100%; display: none;">
+                    <div class="split-container">
+                        <div class="split-tabs">
+                            <div class="split-tab active" data-split="html">HTML</div>
+                            <div class="split-tab" data-split="css">CSS</div>
+                            <div class="split-tab" data-split="js">JS</div>
+                        </div>
+                        <div class="split-content">
+                            <div class="split-pane active-pane" id="splitPaneHtml">
+                                <textarea id="splitHtmlTextarea" class="split-textarea" placeholder="<!-- HTML -->"></textarea>
+                            </div>
+                            <div class="split-pane" id="splitPaneCss">
+                                <textarea id="splitCssTextarea" class="split-textarea" placeholder="/* CSS */"></textarea>
+                            </div>
+                            <div class="split-pane" id="splitPaneJs">
+                                <textarea id="splitJsTextarea" class="split-textarea" placeholder="// JS"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page preview-page" style="position: relative;">
+            <iframe id="previewIframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-same-origin allow-modals allow-popups allow-top-navigation" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 导出弹窗 -->
+    <div id="exportModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3>📁 导出选项</h3>
+            <label class="modal-option"><input type="radio" name="exportFormat" value="full" checked> 📄 HTML完整</label>
+            <label class="modal-option"><input type="radio" name="exportFormat" value="split"> 📁 三文件 (HTML/CSS/JS)</label>
+            
+            <div class="zip-checkbox">
+                <input type="checkbox" id="compressCheckbox" checked> <label for="compressCheckbox">🗜️ 压缩文件 (ZIP)</label>
+            </div>
+            
+            <div class="btn-group">
+                <button id="confirmExport" class="close-btn">✅ 确认</button>
+                <button id="cancelExport" class="close-btn" style="background:#3a3a5a;">🚫 取消</button>
+            </div>
+            <p style="font-size:0.7rem; margin-top:8px; opacity:0.8;">✔勾选压缩=生成ZIP；不勾选=直接下载文件</p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // 核心元素
+            const fullModeDiv = document.getElementById('editorFullMode');
+            const splitModeDiv = document.getElementById('editorSplitMode');
+            const fullModeTab = document.getElementById('fullModeTab');
+            const splitModeTab = document.getElementById('splitModeTab');
+            const parseBtn = document.getElementById('parseToSplitBtn');
+            const mergeBtn = document.getElementById('mergeToFullBtn');
+            const runBtn = document.getElementById('runBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const batchImportBtn = document.getElementById('batchImportBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const pasteBtn = document.getElementById('pasteBtn');
+            const themeToggle = document.getElementById('themeToggleBtn');
+
+            const fullTextarea = document.getElementById('fullCodeTextarea');
+            const splitHtml = document.getElementById('splitHtmlTextarea');
+            const splitCss = document.getElementById('splitCssTextarea');
+            const splitJs = document.getElementById('splitJsTextarea');
+            const previewIframe = document.getElementById('previewIframe');
+
+            const splitTabs = document.querySelectorAll('.split-tab');
+            const splitPanes = document.querySelectorAll('.split-pane');
+
+            // 弹窗
+            const exportModal = document.getElementById('exportModal');
+            const confirmExport = document.getElementById('confirmExport');
+            const cancelExport = document.getElementById('cancelExport');
+            const exportRadios = document.querySelectorAll('input[name="exportFormat"]');
+            const compressCheckbox = document.getElementById('compressCheckbox');
+
+            let currentMode = 'full';
+            let currentUrl = null;
+
+            function setMode(mode) {
+                currentMode = mode;
+                if (mode === 'full') {
+                    fullModeDiv.style.display = 'block';
+                    splitModeDiv.style.display = 'none';
+                    fullModeTab.classList.add('active');
+                    splitModeTab.classList.remove('active');
+                    parseBtn.style.display = 'inline-block';
+                    mergeBtn.style.display = 'none';
+                } else {
+                    fullModeDiv.style.display = 'none';
+                    splitModeDiv.style.display = 'block';
+                    fullModeTab.classList.remove('active');
+                    splitModeTab.classList.add('active');
+                    parseBtn.style.display = 'none';
+                    mergeBtn.style.display = 'inline-block';
+                }
+            }
+
+            fullModeTab.addEventListener('click', () => setMode('full'));
+            splitModeTab.addEventListener('click', () => setMode('split'));
+
+            // 拆分选项卡
+            splitTabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const target = e.target.dataset.split;
+                    splitTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    splitPanes.forEach(pane => pane.classList.remove('active-pane'));
+                    if (target === 'html') document.getElementById('splitPaneHtml').classList.add('active-pane');
+                    else if (target === 'css') document.getElementById('splitPaneCss').classList.add('active-pane');
+                    else if (target === 'js') document.getElementById('splitPaneJs').classList.add('active-pane');
+                });
+            });
+
+            // 监听iframe的加载事件，捕获URL变化
+            previewIframe.addEventListener('load', () => {
+                try {
+                    const iframeUrl = previewIframe.contentWindow.location.href;
+                    if (iframeUrl !== 'about:blank') {
+                        currentUrl = iframeUrl;
+                        console.log('页面跳转到:', iframeUrl);
+                    }
+                } catch (e) {
+                    // 跨域错误忽略
+                }
+            });
+
+            function updatePreview() {
+                let htmlContent = '';
+                if (currentMode === 'full') {
+                    htmlContent = fullTextarea.value || '<!-- 空内容 -->';
+                } else {
+                    const h = splitHtml.value || '';
+                    const c = splitCss.value || '';
+                    const j = splitJs.value || '';
+                    htmlContent = `<!DOCTYPE html>\n<html>\n<head><meta charset="UTF-8"><style>${c}</style></head>\n<body>${h}<script>${j}<\/script>\n</body>\n</html>`;
+                }
+                
+                // 使用srcdoc来支持多页面应用
+                previewIframe.srcdoc = htmlContent;
+                currentUrl = null;
+            }
+
+            runBtn.addEventListener('click', updatePreview);
+
+            clearBtn.addEventListener('click', () => {
+                fullTextarea.value = '';
+                splitHtml.value = ''; splitCss.value = ''; splitJs.value = '';
+                updatePreview();
+            });
+
+            copyBtn.addEventListener('click', async () => {
+                let text = '';
+                if (currentMode === 'full') text = fullTextarea.value;
+                else {
+                    const activePaneId = [...splitPanes].find(p => p.classList.contains('active-pane'))?.id;
+                    if (activePaneId === 'splitPaneHtml') text = splitHtml.value;
+                    else if (activePaneId === 'splitPaneCss') text = splitCss.value;
+                    else text = splitJs.value;
+                }
+                try {
+                    await navigator.clipboard.writeText(text);
+                    alert('✅ 已复制');
+                } catch { 
+                    alert('❌ 复制失败');
+                }
+            });
+
+            deleteBtn.addEventListener('click', () => {
+                if (currentMode === 'full') fullTextarea.value = '';
+                else { splitHtml.value = ''; splitCss.value = ''; splitJs.value = ''; }
+                updatePreview();
+            });
+
+            pasteBtn.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (currentMode === 'full') fullTextarea.value = text;
+                    else {
+                        const activePaneId = [...splitPanes].find(p => p.classList.contains('active-pane'))?.id;
+                        if (activePaneId === 'splitPaneHtml') splitHtml.value = text;
+                        else if (activePaneId === 'splitPaneCss') splitCss.value = text;
+                        else splitJs.value = text;
+                    }
+                    updatePreview();
+                    alert('✅ 粘贴成功');
+                } catch { 
+                    alert('❌ 粘贴失败');
+                }
+            });
+
+            // ========= 解析到拆分 =========
+            parseBtn.addEventListener('click', () => {
+                if (currentMode !== 'full') return;
+                const full = fullTextarea.value;
+
+                // 提取<style>内容
+                const styleBlocks = [];
+                const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+                let styleMatch;
+                while ((styleMatch = styleRegex.exec(full)) !== null) {
+                    styleBlocks.push(styleMatch[1]);
+                }
+                
+                // 提取<script>内容
+                const scriptBlocks = [];
+                const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+                let scriptMatch;
+                while ((scriptMatch = scriptRegex.exec(full)) !== null) {
+                    scriptBlocks.push(scriptMatch[1]);
+                }
+
+                // 获取HTML主体
+                let htmlExt = full
+                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                    .replace(/<!DOCTYPE[^>]*>/gi, '')
+                    .replace(/<\/?html[^>]*>/gi, '')
+                    .replace(/<\/?head[^>]*>/gi, '')
+                    .replace(/<\/?body[^>]*>/gi, '')
+                    .replace(/<meta[^>]*>/gi, '')
+                    .trim();
+
+                splitHtml.value = htmlExt;
+                splitCss.value = styleBlocks.join('\n\n');
+                splitJs.value = scriptBlocks.join('\n\n');
+
+                setMode('split');
+                alert('✅ 解析完成');
+            });
+
+            mergeBtn.addEventListener('click', () => {
+                if (currentMode !== 'split') return;
+                const merged = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>${splitCss.value}</style></head>
+<body>${splitHtml.value}<script>${splitJs.value}<\/script></body>
+</html>`;
+                fullTextarea.value = merged;
+                setMode('full');
+                updatePreview();
+            });
+
+            // ========= 批量导入 =========
+            batchImportBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.html,.htm,.css,.js';
+                input.multiple = true;
+                
+                input.onchange = (e) => {
+                    const files = Array.from(e.target.files);
+                    if (files.length === 0) return;
+
+                    // 获取文件类型
+                    const fileTypes = files.map(f => {
+                        if (f.name.match(/\.html?$/i)) return 'html';
+                        if (f.name.match(/\.css$/i)) return 'css';
+                        if (f.name.match(/\.js$/i)) return 'js';
+                        return 'other';
+                    });
+
+                    if (currentMode === 'full') {
+                        // ===== 完整模式：只能导入单个完整的HTML文件 =====
+                        
+                        if (files.length !== 1) {
+                            alert('❌ 完整模式只能导入一个HTML文件');
+                            return;
+                        }
+                        
+                        if (fileTypes[0] !== 'html') {
+                            alert('❌ 完整模式只能导入HTML文件');
+                            return;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            fullTextarea.value = ev.target.result;
+                            setMode('full');
+                            updatePreview();
+                            alert('✅ 导入成功');
+                        };
+                        reader.readAsText(files[0]);
+                        
+                    } else {
+                        // ===== 拆分模式：分别导入对应的文件 =====
+                        
+                        if (!fileTypes.includes('html')) {
+                            alert('❌ 拆分模式必须包含HTML文件');
+                            return;
+                        }
+                        
+                        if (fileTypes.includes('other')) {
+                            alert('❌ 只能导入HTML、CSS或JS文件');
+                            return;
+                        }
+                        
+                        const htmlCount = fileTypes.filter(t => t === 'html').length;
+                        const cssCount = fileTypes.filter(t => t === 'css').length;
+                        const jsCount = fileTypes.filter(t => t === 'js').length;
+                        
+                        if (htmlCount > 1 || cssCount > 1 || jsCount > 1) {
+                            alert('❌ 每种类型的文件只能选择一个');
+                            return;
+                        }
+                        
+                        let htmlContent = null, cssContent = null, jsContent = null;
+                        let filesRead = 0;
+                        
+                        files.forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                                const content = ev.target.result;
+                                
+                                if (file.name.match(/\.html?$/i)) {
+                                    htmlContent = content;
+                                } else if (file.name.match(/\.css$/i)) {
+                                    cssContent = content;
+                                } else if (file.name.match(/\.js$/i)) {
+                                    jsContent = content;
+                                }
+                                
+                                filesRead++;
+                                if (filesRead === files.length) {
+                                    if (htmlContent !== null) splitHtml.value = htmlContent;
+                                    if (cssContent !== null) splitCss.value = cssContent;
+                                    if (jsContent !== null) splitJs.value = jsContent;
+                                    
+                                    setMode('split');
+                                    updatePreview();
+                                    alert('✅ 导入成功');
+                                }
+                            };
+                            reader.readAsText(file);
+                        });
+                    }
+                };
+                
+                input.click();
+            });
+
+            // ========= 导出逻辑 =========
+            exportBtn.addEventListener('click', () => {
+                exportModal.style.display = 'flex';
+            });
+
+            confirmExport.addEventListener('click', () => {
+                let selected = 'full';
+                exportRadios.forEach(r => { if (r.checked) selected = r.value; });
+                
+                const needCompress = compressCheckbox.checked;
+
+                if (selected === 'full') {
+                    const content = currentMode === 'full' ? fullTextarea.value : 
+                        `<!DOCTYPE html>\n<html>\n<head><meta charset="UTF-8"><style>${splitCss.value}</style></head>\n<body>${splitHtml.value}<script>${splitJs.value}<\/script>\n</body>\n</html>`;
+                    
+                    if (needCompress) {
+                        download('完整代码.zip', content);
+                    } else {
+                        download('index.html', content);
+                    }
+                } else {
+                    if (needCompress) {
+                        if (splitHtml.value) download('index.html', splitHtml.value);
+                        if (splitCss.value) download('style.css', splitCss.value);
+                        if (splitJs.value) download('script.js', splitJs.value);
+                    } else {
+                        if (splitHtml.value) download('index.html', splitHtml.value);
+                        if (splitCss.value) download('style.css', splitCss.value);
+                        if (splitJs.value) download('script.js', splitJs.value);
+                    }
+                }
+                exportModal.style.display = 'none';
+            });
+
+            cancelExport.addEventListener('click', () => {
+                exportModal.style.display = 'none';
+            });
+
+            function download(filename, content) {
+                const blob = new Blob([content], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+
+            // 主题切换
+themeToggle.addEventListener('click', () => {
+    if (document.body.classList.contains('light-mode')) {
+        document.body.classList.remove('light-mode');
+        themeToggle.textContent = '🌙 主题';
+    } else {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '☀️ 主题';
+    }
+});
+
+            setMode('full');
+            updatePreview();
+
+           // 默认为空
+           fullTextarea.value = '';
+           updatePreview();
+        })();
+    </script>
+</body>
+</html>
