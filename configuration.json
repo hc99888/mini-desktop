@@ -38,10 +38,5 @@
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
-  },
-  {
-    "name": "滑雪板",
-    "icon": "apps/滑雪板/logo.png",
-    "url": "apps/滑雪板/"
   }
 ]
