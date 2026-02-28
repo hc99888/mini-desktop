@@ -33,5 +33,10 @@
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
+  },
+  {
+    "name": "小饭馆",
+    "icon": "apps/小饭馆/logo.png",
+    "url": "apps/小饭馆/"
   }
 ]
