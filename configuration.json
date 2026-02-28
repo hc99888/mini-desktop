@@ -1,5 +1,10 @@
 [
   {
+    "name": "超级工厂",
+    "icon": "apps/超级工厂/cjgc.png",
+    "url": "apps/超级工厂/"
+  },
+  {
     "name": "订阅推送",
     "icon": "apps/订阅推送/icon.webp",
     "url": "apps/订阅推送/"
