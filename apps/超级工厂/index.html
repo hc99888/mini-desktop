@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>代码编辑器 + 科技感控制台 · 备份管理版</title>
+  <title>代码编辑器 + 科技感控制台 · 最终版</title>
   <style>
     /* ===== 全局重置 ===== */
     * {
@@ -897,6 +897,244 @@
       border-color: #ff6b6b;
     }
 
+    /* 亮色模式 */
+    body.light-mode {
+      background: #f5f5f7;
+      color: #333;
+    }
+
+    body.light-mode .editor-toolbar {
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    body.light-mode .editor-toolbar button {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #222;
+    }
+
+    body.light-mode .mode-tabs {
+      background: #e8e8e8;
+      border: 1px solid #ccc;
+    }
+
+    body.light-mode .mode-tab {
+      color: #555;
+    }
+
+    body.light-mode .mode-tab.active {
+      background: #4a90e2;
+      color: white;
+    }
+
+    body.light-mode .action-bar {
+      background: #ffffff;
+      border-top: 1px solid #e0e0e0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    body.light-mode .action-bar button {
+      background: #e0e0e0;
+      border: 1px solid #aaa;
+      color: #222;
+    }
+
+    body.light-mode .scroll-area {
+      background: #f5f5f7;
+    }
+
+    body.light-mode .full-textarea {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      color: #333;
+    }
+
+    body.light-mode .split-container {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+    }
+
+    body.light-mode .split-tabs {
+      background: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    body.light-mode .split-tab {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    body.light-mode .split-tab.active {
+      background: #2a6fb0;
+      color: white;
+    }
+
+    body.light-mode .split-content {
+      background: #ffffff;
+    }
+
+    body.light-mode .split-textarea {
+      background: #ffffff;
+      color: #333;
+    }
+
+    body.light-mode .preview-page {
+      background: #ffffff;
+    }
+
+    body.light-mode .preview-header {
+      background: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    body.light-mode .back-to-editor {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #222;
+    }
+
+    body.light-mode .profile-header {
+      background: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    body.light-mode .back-button {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #222;
+    }
+
+    body.light-mode .profile-title {
+      color: #4a4a6a;
+    }
+
+    body.light-mode .console {
+      background: #f5f5f7;
+      border: 1px solid #ccc;
+    }
+
+    body.light-mode .block {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .block-tag {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #555;
+    }
+
+    body.light-mode .block-title {
+      color: #4a4a6a;
+    }
+
+    body.light-mode .field-row {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .field-label {
+      color: #666;
+    }
+
+    body.light-mode input, 
+    body.light-mode input[type="text"], 
+    body.light-mode input[type="password"] {
+      background: #ffffff;
+      color: #333;
+    }
+
+    body.light-mode .path-preview {
+      background: #ffffff;
+      border: 1px solid #ddd;
+      color: #666;
+    }
+
+    body.light-mode .path-preview strong {
+      color: #4a90e2;
+      background: #e0e0e0;
+      border: 1px solid #999;
+    }
+
+    body.light-mode .file-row {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .file-label {
+      color: #666;
+    }
+
+    body.light-mode input[type="file"] {
+      color: #666;
+    }
+
+    body.light-mode input[type="file"]::file-selector-button {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #333;
+    }
+
+    body.light-mode .switch-label {
+      color: #666;
+    }
+
+    body.light-mode .switch-checkbox {
+      background: #ffffff;
+      border: 2px solid #999;
+    }
+
+    body.light-mode .switch-checkbox:checked {
+      border-color: #4a90e2;
+    }
+
+    body.light-mode .switch-checkbox::before {
+      background: #999;
+    }
+
+    body.light-mode .switch-checkbox:checked::before {
+      background: #4a90e2;
+    }
+
+    body.light-mode .token-switch .lock-icon,
+    body.light-mode .token-switch .token-text {
+      color: #999;
+    }
+
+    body.light-mode .token-switch.active .lock-icon,
+    body.light-mode .token-switch.active .token-text {
+      color: #4a90e2;
+    }
+
+    body.light-mode .action-button {
+      background: #e0e0e0;
+      border: 1px solid #999;
+      color: #333;
+    }
+
+    body.light-mode .action-button:hover {
+      border-color: #4a90e2;
+    }
+
+    body.light-mode .action-desc {
+      color: #666;
+      border-left-color: #999;
+    }
+
+    body.light-mode .log-box {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .log-box pre {
+      color: #666;
+    }
+
+    body.light-mode .file-name {
+      color: #999;
+    }
+
     @media (max-width: 600px) {
       .grid-2 {
         grid-template-columns: 1fr;
@@ -1030,7 +1268,7 @@
               <div class="file-row" id="iconFileRow">
                 <span class="file-label">图标</span>
                 <input type="file" id="iconFile" accept="image/*">
-                <span class="file-name" id="fileNameDisplay">未选择文件</span>
+                <span class="file-name" id="fileNameDisplay"></span>
               </div>
             </div>
 
@@ -1198,88 +1436,11 @@
 
     let currentMode = 'full';
 
-    // 初始化示例代码
-    fullTextarea.value = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>示例页面</title>
-  <style>
-    body {
-      font-family: system-ui;
-      background: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .card {
-      background: white;
-      padding: 2rem;
-      border-radius: 1rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #333;
-    }
-    button {
-      background: #4a90e2;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Hello, World!</h1>
-    <p>这是一个可编辑的示例页面</p>
-    <button onclick="alert('按钮被点击了！')">点击我</button>
-  </div>
-</body>
-</html>`;
-
-    splitHtml.value = `<div class="card">
-  <h1>Hello, World!</h1>
-  <p>这是一个可编辑的示例页面</p>
-  <button onclick="alert('按钮被点击了！')">点击我</button>
-</div>`;
-    splitCss.value = `body {
-  font-family: system-ui;
-  background: #f0f0f0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
-.card {
-  background: white;
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-h1 {
-  color: #333;
-}
-button {
-  background: #4a90e2;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-}`;
-    splitJs.value = `// app.js
-console.log('页面加载完成');
-
-// 可以添加交互
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM 已加载');
-});`;
+    // 清空示例代码，保留空编辑器
+    fullTextarea.value = '';
+    splitHtml.value = '';
+    splitCss.value = '';
+    splitJs.value = '';
 
     function setMode(mode) {
       currentMode = mode;
@@ -1550,6 +1711,7 @@ ${splitHtml.value}
       updatePreview();
     });
 
+    // 主题切换
     themeToggle.addEventListener('click', () => {
       if (document.body.classList.contains('light-mode')) {
         document.body.classList.remove('light-mode');
@@ -1613,7 +1775,7 @@ ${splitHtml.value}
         fileNameDisplay.textContent = this.files[0].name;
       } else {
         iconFileRow.classList.remove('highlight');
-        fileNameDisplay.textContent = '未选择文件';
+        fileNameDisplay.textContent = '';  // 清空而不是设置为默认文本
       }
     });
 
@@ -1683,6 +1845,12 @@ ${splitHtml.value}
         gitTokenRow.classList.add('highlight');
         localStorage.setItem('token_enabled', 'true');
         log('🔓 Token 已开启');
+        
+        // 如果之前有缓存的Token，自动填入
+        const cachedToken = localStorage.getItem('github_token');
+        if (cachedToken) {
+          gitTokenInput.value = cachedToken;
+        }
       } else {
         tokenSwitch.classList.remove('active');
         lockIcon.textContent = '🔒';
@@ -1690,7 +1858,7 @@ ${splitHtml.value}
         gitTokenInput.value = '';
         gitTokenRow.classList.remove('highlight');
         localStorage.setItem('token_enabled', 'false');
-        localStorage.removeItem('github_token');
+        // 注意：不清除 localStorage 中的 token，只是禁用输入框
         log('🔒 Token 已关闭');
       }
     });
@@ -2313,7 +2481,7 @@ ${splitHtml.value}
     setMode('full');
     updatePreview();
     showMainPage();
-    log('科技感控制台启动 · 备份管理版');
+    log('科技感控制台启动 · 最终版');
   })();
 </script>
 </body>
