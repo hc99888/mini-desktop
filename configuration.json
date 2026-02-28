@@ -1,0 +1,45 @@
+[
+  {
+    "name": "订阅推送",
+    "icon": "apps/订阅推送/icon.webp",
+    "url": "apps/订阅推送/"
+  },
+  {
+    "name": "代码预览",
+    "icon": "apps/代码预览/icon.png",
+    "url": "apps/代码预览/"
+  },
+  {
+    "name": "代码沙盒",
+    "icon": "apps/代码沙盒/icon.png",
+    "url": "apps/代码沙盒/"
+  },
+  {
+    "name": "空白模板",
+    "icon": "apps/app-factory/icon.png",
+    "url": "apps/app-factory/"
+  },
+  {
+    "name": "书签应用",
+    "icon": "apps/书签应用/app1.webp",
+    "url": "apps/书签应用/"
+  },
+  {
+    "name": "仓库资源",
+    "icon": "apps/仓库资源/icon.webp",
+    "url": "apps/仓库资源/"
+  },
+
+  {
+    "name": "解析双色球",
+    "icon": "apps/解析双色球/icon.png",
+    "url": "apps/解析双色球/"
+  }
+]
+
+
+
+
+
+
+
