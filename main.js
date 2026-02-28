@@ -18,7 +18,7 @@ async function loadApps() {
     const apps = await res.json();
 
     if (!Array.isArray(apps)) {
-      throw new Error('apps.json 格式错误，应为数组');
+      throw new Error('configuration.json 格式错误，应为数组');
     }
 
     renderDesktop(apps);
@@ -67,3 +67,4 @@ if ('serviceWorker' in navigator) {
 }
 
 loadApps();
+
