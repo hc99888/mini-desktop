@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>书签九宫格（4列）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      padding: 10px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .toolbar button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: none;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    .toolbar button.secondary {
+      background: #6c757d;
+    }
+    .toolbar button.danger {
+      background: #dc3545;
+    }
+    .toolbar input[type="file"] {
+      display: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .tile {
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      min-height: 80px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tile-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 4px;
+      font-size: 16px;
+      overflow: hidden;
+    }
+
+    .tile-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .tile-title {
+      font-size: 12px;
+      text-align: center;
+      word-break: break-all;
+      padding: 0 2px;
+      max-height: 32px;
+      overflow: hidden;
+    }
+
+    .tile-actions {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tile:hover .tile-actions {
+      opacity: 1;
+    }
+
+    .tile-actions button {
+      border: none;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .tile.add-tile {
+      border: 1px dashed #aaa;
+      background: #fafafa;
+      color: #666;
+      font-size: 24px;
+    }
+
+    .tile.add-tile span {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* 弹窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      width: 90%;
+      max-width: 360px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .modal h2 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .modal label {
+      display: block;
+      font-size: 13px;
+      margin: 6px 0 2px;
+    }
+    .modal input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    .modal-buttons {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .modal-buttons button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+    .modal-buttons .cancel {
+      background: #6c757d;
+      color: #fff;
+    }
+    .modal-buttons .ok {
+      background: #007bff;
+      color: #fff;
+    }
+
+    @media (max-width: 480px) {
+      .grid {
+        gap: 6px;
+      }
+      .tile {
+        min-height: 72px;
+      }
+      .tile-logo {
+        width: 28px;
+        height: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>书签九宫格（4列）</h1>
+
+  <div class="toolbar">
+    <button id="addBtn">添加书签</button>
+    <button id="exportBtn" class="secondary">导出书签</button>
+    <label>
+      <button id="importBtn" class="secondary">导入书签</button>
+      <input type="file" id="importFile" accept="application/json" />
+    </label>
+    <button id="clearBtn" class="danger">清空全部</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <!-- 添加/编辑 弹窗 -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h2 id="modalTitle">添加书签</h2>
+      <label>标题：</label>
+      <input type="text" id="inputTitle" placeholder="例如：B站 / 常用搜索" />
+      <label>网址：</label>
+      <input type="text" id="inputUrl" placeholder="例如：https://www.bilibili.com" />
+      <div class="modal-buttons">
+        <button class="cancel" id="cancelModal">取消</button>
+        <button class="ok" id="okModal">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 本地存储 key
+    const STORAGEKEY = 'bookmarkGridDatav1';
+
+    // 当前数据
+    let bookmarks = [];
+    let editingIndex = null; // null = 添加，数字 = 编辑
+
+    const gridEl = document.getElementById('grid');
+    const addBtn = document.getElementById('addBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
+    const clearBtn = document.getElementById('clearBtn');
+
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalTitle = document.getElementById('modalTitle');
+    const inputTitle = document.getElementById('inputTitle');
+    const inputUrl = document.getElementById('inputUrl');
+    const cancelModal = document.getElementById('cancelModal');
+    const okModal = document.getElementById('okModal');
+
+    // 初始化
+    function init() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          bookmarks = JSON.parse(saved);
+        } catch (e) {
+          bookmarks = [];
+        }
+      }
+      renderGrid();
+    }
+
+    // 保存到 localStorage
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+    }
+
+    // 渲染九宫格
+    function renderGrid() {
+      gridEl.innerHTML = '';
+      bookmarks.forEach((item, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.addEventListener('click', (e) => {
+          // 避免点击按钮时触发跳转
+          if (e.target.tagName.toLowerCase() === 'button') return;
+          if (item.url) {
+            window.open(item.url, '_blank');
+          }
+        });
+
+        const logo = document.createElement('div');
+        logo.className = 'tile-logo';
+
+        if (item.favicon) {
+          const img = document.createElement('img');
+          img.src = item.favicon;
+          img.onerror = () => {
+            logo.textContent = getTitleInitial(item.title || item.url);
+            logo.style.background = getColorFromText(item.title || item.url);
+          };
+          logo.appendChild(img);
+        } else {
+          logo.textContent = getTitleInitial(item.title || item.url);
+          logo.style.background = getColorFromText(item.title || item.url);
+        }
+
+        const title = document.createElement('div');
+        title.className = 'tile-title';
+        title.textContent = item.title || item.url;
+
+        const actions = document.createElement('div');
+        actions.className = 'tile-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '改';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal(index);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '删';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('确定删除这个书签吗？')) {
+            bookmarks.splice(index, 1);
+            save();
+            renderGrid();
+          }
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        tile.appendChild(logo);
+        tile.appendChild(title);
+        tile.appendChild(actions);
+
+        gridEl.appendChild(tile);
+      });
+
+      // 添加按钮格
+      const addTile = document.createElement('div');
+      addTile.className = 'tile add-tile';
+      addTile.addEventListener('click', () => openAddModal());
+      addTile.innerHTML = '+<span>添加</span>';
+      gridEl.appendChild(addTile);
+    }
+
+    // 获取首字母
+    function getTitleInitial(text) {
+      if (!text) return '?';
+      const t = text.trim();
+      return t[0].toUpperCase();
+    }
+
+    // 根据文字生成颜色
+    function getColorFromText(text) {
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        hash = text.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      return hsl(${hue}, 60%, 55%);
+    }
+
+    // 规范化 URL
+    function normalizeUrl(url) {
+      url = url.trim();
+      if (!url) return '';
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      return url;
+    }
+
+    // 从 URL 获取 favicon
+    function getFaviconUrl(url) {
+      try {
+        const u = new URL(url);
+        const domain = u.hostname;
+        return https://www.google.com/s2/favicons?domain=${domain}&sz=64;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    // 打开添加弹窗
+    function openAddModal() {
+      editingIndex = null;
+      modalTitle.textContent = '添加书签';
+      inputTitle.value = '';
+      inputUrl.value = '';
+      showModal();
+    }
+
+    // 打开编辑弹窗
+    function openEditModal(index) {
+      editingIndex = index;
+      const item = bookmarks[index];
+      modalTitle.textContent = '编辑书签';
+      inputTitle.value = item.title || '';
+      inputUrl.value = item.url || '';
+      showModal();
+    }
+
+    function showModal() {
+      modalBackdrop.style.display = 'flex';
+      setTimeout(() => {
+        inputTitle.focus();
+      }, 50);
+    }
+
+    function hideModal() {
+      modalBackdrop.style.display = 'none';
+    }
+
+    // 确认添加/编辑
+    okModal.addEventListener('click', () => {
+      const title = inputTitle.value.trim();
+      let url = inputUrl.value.trim();
+
+      if (!url) {
+        alert('网址不能为空');
+        return;
+      }
+      url = normalizeUrl(url);
+
+      const favicon = getFaviconUrl(url);
+
+      const data = {
+        title: title || url,
+        url,
+        favicon
+      };
+
+      if (editingIndex === null) {
+        bookmarks.push(data);
+      } else {
+        bookmarks[editingIndex] = data;
+      }
+
+      save();
+      renderGrid();
+      hideModal();
+    });
+
+    cancelModal.addEventListener('click', hideModal);
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) hideModal();
+    });
+
+    // 添加按钮
+    addBtn.addEventListener('click', openAddModal);
+
+    // 导出
+    exportBtn.addEventListener('click', () => {
+      const dataStr = JSON.stringify(bookmarks, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const now = new Date();
+      const ts = now.toISOString().replace(/[:.]/g, '-');
+      a.href = url;
+      a.download = bookmarks-${ts}.json;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // 导入
+    importBtn.addEventListener('click', () => {
+      importFile.click();
+    });
+
+    importFile.addEventListener('change', () => {
+      const file = importFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!Array.isArray(data)) {
+            alert('导入文件格式不正确');
+            return;
+          }
+          bookmarks = data;
+          save();
+          renderGrid();
+          alert('导入成功');
+        } catch (err) {
+          alert('导入失败：JSON 解析错误');
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+      importFile.value = '';
+    });
+
+    // 清空
+    clearBtn.addEventListener('click', () => {
+      if (confirm('确定清空全部书签吗？')) {
+        bookmarks = [];
+        save();
+        renderGrid();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
