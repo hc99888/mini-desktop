@@ -29,17 +29,14 @@
     "icon": "apps/仓库资源/icon.webp",
     "url": "apps/仓库资源/"
   },
-
   {
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
+  },
+  {
+    "name": "适当的",
+    "icon": "apps/适当的/logo.png",
+    "url": "apps/适当的/"
   }
 ]
-
-
-
-
-
-
-
