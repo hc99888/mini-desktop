@@ -23,10 +23,5 @@
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
-  },
-  {
-    "name": "测试九空格",
-    "icon": "apps/测试九空格/logo.png",
-    "url": "apps/测试九空格/"
   }
 ]
