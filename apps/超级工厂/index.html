@@ -1,0 +1,2320 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>代码编辑器 + 科技感控制台 · 备份管理版</title>
+  <style>
+    /* ===== 全局重置 ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0a0a12;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: #eee;
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+    }
+
+    /* ===== 主容器 ===== */
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ===== 主页面 (代码编辑器) ===== */
+    .main-page {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+      background: #0a0a12;
+      overflow: hidden;
+    }
+
+    .main-page.hidden {
+      transform: translateX(-100%);
+      display: none;
+    }
+
+    /* ===== 预览页面 (右侧滑动) ===== */
+    .preview-page {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #0c0c18;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 5;
+    }
+
+    .preview-page.active {
+      transform: translateX(0);
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #1a1a30;
+      border-bottom: 1px solid #3d3d66;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .back-to-editor {
+      background: #2a2a48;
+      border: 1px solid #5d5d92;
+      color: #f0eefc;
+      font-size: 0.9rem;
+      padding: 6px 14px;
+      border-radius: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.1s ease;
+    }
+
+    .back-to-editor:active {
+      background: #5a5a9a;
+      border-color: #b59eff;
+      transform: scale(0.97);
+    }
+
+    .preview-title {
+      margin-left: 16px;
+      color: #b0b0e0;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .preview-iframe {
+      width: 100%;
+      flex: 1;
+      background: white;
+      border: none;
+      display: block;
+    }
+
+    /* ===== 编辑资料页面 ===== */
+    .profile-page {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+      background: #03060b;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translateX(100%);
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .profile-page.active {
+      transform: translateX(0);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #0a141f;
+      border-bottom: 1px solid #1e3f5a;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .back-button {
+      background: #102b36;
+      border: 1px solid #2c5f7a;
+      color: #c0e0ff;
+      font-size: 1rem;
+      padding: 8px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.1s ease;
+      font-weight: 500;
+    }
+
+    .back-button:active {
+      background: #2c5f7a;
+      border-color: #00ccff;
+      transform: scale(0.97);
+    }
+
+    .profile-title {
+      margin-left: 16px;
+      color: #7eb8cc;
+      font-size: 1.2rem;
+      font-weight: 600;
+      font-family: 'Major Mono Display', monospace;
+    }
+
+    /* ===== 代码编辑器样式 ===== */
+    .editor-page {
+      background: #141422;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      background: #1c1c30;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #3d3d66;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+      box-shadow: 0 1px 4px #00000080;
+      min-height: 44px;
+      flex-wrap: nowrap;
+    }
+
+    .editor-toolbar::-webkit-scrollbar {
+      height: 2px;
+      background: #1e1e30;
+    }
+
+    .editor-toolbar::-webkit-scrollbar-thumb {
+      background: #5a5a9a;
+      border-radius: 0;
+    }
+
+    .editor-toolbar button {
+      background: #2a2a48;
+      border: 1px solid #5d5d92;
+      color: #f0eefc;
+      padding: 5px 12px;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.1s ease;
+    }
+
+    .editor-toolbar button:active {
+      background: #5a5a9a;
+      border-color: #b59eff;
+      transform: scale(0.97);
+      box-shadow: 0 2px 8px rgba(180, 150, 255, 0.3);
+    }
+
+    .mode-tabs {
+      display: flex;
+      background: #16162a;
+      border-radius: 40px;
+      margin: 3px 8px;
+      padding: 2px;
+      border: 1px solid #4a4a78;
+      flex-shrink: 0;
+    }
+
+    .mode-tab {
+      flex: 1;
+      text-align: center;
+      padding: 1px 0;
+      border-radius: 30px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #b0b0e0;
+      background: transparent;
+      transition: 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mode-tab.active {
+      background: #3d3d6b;
+      color: white;
+    }
+
+    .action-bar {
+      background: #1a1a30;
+      padding: 3px 8px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      border-top: 1px solid #3b3b60;
+      border-bottom: 1px solid #3b3b60;
+      flex-shrink: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      scrollbar-width: thin;
+      min-height: 30px;
+    }
+
+    .action-bar button {
+      background: #2e2e52;
+      border: 1px solid #63639f;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      margin: 2px;
+      transition: all 0.1s ease;
+    }
+
+    .action-bar button:active {
+      background: #5a5a9a;
+      border-color: #b59eff;
+      transform: scale(0.97);
+    }
+
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: #11111d;
+      padding: 3px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .full-textarea {
+      width: 100%;
+      min-height: 100%;
+      height: auto;
+      background: #0a0a14;
+      border: 1px solid #313158;
+      color: #f0f0ff;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: none;
+      outline: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 12px;
+      display: block;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    .split-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #0d0d1a;
+      border-radius: 12px;
+      border: 1px solid #32325a;
+      overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .split-tabs {
+      display: flex;
+      background: #1a1a32;
+      border-radius: 12px 12px 0 0;
+      border-bottom: 1px solid #4f4f88;
+      flex-shrink: 0;
+    }
+
+    .split-tab {
+      flex: 1;
+      text-align: center;
+      padding: 3px 0;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #b1b1e6;
+      cursor: pointer;
+      background: #232342;
+      border-right: 1px solid #3f3f6e;
+      transition: 0.1s;
+    }
+
+    .split-tab:last-child {
+      border-right: none;
+    }
+
+    .split-tab.active {
+      background: #2f2f60;
+      color: white;
+      border-bottom: 1px solid #b59eff;
+    }
+
+    .split-content {
+      flex: 1;
+      overflow-y: auto;
+      background: #0a0a16;
+      border-radius: 0 0 12px 12px;
+      min-height: 0;
+    }
+
+    .split-pane {
+      display: none;
+      height: 100%;
+    }
+
+    .split-pane.active-pane {
+      display: block;
+      height: 100%;
+    }
+
+    .split-textarea {
+      width: 100%;
+      min-height: 100%;
+      height: auto;
+      background: #0a0a16;
+      border: none;
+      color: #f0f0ff;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: none;
+      outline: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ===== 科技感控制台样式 ===== */
+    .console {
+      width: 100%;
+      background: rgba(8, 18, 28, 0.9);
+      border: 1px solid #1e3f5a;
+      border-radius: 24px;
+      padding: 16px 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .block {
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 20px;
+      padding: 14px 14px;
+      transition: border-color 0.15s ease;
+    }
+
+    .block-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #1e3f5a;
+      padding-bottom: 8px;
+    }
+
+    .block-tag {
+      background: #102b36;
+      border: 1px solid #2c5f7a;
+      color: #7eb8cc;
+      font-family: 'Major Mono Display', monospace;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 2px 10px;
+      border-radius: 30px;
+      letter-spacing: 1px;
+    }
+
+    .block-title {
+      color: #c0e0ff;
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 40px;
+      transition: border-color 0.15s ease;
+    }
+
+    .field-row.highlight {
+      border-color: #00ccff;
+    }
+
+    .field-label {
+      width: 70px;
+      padding-left: 14px;
+      color: #9cb8cc;
+      font-weight: 500;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .field-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    input, input[type="text"], input[type="password"] {
+      width: 100%;
+      background: #0a141f;
+      border: none;
+      border-radius: 40px;
+      padding: 10px 16px;
+      color: #e0f0ff;
+      font-size: 0.9rem;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+    }
+
+    .path-preview {
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 40px;
+      padding: 8px 16px;
+      margin: 8px 0 14px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      color: #9cb8cc;
+      word-break: break-all;
+    }
+
+    .path-preview strong {
+      color: #00ccff;
+      background: #102b36;
+      padding: 2px 8px;
+      border-radius: 30px;
+      border: 1px solid #2c5f7a;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 0 12px;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 40px;
+      padding: 4px 4px 4px 16px;
+      transition: border-color 0.15s ease;
+    }
+
+    .file-row.highlight {
+      border-color: #00ccff;
+    }
+
+    .file-label {
+      color: #9cb8cc;
+      font-weight: 500;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    input[type="file"] {
+      background: transparent;
+      border: none;
+      padding: 6px 0;
+      font-size: 0.8rem;
+      color: #9cb8cc;
+    }
+
+    input[type="file"]::file-selector-button {
+      background: #102b36;
+      border: 1px solid #2c5f7a;
+      border-radius: 30px;
+      padding: 8px 14px;
+      color: #c0e0ff;
+      font-weight: 500;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      margin: 12px 0 4px;
+      padding-left: 10px;
+    }
+
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #9cb8cc;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .switch-checkbox {
+      appearance: none;
+      width: 44px;
+      height: 22px;
+      background: #0a141f;
+      border: 2px solid #1e3f5a;
+      border-radius: 30px;
+      position: relative;
+      transition: border-color 0.15s;
+      cursor: pointer;
+    }
+
+    .switch-checkbox:checked {
+      border-color: #00ccff;
+    }
+
+    .switch-checkbox::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #5f7a8c;
+      border-radius: 50%;
+      top: 1px;
+      left: 2px;
+      transition: left 0.15s, background 0.15s;
+    }
+
+    .switch-checkbox:checked::before {
+      left: 22px;
+      background: #00ccff;
+    }
+
+    .token-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .token-switch .lock-icon {
+      font-size: 1.1rem;
+      color: #5f7a8c;
+      transition: color 0.15s;
+    }
+
+    .token-switch .token-text {
+      color: #5f7a8c;
+      font-weight: 600;
+      letter-spacing: 1px;
+      transition: color 0.15s;
+    }
+
+    .token-switch.active .lock-icon,
+    .token-switch.active .token-text {
+      color: #00ccff;
+    }
+
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+      border-bottom: 1px solid #1e3f5a;
+    }
+
+    .arrow {
+      font-size: 1.2rem;
+      color: #5f7a8c;
+      transition: transform 0.15s;
+    }
+
+    .collapsible-body {
+      overflow: hidden;
+      transition: max-height 0.2s ease;
+      max-height: 300px;
+    }
+
+    .collapsed .collapsible-body {
+      max-height: 0;
+      margin: 0;
+      visibility: hidden;
+    }
+
+    .collapsed .arrow {
+      transform: rotate(-90deg);
+    }
+
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .action-item {
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 24px;
+      padding: 10px 12px;
+    }
+
+    .action-button {
+      width: 100%;
+      background: #102b36;
+      border: 1px solid #1e3f5a;
+      border-radius: 40px;
+      padding: 14px 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #c0e0ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .action-button:hover {
+      border-color: #00ccff;
+    }
+
+    .action-button span {
+      font-size: 1.5rem;
+    }
+
+    .action-desc {
+      color: #7e9aad;
+      font-size: 0.8rem;
+      padding-left: 52px;
+      margin-top: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      border-left: 2px solid #1e3f5a;
+      line-height: 1.4;
+    }
+
+    .delete-block {
+      border-color: #5a3f3f;
+    }
+
+    .log-box {
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 20px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .log-box pre {
+      margin: 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      color: #9cb8cc;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .log-box::-webkit-scrollbar {
+      width: 4px;
+      background: #1e3f5a;
+    }
+
+    .log-box::-webkit-scrollbar-thumb {
+      background: #5f7a8c;
+      border-radius: 2px;
+    }
+
+    .file-name {
+      color: #5f7a8c;
+      font-size: 0.75rem;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .profile-content {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* 删除选项弹窗 */
+    .delete-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #0a141f;
+      border: 2px solid #5a3f3f;
+      border-radius: 24px;
+      padding: 20px;
+      z-index: 1000;
+      display: none;
+      width: 300px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    .delete-modal.active {
+      display: block;
+    }
+
+    .delete-modal h3 {
+      color: #ff8a8a;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .delete-option {
+      background: #102b36;
+      border: 1px solid #5a3f3f;
+      border-radius: 40px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #e0f0ff;
+      transition: border-color 0.15s;
+    }
+
+    .delete-option:hover {
+      border-color: #ff6b6b;
+    }
+
+    .delete-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #ff6b6b;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .modal-button {
+      flex: 1;
+      background: #102b36;
+      border: 1px solid #2c5f7a;
+      border-radius: 40px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      color: #c0e0ff;
+      transition: border-color 0.15s;
+    }
+
+    .modal-button:hover {
+      border-color: #00ccff;
+    }
+
+    .modal-button.confirm {
+      background: #2c5f7a;
+      border-color: #00ccff;
+    }
+
+    .modal-button.cancel {
+      background: #2c3f4a;
+      border-color: #5a3f3f;
+    }
+
+    /* 备份管理样式 */
+    .backup-list {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 16px;
+      padding: 8px;
+    }
+
+    .backup-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #1e3f5a;
+    }
+
+    .backup-item:last-child {
+      border-bottom: none;
+    }
+
+    .backup-name {
+      color: #9cb8cc;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .backup-delete {
+      background: #3f2a2a;
+      border: 1px solid #8f4a4a;
+      border-radius: 30px;
+      padding: 4px 12px;
+      color: #ffaaaa;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .backup-delete:hover {
+      background: #5f3a3a;
+      border-color: #ff6b6b;
+    }
+
+    @media (max-width: 600px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Major+Mono+Display&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- 删除选项弹窗 -->
+  <div class="delete-modal" id="deleteModal">
+    <h3>⚠️ 删除选项</h3>
+    <div class="delete-option">
+      <input type="radio" name="deleteOption" id="optionDeleteOnly" value="deleteOnly" checked>
+      <label for="optionDeleteOnly">只删除（不备份）</label>
+    </div>
+    <div class="delete-option">
+      <input type="radio" name="deleteOption" id="optionBackupOnly" value="backupOnly">
+      <label for="optionBackupOnly">备份（不删除）</label>
+    </div>
+    <div class="modal-buttons">
+      <div class="modal-button confirm" id="confirmDelete">确认</div>
+      <div class="modal-button cancel" id="cancelDelete">取消</div>
+    </div>
+  </div>
+
+  <!-- 备份删除确认弹窗 -->
+  <div class="delete-modal" id="backupDeleteModal" style="width: 320px;">
+    <h3>🗑️ 删除备份</h3>
+    <div style="color: #9cb8cc; text-align: center; margin: 16px 0;" id="backupDeleteName">确定删除备份文件?</div>
+    <div class="modal-buttons">
+      <div class="modal-button confirm" id="confirmBackupDelete">确认</div>
+      <div class="modal-button cancel" id="cancelBackupDelete">取消</div>
+    </div>
+  </div>
+
+<div class="app-container">
+  <!-- 主页面：代码编辑器 -->
+  <div class="main-page" id="mainPage">
+    <div class="editor-page">
+      <div class="editor-toolbar" id="editorToolbar">
+        <button id="runBtn">▶ 运行</button>
+        <button id="exportBtn">📦 导出</button>
+        <button id="batchImportBtn">📎 批量导入</button>
+        <button id="clearBtn">🗑️ 清空</button>
+        <button id="themeToggleBtn">🌙 主题</button>
+        <button id="editProfileBtn">✏️ 编辑资料</button>
+      </div>
+
+      <div class="mode-tabs">
+        <div class="mode-tab active" id="fullModeTab">📄 HTML完整</div>
+        <div class="mode-tab" id="splitModeTab">📁 三文件区</div>
+      </div>
+
+      <div class="action-bar">
+        <button id="copyBtn">📋 复制</button>
+        <button id="deleteBtn">❌ 删除</button>
+        <button id="pasteBtn">📎 粘贴</button>
+        <button id="parseToSplitBtn">🔍 解析→拆分</button>
+        <button id="mergeToFullBtn" style="display: none;">🔗 合并→完整</button>
+      </div>
+
+      <div class="scroll-area" id="mainScrollArea">
+        <div id="editorFullMode" style="height:100%;">
+          <textarea id="fullCodeTextarea" class="full-textarea" placeholder="<!-- 完整HTML -->" spellcheck="false"></textarea>
+        </div>
+        <div id="editorSplitMode" style="height:100%; display: none;">
+          <div class="split-container">
+            <div class="split-tabs">
+              <div class="split-tab active" data-split="html">HTML</div>
+              <div class="split-tab" data-split="css">CSS</div>
+              <div class="split-tab" data-split="js">JS</div>
+            </div>
+            <div class="split-content">
+              <div class="split-pane active-pane" id="splitPaneHtml">
+                <textarea id="splitHtmlTextarea" class="split-textarea" placeholder="<!-- HTML -->"></textarea>
+              </div>
+              <div class="split-pane" id="splitPaneCss">
+                <textarea id="splitCssTextarea" class="split-textarea" placeholder="/* CSS */"></textarea>
+              </div>
+              <div class="split-pane" id="splitPaneJs">
+                <textarea id="splitJsTextarea" class="split-textarea" placeholder="// app.js"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 预览页面 (右侧滑动) -->
+  <div class="preview-page" id="previewPage">
+    <div class="preview-header">
+      <button class="back-to-editor" id="backToEditorBtn">
+        <span>←</span> 返回编辑器
+      </button>
+      <span class="preview-title">预览</span>
+    </div>
+    <iframe id="previewIframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-same-origin allow-modals allow-popups allow-top-navigation" src="about:blank"></iframe>
+  </div>
+
+  <!-- 编辑资料页面 (完整科技感控制台) -->
+  <div class="profile-page" id="profilePage">
+    <div class="profile-header">
+      <button class="back-button" id="backFromProfileBtn">
+        <span>←</span> 返回
+      </button>
+      <span class="profile-title">编辑资料 · 科技感控制台</span>
+    </div>
+    <div class="profile-content">
+      <!-- 这里嵌入完整的科技感控制台 -->
+      <div class="console">
+        <div class="grid-2">
+          <!-- 左列 -->
+          <div class="left-stack" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- 基本信息区 -->
+            <div class="block">
+              <div class="block-header">
+                <span class="block-tag">#01</span>
+                <span class="block-title">📱 基本信息</span>
+              </div>
+              <div class="field-row" id="appNameRow">
+                <div class="field-label">名称</div>
+                <div class="field-input">
+                  <input type="text" id="appName" placeholder="输入应用名称" value="">
+                </div>
+              </div>
+              <div class="path-preview">
+                路径: apps/<strong id="pathPreview">应用名称</strong>/
+              </div>
+              <div class="file-row" id="iconFileRow">
+                <span class="file-label">图标</span>
+                <input type="file" id="iconFile" accept="image/*">
+                <span class="file-name" id="fileNameDisplay">未选择文件</span>
+              </div>
+            </div>
+
+            <!-- GitHub 设置（可折叠） -->
+            <div class="block collapsible" id="githubBlock">
+              <div class="collapsible-header" id="toggleGithub">
+                <span class="arrow" id="githubArrow">▼</span>
+                <span class="block-title" style="font-size:1rem;">🔧 GitHub 设置</span>
+              </div>
+              <div class="collapsible-body" id="githubBody">
+                <div class="field-row" id="gitUserRow" style="margin-top:10px;">
+                  <div class="field-label">用户</div>
+                  <div class="field-input"><input type="text" id="gitUser" placeholder="用户名"></div>
+                </div>
+                <div class="field-row" id="gitRepoRow">
+                  <div class="field-label">仓库</div>
+                  <div class="field-input"><input type="text" id="gitRepo" placeholder="仓库名" value="mini-desktop"></div>
+                </div>
+                <div class="field-row" id="gitTokenRow">
+                  <div class="token-switch" id="tokenSwitch">
+                    <span class="lock-icon" id="lockIcon">🔒</span>
+                    <span class="token-text" id="tokenText">TOKEN</span>
+                  </div>
+                  <div class="field-input">
+                    <input type="password" id="gitToken" placeholder="个人访问令牌" disabled>
+                  </div>
+                </div>
+                <div class="switch-row">
+                  <label class="switch-label">
+                    <input type="checkbox" id="autoUpload" class="switch-checkbox">
+                    <span>自动上传</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右列 -->
+          <div class="right-stack" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- 操作区 -->
+            <div class="block">
+              <div class="block-header">
+                <span class="block-tag">#03</span>
+                <span class="block-title">⚙️ 操作面板</span>
+              </div>
+              <div class="action-group">
+                <div class="action-item">
+                  <button class="action-button" id="btnGenerate">
+                    <span>🏭</span> 生成文件夹
+                  </button>
+                  <div class="action-desc">生成 apps/名称/ 三文件</div>
+                </div>
+                <div class="action-item">
+                  <button class="action-button" id="btnUpload">
+                    <span>📤</span> 上传到 GitHub
+                  </button>
+                  <div class="action-desc">PUT index.html/style.css/app.js/图标</div>
+                </div>
+                <div class="action-item">
+                  <button class="action-button" id="btnUpdateJson">
+                    <span>🖥</span> 更新 configuration.json
+                  </button>
+                  <div class="action-desc">写入桌面图标配置 {name, icon, url}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 备份管理区块 (可折叠) -->
+            <div class="block delete-block collapsible" id="backupBlock">
+              <div class="collapsible-header" id="toggleBackup">
+                <span class="arrow" id="backupArrow">▼</span>
+                <span class="block-tag">#04</span>
+                <span class="block-title">⚠️ 备份管理</span>
+              </div>
+              <div class="collapsible-body" id="backupBody">
+                <button class="action-button" id="btnDeleteApp" style="margin-bottom:8px;">
+                  <span>🗑️</span> 删除 / 备份
+                </button>
+                <div class="action-desc" style="border-left-color:#5a3f3f; margin-bottom:12px;">
+                  → 点击后选择：只删除 或 备份<br>
+                  → 自动更新 configuration.json
+                </div>
+                
+                <div class="action-button" id="btnShowBackups" style="margin-bottom:8px; background:#1e3a4a;">
+                  <span>📦</span> 备份目录
+                </div>
+                
+                <div id="backupListContainer" style="display: none; margin-top: 8px;">
+                  <div class="backup-list" id="backupList">
+                    <div style="color: #5f7a8c; text-align: center; padding: 10px;">点击加载备份列表</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 日志框 - 可滚动 -->
+        <div class="log-box">
+          <pre id="logOutput">>> 系统就绪 · 科技感边框高亮版</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ========== 页面切换 ==========
+    const mainPage = document.getElementById('mainPage');
+    const previewPage = document.getElementById('previewPage');
+    const profilePage = document.getElementById('profilePage');
+    const editProfileBtn = document.getElementById('editProfileBtn');
+    const backBtn = document.getElementById('backFromProfileBtn');
+    const runBtn = document.getElementById('runBtn');
+    const backToEditorBtn = document.getElementById('backToEditorBtn');
+
+    function showMainPage() {
+      mainPage.style.display = 'flex';
+      previewPage.classList.remove('active');
+      profilePage.classList.remove('active');
+    }
+
+    function showPreviewPage() {
+      mainPage.style.display = 'none';
+      previewPage.classList.add('active');
+      profilePage.classList.remove('active');
+      updatePreview();
+    }
+
+    function showProfilePage() {
+      mainPage.style.display = 'none';
+      previewPage.classList.remove('active');
+      profilePage.classList.add('active');
+    }
+
+    runBtn.addEventListener('click', showPreviewPage);
+    backToEditorBtn.addEventListener('click', showMainPage);
+    editProfileBtn.addEventListener('click', showProfilePage);
+    backBtn.addEventListener('click', showMainPage);
+
+    // ========== 代码编辑器功能 ==========
+    const fullModeDiv = document.getElementById('editorFullMode');
+    const splitModeDiv = document.getElementById('editorSplitMode');
+    const fullModeTab = document.getElementById('fullModeTab');
+    const splitModeTab = document.getElementById('splitModeTab');
+    const parseBtn = document.getElementById('parseToSplitBtn');
+    const mergeBtn = document.getElementById('mergeToFullBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const batchImportBtn = document.getElementById('batchImportBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const themeToggle = document.getElementById('themeToggleBtn');
+
+    const fullTextarea = document.getElementById('fullCodeTextarea');
+    const splitHtml = document.getElementById('splitHtmlTextarea');
+    const splitCss = document.getElementById('splitCssTextarea');
+    const splitJs = document.getElementById('splitJsTextarea');
+    const previewIframe = document.getElementById('previewIframe');
+
+    const splitTabs = document.querySelectorAll('.split-tab');
+    const splitPanes = document.querySelectorAll('.split-pane');
+
+    let currentMode = 'full';
+
+    // 初始化示例代码
+    fullTextarea.value = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>示例页面</title>
+  <style>
+    body {
+      font-family: system-ui;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hello, World!</h1>
+    <p>这是一个可编辑的示例页面</p>
+    <button onclick="alert('按钮被点击了！')">点击我</button>
+  </div>
+</body>
+</html>`;
+
+    splitHtml.value = `<div class="card">
+  <h1>Hello, World!</h1>
+  <p>这是一个可编辑的示例页面</p>
+  <button onclick="alert('按钮被点击了！')">点击我</button>
+</div>`;
+    splitCss.value = `body {
+  font-family: system-ui;
+  background: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+.card {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+h1 {
+  color: #333;
+}
+button {
+  background: #4a90e2;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}`;
+    splitJs.value = `// app.js
+console.log('页面加载完成');
+
+// 可以添加交互
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM 已加载');
+});`;
+
+    function setMode(mode) {
+      currentMode = mode;
+      if (mode === 'full') {
+        fullModeDiv.style.display = 'block';
+        splitModeDiv.style.display = 'none';
+        fullModeTab.classList.add('active');
+        splitModeTab.classList.remove('active');
+        parseBtn.style.display = 'inline-block';
+        mergeBtn.style.display = 'none';
+      } else {
+        fullModeDiv.style.display = 'none';
+        splitModeDiv.style.display = 'block';
+        fullModeTab.classList.remove('active');
+        splitModeTab.classList.add('active');
+        parseBtn.style.display = 'none';
+        mergeBtn.style.display = 'inline-block';
+      }
+    }
+
+    fullModeTab.addEventListener('click', () => setMode('full'));
+    splitModeTab.addEventListener('click', () => setMode('split'));
+
+    splitTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const target = e.target.dataset.split;
+        splitTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        splitPanes.forEach(pane => pane.classList.remove('active-pane'));
+        if (target === 'html') document.getElementById('splitPaneHtml').classList.add('active-pane');
+        else if (target === 'css') document.getElementById('splitPaneCss').classList.add('active-pane');
+        else if (target === 'js') document.getElementById('splitPaneJs').classList.add('active-pane');
+      });
+    });
+
+    function updatePreview() {
+      let htmlContent = '';
+      if (currentMode === 'full') {
+        htmlContent = fullTextarea.value || '<!-- 空内容 -->';
+      } else {
+        const h = splitHtml.value || '';
+        const c = splitCss.value || '';
+        const j = splitJs.value || '';
+        htmlContent = `<!DOCTYPE html>\n<html>\n<head><meta charset="UTF-8"><style>${c}</style></head>\n<body>${h}<script>${j}<\/script>\n</body>\n</html>`;
+      }
+      previewIframe.srcdoc = htmlContent;
+    }
+
+    function downloadFile(filename, content) {
+      const blob = new Blob([content], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    exportBtn.addEventListener('click', () => {
+      if (currentMode === 'full') {
+        downloadFile('index.html', fullTextarea.value);
+      } else {
+        downloadFile('index.html', splitHtml.value);
+        downloadFile('style.css', splitCss.value);
+        downloadFile('app.js', splitJs.value);
+      }
+    });
+
+    function isCompleteHtml(content) {
+      const hasHtml = /<html/i.test(content);
+      const hasHead = /<head/i.test(content);
+      const hasBody = /<body/i.test(content);
+      const hasStyle = /<style/i.test(content);
+      const hasScript = /<script/i.test(content);
+      return (hasHtml || (hasHead && hasBody)) && (hasStyle || hasScript);
+    }
+
+    batchImportBtn.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.accept = '.html,.htm,.css,.js';
+      
+      input.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        
+        if (currentMode === 'full') {
+          const htmlFile = files.find(f => f.name.match(/\.html?$/i));
+          if (htmlFile) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              fullTextarea.value = ev.target.result;
+              updatePreview();
+              alert('✅ HTML文件已导入到完整编辑器');
+            };
+            reader.readAsText(htmlFile);
+          } else {
+            alert('完整模式只能导入HTML文件，请选择.html文件');
+          }
+        } else {
+          const htmlFile = files.find(f => f.name.match(/\.html?$/i));
+          
+          if (htmlFile) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const content = ev.target.result;
+              
+              if (isCompleteHtml(content)) {
+                fullTextarea.value = content;
+                setMode('full');
+                updatePreview();
+                alert('✅ 检测到完整HTML，已自动切换到完整模式并导入');
+              } else {
+                splitHtml.value = content;
+                
+                files.forEach(file => {
+                  if (file === htmlFile) return;
+                  
+                  const fileReader = new FileReader();
+                  fileReader.onload = (ev2) => {
+                    const fileContent = ev2.target.result;
+                    if (file.name.match(/\.css$/i)) {
+                      splitCss.value = fileContent;
+                    } else if (file.name.match(/\.js$/i)) {
+                      splitJs.value = fileContent;
+                    }
+                    updatePreview();
+                  };
+                  fileReader.readAsText(file);
+                });
+                
+                updatePreview();
+                alert('✅ 已导入HTML片段到拆分模式');
+              }
+            };
+            reader.readAsText(htmlFile);
+          } else {
+            files.forEach(file => {
+              const fileReader = new FileReader();
+              fileReader.onload = (ev) => {
+                const content = ev.target.result;
+                if (file.name.match(/\.css$/i)) {
+                  splitCss.value = content;
+                } else if (file.name.match(/\.js$/i)) {
+                  splitJs.value = content;
+                }
+                updatePreview();
+              };
+              fileReader.readAsText(file);
+            });
+            alert('✅ 已导入CSS/JS文件到拆分模式');
+          }
+        }
+      };
+      input.click();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (currentMode === 'full') {
+        fullTextarea.value = '';
+      } else {
+        splitHtml.value = '';
+        splitCss.value = '';
+        splitJs.value = '';
+      }
+      updatePreview();
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      let text = '';
+      if (currentMode === 'full') {
+        text = fullTextarea.value;
+      } else {
+        const activePaneId = [...splitPanes].find(p => p.classList.contains('active-pane'))?.id;
+        if (activePaneId === 'splitPaneHtml') text = splitHtml.value;
+        else if (activePaneId === 'splitPaneCss') text = splitCss.value;
+        else text = splitJs.value;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('✅ 已复制到剪贴板');
+      } catch {
+        alert('❌ 复制失败');
+      }
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      if (currentMode === 'full') {
+        fullTextarea.value = '';
+      } else {
+        const activePaneId = [...splitPanes].find(p => p.classList.contains('active-pane'))?.id;
+        if (activePaneId === 'splitPaneHtml') splitHtml.value = '';
+        else if (activePaneId === 'splitPaneCss') splitCss.value = '';
+        else if (activePaneId === 'splitPaneJs') splitJs.value = '';
+      }
+      updatePreview();
+    });
+
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (currentMode === 'full') {
+          fullTextarea.value = text;
+        } else {
+          const activePaneId = [...splitPanes].find(p => p.classList.contains('active-pane'))?.id;
+          if (activePaneId === 'splitPaneHtml') splitHtml.value = text;
+          else if (activePaneId === 'splitPaneCss') splitCss.value = text;
+          else if (activePaneId === 'splitPaneJs') splitJs.value = text;
+        }
+        updatePreview();
+        alert('✅ 粘贴成功');
+      } catch {
+        alert('❌ 粘贴失败，请检查剪贴板权限');
+      }
+    });
+
+    parseBtn.addEventListener('click', () => {
+      if (currentMode !== 'full') return;
+      const full = fullTextarea.value;
+      
+      const styleBlocks = [];
+      const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+      let styleMatch;
+      while ((styleMatch = styleRegex.exec(full)) !== null) {
+        styleBlocks.push(styleMatch[1]);
+      }
+      
+      const scriptBlocks = [];
+      const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+      let scriptMatch;
+      while ((scriptMatch = scriptRegex.exec(full)) !== null) {
+        scriptBlocks.push(scriptMatch[1]);
+      }
+      
+      let htmlExt = full
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<\/?html[^>]*>/gi, '')
+        .replace(/<\/?head[^>]*>/gi, '')
+        .replace(/<\/?body[^>]*>/gi, '')
+        .replace(/<meta[^>]*>/gi, '')
+        .trim();
+      
+      splitHtml.value = htmlExt;
+      splitCss.value = styleBlocks.join('\n\n');
+      splitJs.value = scriptBlocks.join('\n\n');
+      
+      setMode('split');
+      updatePreview();
+    });
+
+    mergeBtn.addEventListener('click', () => {
+      if (currentMode !== 'split') return;
+      const merged = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>${splitCss.value}</style>
+</head>
+<body>
+${splitHtml.value}
+<script>${splitJs.value}<\/script>
+</body>
+</html>`;
+      fullTextarea.value = merged;
+      setMode('full');
+      updatePreview();
+    });
+
+    themeToggle.addEventListener('click', () => {
+      if (document.body.classList.contains('light-mode')) {
+        document.body.classList.remove('light-mode');
+        themeToggle.textContent = '🌙 主题';
+      } else {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '☀️ 主题';
+      }
+    });
+
+    // ========== 科技感控制台功能 ==========
+    const logEl = document.getElementById('logOutput');
+    function log(msg) {
+      if (!logEl) return;
+      const now = new Date();
+      const time = `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}]`;
+      const safe = String(msg).replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, '?');
+      let text = logEl.textContent + '\n' + time + ' ' + safe;
+      if (text.length > 5000) text = text.slice(-4500);
+      logEl.textContent = text;
+      const logBox = document.querySelector('.log-box');
+      if (logBox) logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function getConfig() {
+      const appName = document.getElementById('appName').value.trim();
+      const gitUser = document.getElementById('gitUser').value.trim();
+      const gitRepo = document.getElementById('gitRepo').value.trim();
+      const gitToken = document.getElementById('gitToken').value.trim();
+      const autoUpload = document.getElementById('autoUpload').checked;
+      return { appName, gitUser, gitRepo, gitToken, autoUpload };
+    }
+
+    // 高亮控制
+    const appNameInput = document.getElementById('appName');
+    const appNameRow = document.getElementById('appNameRow');
+    const pathSpan = document.getElementById('pathPreview');
+
+    function updateAppNameHighlight() {
+      const hasValue = appNameInput.value.trim().length > 0;
+      if (hasValue) {
+        appNameRow.classList.add('highlight');
+      } else {
+        appNameRow.classList.remove('highlight');
+      }
+      let val = appNameInput.value.trim();
+      if (val === '') val = '应用名称';
+      pathSpan.textContent = val;
+    }
+    appNameInput.addEventListener('input', updateAppNameHighlight);
+    appNameInput.addEventListener('blur', updateAppNameHighlight);
+    updateAppNameHighlight();
+
+    const iconFile = document.getElementById('iconFile');
+    const iconFileRow = document.getElementById('iconFileRow');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+    iconFile.addEventListener('change', function() {
+      if (this.files && this.files.length > 0) {
+        iconFileRow.classList.add('highlight');
+        fileNameDisplay.textContent = this.files[0].name;
+      } else {
+        iconFileRow.classList.remove('highlight');
+        fileNameDisplay.textContent = '未选择文件';
+      }
+    });
+
+    // Token 开关 + 缓存 (修复: 增加用户名和仓库名缓存)
+    const tokenSwitch = document.getElementById('tokenSwitch');
+    const lockIcon = document.getElementById('lockIcon');
+    const tokenText = document.getElementById('tokenText');
+    const gitTokenInput = document.getElementById('gitToken');
+    const gitTokenRow = document.getElementById('gitTokenRow');
+    const gitUserInput = document.getElementById('gitUser');
+    const gitRepoInput = document.getElementById('gitRepo');
+
+    // 加载所有缓存
+    function loadAllCache() {
+      // 加载用户名
+      const cachedUser = localStorage.getItem('github_user');
+      if (cachedUser) {
+        gitUserInput.value = cachedUser;
+      }
+      
+      // 加载仓库名
+      const cachedRepo = localStorage.getItem('github_repo');
+      if (cachedRepo) {
+        gitRepoInput.value = cachedRepo;
+      }
+      
+      // 加载 Token 状态
+      const cachedToken = localStorage.getItem('github_token');
+      const cachedEnabled = localStorage.getItem('token_enabled') === 'true';
+      
+      if (cachedEnabled && cachedToken) {
+        tokenEnabled = true;
+        tokenSwitch.classList.add('active');
+        lockIcon.textContent = '🔓';
+        gitTokenInput.disabled = false;
+        gitTokenInput.value = cachedToken;
+        gitTokenRow.classList.add('highlight');
+        log('🔓 Token 已从缓存加载');
+      }
+    }
+
+    // 保存用户名和仓库名
+    function saveGitConfig() {
+      const gitUser = gitUserInput.value.trim();
+      const gitRepo = gitRepoInput.value.trim();
+      
+      if (gitUser) {
+        localStorage.setItem('github_user', gitUser);
+      }
+      if (gitRepo) {
+        localStorage.setItem('github_repo', gitRepo);
+      }
+    }
+
+    gitUserInput.addEventListener('blur', saveGitConfig);
+    gitRepoInput.addEventListener('blur', saveGitConfig);
+
+    let tokenEnabled = false;
+    loadAllCache();
+
+    tokenSwitch.addEventListener('click', function() {
+      tokenEnabled = !tokenEnabled;
+      if (tokenEnabled) {
+        tokenSwitch.classList.add('active');
+        lockIcon.textContent = '🔓';
+        gitTokenInput.disabled = false;
+        gitTokenRow.classList.add('highlight');
+        localStorage.setItem('token_enabled', 'true');
+        log('🔓 Token 已开启');
+      } else {
+        tokenSwitch.classList.remove('active');
+        lockIcon.textContent = '🔒';
+        gitTokenInput.disabled = true;
+        gitTokenInput.value = '';
+        gitTokenRow.classList.remove('highlight');
+        localStorage.setItem('token_enabled', 'false');
+        localStorage.removeItem('github_token');
+        log('🔒 Token 已关闭');
+      }
+    });
+
+    gitTokenInput.addEventListener('input', () => {
+      if (tokenEnabled) {
+        localStorage.setItem('github_token', gitTokenInput.value);
+      }
+    });
+
+    const gitUserRow = document.getElementById('gitUserRow');
+    const gitRepoRow = document.getElementById('gitRepoRow');
+
+    function setupInputHighlight(input, row) {
+      input.addEventListener('input', function() {
+        if (this.value.trim().length > 0) {
+          row.classList.add('highlight');
+        } else {
+          row.classList.remove('highlight');
+        }
+      });
+      input.addEventListener('blur', function() {
+        if (this.value.trim().length > 0) {
+          row.classList.add('highlight');
+        } else {
+          row.classList.remove('highlight');
+        }
+      });
+    }
+    setupInputHighlight(gitUserInput, gitUserRow);
+    setupInputHighlight(gitRepoInput, gitRepoRow);
+
+    // 折叠功能
+    const githubBlock = document.getElementById('githubBlock');
+    document.getElementById('toggleGithub').addEventListener('click', (e) => {
+      e.preventDefault();
+      githubBlock.classList.toggle('collapsed');
+    });
+
+    // 备份管理折叠
+    const backupBlock = document.getElementById('backupBlock');
+    document.getElementById('toggleBackup').addEventListener('click', (e) => {
+      e.preventDefault();
+      backupBlock.classList.toggle('collapsed');
+    });
+
+    function toBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    function fromBase64(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    function getAppFilesSafe() {
+      return {
+        html: fullTextarea.value || '<!DOCTYPE html><meta charset="UTF-8"><title>应用</title><h1>⚡</h1>',
+        css: splitCss.value || '/* 样式 */',
+        js: splitJs.value || '// 脚本'
+      };
+    }
+
+    async function buildAppFiles(appName) {
+      const { html, css, js } = getAppFilesSafe();
+      const files = {};
+      
+      files[`apps/${appName}/index.html`] = { content: html, isBinary: false };
+      files[`apps/${appName}/style.css`] = { content: css, isBinary: false };
+      files[`apps/${appName}/app.js`] = { content: js, isBinary: false };
+      
+      const iconFileInput = document.getElementById('iconFile');
+      if (iconFileInput.files && iconFileInput.files.length > 0) {
+        const file = iconFileInput.files[0];
+        const ext = file.name.split('.').pop().toLowerCase();
+        
+        await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const base64 = e.target.result.split(',')[1];
+            const filename = ext ? `logo.${ext}` : 'logo';
+            files[`apps/${appName}/${filename}`] = { content: base64, isBinary: true };
+            resolve();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      
+      return files;
+    }
+
+    async function githubUpload({ user, repo, token, path, fileInfo, message }) {
+      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      
+      let contentToUpload;
+      if (fileInfo.isBinary) {
+        contentToUpload = fileInfo.content;
+      } else {
+        contentToUpload = toBase64(fileInfo.content);
+      }
+      
+      let sha = null;
+      try {
+        const existingFile = await githubGetFile({ user, repo, token, path });
+        if (existingFile && existingFile.sha) {
+          sha = existingFile.sha;
+        }
+      } catch (e) {}
+      
+      const body = {
+        message,
+        content: contentToUpload
+      };
+      
+      if (sha) {
+        body.sha = sha;
+      }
+      
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `token ${token}`, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || `HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    async function githubGetFile({ user, repo, token, path }) {
+      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      const res = await fetch(url, {
+        headers: { 'Authorization': `token ${token}` }
+      });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error('获取失败');
+      return res.json();
+    }
+
+    async function githubDelete({ user, repo, token, path, sha, message }) {
+      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `token ${token}`, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ message, sha })
+      });
+      if (!res.ok) throw new Error('删除失败');
+      return res.json();
+    }
+
+    // 生成文件夹
+    document.getElementById('btnGenerate').addEventListener('click', async () => {
+      const { appName, autoUpload } = getConfig();
+      if (!appName) return log('❌ 应用名不能为空');
+      
+      if (!fullTextarea.value.trim() && !splitHtml.value.trim() && !splitCss.value.trim() && !splitJs.value.trim()) {
+        return log('❌ 编辑器内容为空，无法生成文件夹');
+      }
+      
+      const files = await buildAppFiles(appName);
+      const fileCount = Object.keys(files).length;
+      log(`🏭 生成文件夹: apps/${appName}/ (${fileCount} 个文件)`);
+      
+      Object.keys(files).forEach(path => {
+        const filename = path.split('/').pop();
+        log(`   📄 ${filename}`);
+      });
+      
+      log(`✅ 第1步完成，可进行上传`);
+      
+      if (autoUpload) {
+        log('⚡ 自动上传已开启，开始上传...');
+        setTimeout(() => document.getElementById('btnUpload').click(), 500);
+      }
+    });
+
+    // 上传到 GitHub
+    document.getElementById('btnUpload').addEventListener('click', async () => {
+      const { appName, gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) return log('❌ 请填完整 GitHub 信息');
+      
+      log(`📤 上传到 GitHub: ${gitUser}/${gitRepo}`);
+      
+      const files = await buildAppFiles(appName);
+      
+      for (const [path, fileInfo] of Object.entries(files)) {
+        try {
+          await githubUpload({ 
+            user: gitUser, 
+            repo: gitRepo, 
+            token: gitToken, 
+            path, 
+            fileInfo,
+            message: `上传 ${appName} - ${path.split('/').pop()}` 
+          });
+          log(`✔ 上传: ${path}`);
+        } catch (e) { 
+          log(`❌ 失败: ${path} - ${e.message}`); 
+        }
+      }
+      
+      log(`✅ 第2步完成，可更新 configuration.json`);
+    });
+
+    // 更新 configuration.json
+    document.getElementById('btnUpdateJson').addEventListener('click', async () => {
+      const { appName, gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少 GitHub 信息');
+      if (!appName) return log('❌ 应用名不能为空');
+      
+      try {
+        let iconPath = `apps/${appName}/logo`;
+        const iconFileInput = document.getElementById('iconFile');
+        if (iconFileInput.files && iconFileInput.files.length > 0) {
+          const ext = iconFileInput.files[0].name.split('.').pop().toLowerCase();
+          if (['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
+            iconPath = `apps/${appName}/logo.${ext}`;
+          }
+        }
+        
+        log(`📖 读取 configuration.json...`);
+        
+        const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: 'configuration.json' });
+        let apps = [];
+        let sha = null;
+        
+        if (file?.content) {
+          try {
+            apps = JSON.parse(fromBase64(file.content));
+            sha = file.sha;
+            log(`   已存在 ${apps.length} 个应用配置`);
+          } catch (e) {
+            log(`   ⚠️ 解析失败，将创建新文件`);
+            apps = [];
+          }
+        } else {
+          log(`   ⚠️ 文件不存在，将创建新文件`);
+        }
+        
+        const oldCount = apps.length;
+        apps = apps.filter(a => a.name !== appName);
+        if (apps.length < oldCount) {
+          log(`   已移除旧配置: ${appName}`);
+        }
+        
+        apps.push({ 
+          name: appName, 
+          icon: iconPath,
+          url: `apps/${appName}/`
+        });
+        
+        log(`   添加新配置: ${appName}`);
+        log(`   图标路径: ${iconPath}`);
+        
+        const configContent = JSON.stringify(apps, null, 2);
+        const contentBase64 = toBase64(configContent);
+        
+        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/configuration.json`;
+        
+        const body = {
+          message: `更新 configuration.json - 添加 ${appName}`,
+          content: contentBase64
+        };
+        
+        if (sha) {
+          body.sha = sha;
+        }
+        
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: { 
+            'Authorization': `token ${gitToken}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify(body)
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || `HTTP ${res.status}`);
+        }
+        
+        log('✅ configuration.json 已更新');
+        log(`   当前共有 ${apps.length} 个应用`);
+        
+      } catch (e) { 
+        log('❌ 更新失败: ' + e.message); 
+      }
+    });
+
+    // ========== 删除/备份弹窗逻辑 ==========
+    const deleteModal = document.getElementById('deleteModal');
+    const confirmDelete = document.getElementById('confirmDelete');
+    const cancelDelete = document.getElementById('cancelDelete');
+    const optionDeleteOnly = document.getElementById('optionDeleteOnly');
+    const optionBackupOnly = document.getElementById('optionBackupOnly');
+    
+    let currentAction = null;
+
+    // 显示删除选项弹窗
+    document.getElementById('btnDeleteApp').addEventListener('click', () => {
+      const { appName, gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) {
+        log('❌ 需要 GitHub 认证');
+        return;
+      }
+      if (!appName) {
+        log('❌ 请填写应用名称');
+        return;
+      }
+      
+      deleteModal.classList.add('active');
+    });
+
+    // 确认删除/备份
+    confirmDelete.addEventListener('click', async () => {
+      deleteModal.classList.remove('active');
+      
+      const { appName, gitUser, gitRepo, gitToken } = getConfig();
+      
+      if (optionDeleteOnly.checked) {
+        // 只删除（不备份）
+        await performDelete(appName, gitUser, gitRepo, gitToken, false, false);
+      } else if (optionBackupOnly.checked) {
+        // 只备份（不删除）
+        await performDelete(appName, gitUser, gitRepo, gitToken, true, false);
+      }
+    });
+
+    // 取消
+    cancelDelete.addEventListener('click', () => {
+      deleteModal.classList.remove('active');
+    });
+
+    // 执行操作
+    async function performDelete(appName, gitUser, gitRepo, gitToken, backup, deleteAfterBackup) {
+      log(`📦 开始${backup ? '备份' : ''}${deleteAfterBackup ? '并删除' : ''}应用: ${appName}`);
+      
+      const paths = [
+        `apps/${appName}/index.html`,
+        `apps/${appName}/style.css`,
+        `apps/${appName}/app.js`
+      ];
+      
+      const iconExts = ['', '.png', '.webp', '.jpg', '.jpeg', '.gif', '.svg'];
+      iconExts.forEach(ext => {
+        paths.push(`apps/${appName}/logo${ext}`);
+      });
+      
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0,19);
+      const backupBase = `backup/${appName}-${ts}`;
+      
+      let processedCount = 0;
+      let backupCount = 0;
+      
+      for (const path of paths) {
+        try {
+          const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path });
+          if (!file?.sha) continue;
+          
+          if (backup) {
+            // 备份
+            const decoded = fromBase64(file.content);
+            const filename = path.split('/').pop();
+            
+            let backupSha = null;
+            try {
+              const backupFile = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `${backupBase}/${filename}` });
+              if (backupFile && backupFile.sha) {
+                backupSha = backupFile.sha;
+              }
+            } catch (e) {}
+            
+            const backupBody = {
+              message: `备份 ${appName} - ${filename}`,
+              content: file.content
+            };
+            if (backupSha) {
+              backupBody.sha = backupSha;
+            }
+            
+            const backupUrl = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/${backupBase}/${filename}`;
+            const backupRes = await fetch(backupUrl, {
+              method: 'PUT',
+              headers: { 
+                'Authorization': `token ${gitToken}`, 
+                'Content-Type': 'application/json' 
+              },
+              body: JSON.stringify(backupBody)
+            });
+            
+            if (backupRes.ok) {
+              log(`📦 已备份: ${filename}`);
+              backupCount++;
+            }
+          }
+          
+          if (deleteAfterBackup || !backup) {
+            // 删除
+            await githubDelete({ 
+              user: gitUser, 
+              repo: gitRepo, 
+              token: gitToken, 
+              path, 
+              sha: file.sha, 
+              message: `删除 ${appName} - ${path.split('/').pop()}` 
+            });
+            log(`🗑️ 已删除: ${path.split('/').pop()}`);
+            processedCount++;
+          }
+          
+        } catch (e) {
+          // 文件不存在跳过
+        }
+      }
+      
+      if (processedCount === 0 && backupCount === 0) {
+        log(`⚠️ 未找到任何文件`);
+      } else {
+        if (backup) log(`✅ 已备份 ${backupCount} 个文件`);
+        if (deleteAfterBackup || (!backup && processedCount > 0)) log(`✅ 已删除 ${processedCount} 个文件`);
+      }
+      
+      // 更新 configuration.json（只在删除时更新）
+      if (deleteAfterBackup || !backup) {
+        try {
+          log(`📖 更新 configuration.json...`);
+          const appsFile = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: 'configuration.json' });
+          if (appsFile?.content) {
+            let apps = JSON.parse(fromBase64(appsFile.content));
+            const oldCount = apps.length;
+            apps = apps.filter(a => a.name !== appName);
+            
+            if (apps.length < oldCount) {
+              const configContent = JSON.stringify(apps, null, 2);
+              const contentBase64 = toBase64(configContent);
+              
+              const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/configuration.json`;
+              const body = {
+                message: `移除 ${appName} 从 configuration.json`,
+                content: contentBase64,
+                sha: appsFile.sha
+              };
+              
+              const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 
+                  'Authorization': `token ${gitToken}`, 
+                  'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(body)
+              });
+              
+              if (res.ok) {
+                log('✅ configuration.json 已清理');
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      
+      log('>> 操作完成');
+    }
+
+    // ========== 备份管理 ==========
+    const btnShowBackups = document.getElementById('btnShowBackups');
+    const backupListContainer = document.getElementById('backupListContainer');
+    const backupList = document.getElementById('backupList');
+    const backupDeleteModal = document.getElementById('backupDeleteModal');
+    const confirmBackupDelete = document.getElementById('confirmBackupDelete');
+    const cancelBackupDelete = document.getElementById('cancelBackupDelete');
+    const backupDeleteName = document.getElementById('backupDeleteName');
+    
+    let currentBackupPath = '';
+    let currentBackupName = '';
+
+    btnShowBackups.addEventListener('click', async () => {
+      const { gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) {
+        log('❌ 需要 GitHub 认证');
+        return;
+      }
+      
+      if (backupListContainer.style.display === 'none') {
+        backupListContainer.style.display = 'block';
+        await loadBackupList(gitUser, gitRepo, gitToken);
+      } else {
+        backupListContainer.style.display = 'none';
+      }
+    });
+
+    async function loadBackupList(gitUser, gitRepo, gitToken) {
+      backupList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">加载中...</div>';
+      
+      try {
+        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/backup`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `token ${gitToken}` }
+        });
+        
+        if (res.status === 404) {
+          backupList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">暂无备份</div>';
+          return;
+        }
+        
+        if (!res.ok) throw new Error('获取失败');
+        
+        const data = await res.json();
+        const folders = data.filter(item => item.type === 'dir');
+        
+        if (folders.length === 0) {
+          backupList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">暂无备份</div>';
+          return;
+        }
+        
+        backupList.innerHTML = '';
+        folders.sort((a, b) => b.name.localeCompare(a.name)); // 最新的在前面
+        
+        folders.forEach(folder => {
+          const item = document.createElement('div');
+          item.className = 'backup-item';
+          item.innerHTML = `
+            <span class="backup-name">${folder.name}</span>
+            <span class="backup-delete" data-path="${folder.path}">🗑️ 删除</span>
+          `;
+          backupList.appendChild(item);
+        });
+        
+        // 添加删除事件
+        document.querySelectorAll('.backup-delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const path = btn.dataset.path;
+            const name = btn.previousElementSibling.textContent;
+            showBackupDeleteModal(path, name);
+          });
+        });
+        
+      } catch (e) {
+        backupList.innerHTML = `<div style="color: #ff8a8a; text-align: center; padding: 10px;">加载失败: ${e.message}</div>`;
+      }
+    }
+
+    function showBackupDeleteModal(path, name) {
+      currentBackupPath = path;
+      currentBackupName = name;
+      backupDeleteName.textContent = `确定删除备份: ${name}?`;
+      backupDeleteModal.classList.add('active');
+    }
+
+    confirmBackupDelete.addEventListener('click', async () => {
+      backupDeleteModal.classList.remove('active');
+      
+      const { gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) {
+        log('❌ 需要 GitHub 认证');
+        return;
+      }
+      
+      await deleteBackupFolder(gitUser, gitRepo, gitToken, currentBackupPath, currentBackupName);
+    });
+
+    cancelBackupDelete.addEventListener('click', () => {
+      backupDeleteModal.classList.remove('active');
+    });
+
+    async function deleteBackupFolder(gitUser, gitRepo, gitToken, folderPath, folderName) {
+      log(`🗑️ 开始删除备份: ${folderName}`);
+      
+      try {
+        // 获取文件夹内容
+        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/${folderPath}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `token ${gitToken}` }
+        });
+        
+        if (!res.ok) throw new Error('获取备份文件列表失败');
+        
+        const files = await res.json();
+        
+        // 删除所有文件
+        for (const file of files) {
+          if (file.type === 'file') {
+            await githubDelete({
+              user: gitUser,
+              repo: gitRepo,
+              token: gitToken,
+              path: file.path,
+              sha: file.sha,
+              message: `删除备份文件: ${file.name}`
+            });
+            log(`   🗑️ 删除: ${file.name}`);
+          }
+        }
+        
+        log(`✅ 备份已删除: ${folderName}`);
+        
+        // 刷新备份列表
+        await loadBackupList(gitUser, gitRepo, gitToken);
+        
+      } catch (e) {
+        log(`❌ 删除备份失败: ${e.message}`);
+      }
+    }
+
+    // 初始化
+    setMode('full');
+    updatePreview();
+    showMainPage();
+    log('科技感控制台启动 · 备份管理版');
+  })();
+</script>
+</body>
+</html>
