@@ -23,5 +23,10 @@
     "name": "解析双色球",
     "icon": "apps/解析双色球/icon.png",
     "url": "apps/解析双色球/"
+  },
+  {
+    "name": "萨维斯",
+    "icon": "apps/萨维斯/logo.png",
+    "url": "apps/萨维斯/"
   }
 ]
