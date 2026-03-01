@@ -28,5 +28,10 @@
     "name": "萨维斯",
     "icon": "apps/萨维斯/logo.png",
     "url": "apps/萨维斯/"
+  },
+  {
+    "name": "AI编辑",
+    "icon": "apps/AI编辑/logo.png",
+    "url": "apps/AI编辑/"
   }
 ]
