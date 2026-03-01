@@ -38,5 +38,10 @@
     "name": "萨维斯",
     "icon": "apps/萨维斯/icon.webp",
     "url": "apps/萨维斯/"
+  },
+  {
+    "name": "热热热我热搜索",
+    "icon": "apps/热热热我热搜索/icon.webp",
+    "url": "apps/热热热我热搜索/"
   }
 ]
