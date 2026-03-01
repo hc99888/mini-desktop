@@ -23,5 +23,10 @@
     "name": "AI编辑",
     "icon": "apps/AI编辑/logo.png",
     "url": "apps/AI编辑/"
+  },
+  {
+    "name": "打得过的",
+    "icon": "apps/打得过的/logo.webp",
+    "url": "apps/打得过的/"
   }
 ]
