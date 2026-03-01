@@ -28,5 +28,10 @@
     "name": "AI编辑",
     "icon": "apps/AI编辑/logo.png",
     "url": "apps/AI编辑/"
+  },
+  {
+    "name": "时时三段",
+    "icon": "apps/时时三段/logo.webp",
+    "url": "apps/时时三段/"
   }
 ]
