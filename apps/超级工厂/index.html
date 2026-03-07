@@ -729,7 +729,7 @@
     .collapsible-body {
       overflow: hidden;
       transition: max-height 0.2s ease;
-      max-height: 300px;
+      max-height: 600px;
     }
 
     .collapsed .collapsible-body {
@@ -1725,10 +1725,10 @@
                 </div>
                 <div style="padding: 12px; background: #0a1a2a; border-top: 1px solid #1e3f5a;">
                   <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" id="showRepoListBtn">
+                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: #ffffff;" id="showRepoListBtn">
                       <span>📋</span> 显示列表
                     </button>
-                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" id="addCurrentRepoBtn">
+                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: #ffffff;" id="addCurrentRepoBtn">
                       <span>➕</span> 添加当前
                     </button>
                   </div>
@@ -2560,7 +2560,7 @@ ${splitHtml.value}
       repositories.forEach((repo, index) => {
         const platformIcon = repo.platform === 'github' ? '🐙' : '🦊';
         const item = document.createElement('div');
-        item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e3f5a;';
+        item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e3f5a; font-size: 0.5rem;';
         item.innerHTML = `
           <span style="color: #9cb8cc;">
             ${platformIcon} ${repo.user}/${repo.repo}
@@ -3293,7 +3293,7 @@ ${splitHtml.value}
         
         folders.forEach(folder => {
           const item = document.createElement('div');
-          item.className = 'backup-item';
+          item.className = 'backup-item'; 
           item.innerHTML = `
             <span class="backup-name">${folder.name}</span>
             <span class="backup-delete" data-path="${folder.path}">🗑️ 删除</span>
