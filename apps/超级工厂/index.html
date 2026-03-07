@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>代码编辑器 + 科技感控制台 · 最终版</title>
+  <title>代码编辑器 · 一键清空 + Token历史 + 应用加载修复</title>
   <style>
     /* ===== 全局重置 ===== */
     * {
@@ -490,6 +490,7 @@
     .field-input {
       flex: 1;
       min-width: 0;
+      position: relative;
     }
 
     input, input[type="text"], input[type="password"] {
@@ -502,6 +503,74 @@
       font-size: 0.9rem;
       font-family: 'JetBrains Mono', monospace;
       outline: none;
+    }
+
+    .token-dropdown {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #5f7a8c;
+      cursor: pointer;
+      font-size: 1.2rem;
+      z-index: 5;
+    }
+
+    .token-dropdown:hover {
+      color: #00ccff;
+    }
+
+    .token-history {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 250px;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 16px;
+      padding: 8px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    }
+
+    .token-history.active {
+      display: block;
+    }
+
+    .token-history-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid #1e3f5a;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .token-history-item:last-child {
+      border-bottom: none;
+    }
+
+    .token-history-item:hover {
+      background: #1e3a4a;
+    }
+
+    .token-history-item .platform-icon {
+      font-size: 1rem;
+      width: 20px;
+    }
+
+    .token-history-item .token-preview {
+      font-family: 'Share Tech Mono', monospace;
+      color: #9cb8cc;
+      font-size: 0.8rem;
+    }
+
+    .token-history-item .token-delete {
+      margin-left: auto;
+      color: #8f4a4a;
+      font-size: 0.9rem;
     }
 
     .path-preview {
@@ -730,7 +799,7 @@
       border-radius: 20px;
       padding: 12px 16px;
       margin-top: 12px;
-      margin-bottom: 30px; 
+      margin-bottom: 20px;
       max-height: 150px;
       overflow-y: auto;
       scrollbar-width: thin;
@@ -769,6 +838,56 @@
       padding: 16px;
       overflow-y: auto;
       flex: 1;
+    }
+
+    /* 导出弹窗 */
+    .export-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #0a141f;
+      border: 2px solid #2c5f7a;
+      border-radius: 24px;
+      padding: 20px;
+      z-index: 2000;
+      display: none;
+      width: 300px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    .export-modal.active {
+      display: block;
+    }
+
+    .export-modal h3 {
+      color: #7eb8cc;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .export-option {
+      background: #102b36;
+      border: 1px solid #2c5f7a;
+      border-radius: 40px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #e0f0ff;
+    }
+
+    .export-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #00ccff;
+    }
+
+    .export-option input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #00ccff;
     }
 
     /* 删除选项弹窗 */
@@ -851,6 +970,148 @@
     .modal-button.cancel {
       background: #2c3f4a;
       border-color: #5a3f3f;
+    }
+
+    /* 应用列表样式 */
+    .app-list {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 16px;
+      padding: 8px;
+    }
+
+    .app-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #1e3f5a;
+    }
+
+    .app-item:last-child {
+      border-bottom: none;
+    }
+
+    .app-name {
+      color: #9cb8cc;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-icon {
+      font-size: 1.1rem;
+    }
+
+    .app-uninstall {
+      background: #3f2a2a;
+      border: 1px solid #8f4a4a;
+      border-radius: 30px;
+      padding: 4px 12px;
+      color: #ffaaaa;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .app-uninstall:hover {
+      background: #5f3a3a;
+      border-color: #ff6b6b;
+    }
+
+    .app-edit {
+      background: #1e3a4a;
+      border: 1px solid #2c5f7a;
+      border-radius: 30px;
+      padding: 4px 12px;
+      color: #aaddff;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-right: 6px;
+      transition: all 0.15s;
+    }
+
+    .app-edit:hover {
+      background: #2c5f7a;
+      border-color: #00ccff;
+    }
+
+    /* 仓库列表样式 */
+    .repo-list {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #0a141f;
+      border: 1px solid #1e3f5a;
+      border-radius: 16px;
+      padding: 8px;
+    }
+
+    .repo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #1e3f5a;
+    }
+
+    .repo-item:last-child {
+      border-bottom: none;
+    }
+
+    .repo-name {
+      color: #9cb8cc;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .repo-select {
+      background: #1e3a4a;
+      border: 1px solid #2c5f7a;
+      border-radius: 30px;
+      padding: 2px 8px;
+      color: #aaddff;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+
+    .repo-delete {
+      background: #3f2a2a;
+      border: 1px solid #8f4a4a;
+      border-radius: 30px;
+      padding: 2px 8px;
+      color: #ffaaaa;
+      font-size: 0.7rem;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    .platform-toggle {
+      display: flex;
+      gap: 16px;
+      margin: 8px 0 12px 10px;
+    }
+
+    .platform-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #9cb8cc;
+      cursor: pointer;
+    }
+
+    .platform-option input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #00ccff;
     }
 
     /* 备份管理样式 */
@@ -1136,6 +1397,84 @@
       color: #999;
     }
 
+    body.light-mode .export-modal {
+      background: #ffffff;
+      border: 2px solid #4a90e2;
+    }
+
+    body.light-mode .export-modal h3 {
+      color: #4a4a6a;
+    }
+
+    body.light-mode .export-option {
+      background: #f0f0f0;
+      border: 1px solid #4a90e2;
+      color: #333;
+    }
+
+    body.light-mode .app-list {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .app-name {
+      color: #666;
+    }
+
+    body.light-mode .app-edit {
+      background: #e0e0e0;
+      border: 1px solid #4a90e2;
+      color: #2a6fb0;
+    }
+
+    body.light-mode .app-uninstall {
+      background: #ffe0e0;
+      border: 1px solid #ff8a8a;
+      color: #d44;
+    }
+
+    body.light-mode .repo-list {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .repo-name {
+      color: #666;
+    }
+
+    body.light-mode .repo-select {
+      background: #e0e0e0;
+      border: 1px solid #4a90e2;
+      color: #2a6fb0;
+    }
+
+    body.light-mode .repo-delete {
+      background: #ffe0e0;
+      border: 1px solid #ff8a8a;
+      color: #d44;
+    }
+
+    body.light-mode .platform-option {
+      color: #666;
+    }
+
+    body.light-mode .token-history {
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+
+    body.light-mode .token-history-item {
+      border-bottom: 1px solid #ddd;
+    }
+
+    body.light-mode .token-history-item:hover {
+      background: #f0f0f0;
+    }
+
+    body.light-mode .token-history-item .token-preview {
+      color: #666;
+    }
+
     @media (max-width: 600px) {
       .grid-2 {
         grid-template-columns: 1fr;
@@ -1143,8 +1482,31 @@
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Major+Mono+Display&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
+  <!-- 导出弹窗 -->
+  <div class="export-modal" id="exportModal">
+    <h3>📦 导出选项</h3>
+    <div class="export-option">
+      <input type="radio" name="exportFormat" id="exportFull" value="full" checked>
+      <label for="exportFull">完整HTML</label>
+    </div>
+    <div class="export-option">
+      <input type="radio" name="exportFormat" id="exportSplit" value="split">
+      <label for="exportSplit">三文件 (HTML/CSS/JS)</label>
+    </div>
+    <div class="export-option">
+      <input type="checkbox" id="exportZip" value="zip">
+      <label for="exportZip">压缩为ZIP</label>
+    </div>
+    <div class="modal-buttons">
+      <div class="modal-button confirm" id="confirmExport">确认</div>
+      <div class="modal-button cancel" id="cancelExport">取消</div>
+    </div>
+  </div>
+
   <!-- 删除选项弹窗 -->
   <div class="delete-modal" id="deleteModal">
     <h3>⚠️ 删除选项</h3>
@@ -1172,6 +1534,16 @@
     </div>
   </div>
 
+  <!-- 卸载确认弹窗 -->
+  <div class="delete-modal" id="uninstallModal" style="width: 320px;">
+    <h3>🗑️ 卸载应用</h3>
+    <div style="color: #9cb8cc; text-align: center; margin: 16px 0;" id="uninstallAppName">确定卸载该应用?</div>
+    <div class="modal-buttons">
+      <div class="modal-button confirm" id="confirmUninstall">确认</div>
+      <div class="modal-button cancel" id="cancelUninstall">取消</div>
+    </div>
+  </div>
+
 <div class="app-container">
   <!-- 主页面：代码编辑器 -->
   <div class="main-page" id="mainPage">
@@ -1182,6 +1554,7 @@
         <button id="batchImportBtn">📎 批量导入</button>
         <button id="clearBtn">🗑️ 清空</button>
         <button id="themeToggleBtn">🌙 主题</button>
+        <button id="clearAllBtn">🧹 一键清空</button>
         <button id="editProfileBtn">✏️ 编辑资料</button>
       </div>
 
@@ -1237,7 +1610,7 @@
     <iframe id="previewIframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-same-origin allow-modals allow-popups allow-top-navigation" src="about:blank"></iframe>
   </div>
 
-  <!-- 编辑资料页面 (完整科技感控制台) -->
+  <!-- 编辑资料页面 -->
   <div class="profile-page" id="profilePage">
     <div class="profile-header">
       <button class="back-button" id="backFromProfileBtn">
@@ -1246,8 +1619,7 @@
       <span class="profile-title">编辑资料 · 科技感控制台</span>
     </div>
     <div class="profile-content">
-      <!-- 这里嵌入完整的科技感控制台 -->
-      <div class="console">
+<div class="console">
         <div class="grid-2">
           <!-- 左列 -->
           <div class="left-stack" style="display: flex; flex-direction: column; gap: 12px;">
@@ -1272,41 +1644,113 @@
               </div>
             </div>
 
-            <!-- GitHub 设置（可折叠） -->
-            <div class="block collapsible" id="githubBlock">
-              <div class="collapsible-header" id="toggleGithub">
-                <span class="arrow" id="githubArrow">▼</span>
-                <span class="block-title" style="font-size:1rem;">🔧 GitHub 设置</span>
+            <!-- 代码仓库设置卡片 - 修复版 (平台配置分离 + 自动加载) -->
+            <div class="block" id="githubBlock" style="padding: 12px;">
+              <!-- 大标题 -->
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <span style="font-size: 1.2rem;">🔧</span>
+                <span class="block-title" style="font-size: 1.1rem;">代码仓库设置</span>
               </div>
-              <div class="collapsible-body" id="githubBody">
-                <div class="field-row" id="gitUserRow" style="margin-top:10px;">
-                  <div class="field-label">用户</div>
-                  <div class="field-input"><input type="text" id="gitUser" placeholder="用户名"></div>
+              
+              <!-- 当前使用配置卡片 (用于API调用) -->
+              <div style="background: #0a1a2a; border: 2px solid #2c5f7a; border-radius: 16px; padding: 12px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="color: #7eb8cc; font-size: 0.9rem; font-weight: 600;">📌 当前使用配置 (API调用)</span>
+                  <span style="background: #1e3a4a; padding: 2px 10px; border-radius: 30px; font-size: 0.8rem; color: #00ccff;" id="currentPlatformBadge">🐙 GitHub</span>
                 </div>
-                <div class="field-row" id="gitRepoRow">
-                  <div class="field-label">仓库</div>
-                  <div class="field-input"><input type="text" id="gitRepo" placeholder="仓库名" value="mini-desktop"></div>
+                
+                <div style="display: grid; grid-template-columns: 60px 1fr; gap: 8px;">
+                  <span style="color: #9cb8cc;">用户</span>
+                  <span style="color: #fff; font-weight: 500;" id="currentUserDisplay">未设置</span>
+                  
+                  <span style="color: #9cb8cc;">仓库</span>
+                  <span style="color: #fff; font-weight: 500;" id="currentRepoDisplay">未设置</span>
+                  
+                  <span style="color: #9cb8cc;">令牌</span>
+                  <span style="color: #ffaa00;" id="currentTokenDisplay">未设置</span>
                 </div>
-                <div class="field-row" id="gitTokenRow">
-                  <div class="token-switch" id="tokenSwitch">
-                    <span class="lock-icon" id="lockIcon">🔒</span>
-                    <span class="token-text" id="tokenText">TOKEN</span>
-                  </div>
-                  <div class="field-input">
-                    <input type="password" id="gitToken" placeholder="个人访问令牌" disabled>
-                  </div>
-                </div>
-                <div class="switch-row">
-                  <label class="switch-label">
-                    <input type="checkbox" id="autoUpload" class="switch-checkbox">
-                    <span>自动上传</span>
+              </div>
+
+              <!-- 平台切换 - 两个大按钮 (高亮显示当前选中) -->
+              <div style="margin-bottom: 16px;">
+                <div style="display: flex; gap: 12px;">
+                  <label style="flex: 1; text-align: center; padding: 10px 0; border-radius: 40px; background: #1e3a4a; border: 2px solid #2c5f7a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; transition: all 0.2s;" id="selectGithubBtn">
+                    <span style="font-size: 1.2rem;">🐙</span> GitHub
+                    <input type="radio" name="platform" value="github" checked style="display: none;">
                   </label>
+                  <label style="flex: 1; text-align: center; padding: 10px 0; border-radius: 40px; background: #1e3a4a; border: 2px solid #2c5f7a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; transition: all 0.2s;" id="selectGiteeBtn">
+                    <span style="font-size: 1.2rem;">🦊</span> Gitee
+                    <input type="radio" name="platform" value="gitee" style="display: none;">
+                  </label>
+                </div>
+              </div>
+
+              <!-- 编辑配置区域 (一套输入框) -->
+              <div style="margin-bottom: 16px; border: 1px solid #1e3f5a; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 12px; background: #0a1a2a;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span style="font-weight: 600; color: #7eb8cc;">✏️ 编辑配置</span>
+                    <span style="color: #5f7a8c; font-size: 0.75rem; margin-left: auto;" id="editingPlatformHint">当前编辑: GitHub</span>
+                  </div>
+                  
+                  <!-- 用户输入 -->
+                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #9cb8cc; width: 50px;">用户</span>
+                    <input type="text" id="gitUser" placeholder="用户名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+                  </div>
+                  
+                  <!-- 仓库输入 -->
+                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #9cb8cc; width: 50px;">仓库</span>
+                    <input type="text" id="gitRepo" placeholder="仓库名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+                  </div>
+                  
+                  <!-- 令牌输入 -->
+                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #9cb8cc; width: 50px;">令牌</span>
+                    <input type="password" id="gitToken" placeholder="个人访问令牌" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+                  </div>
+                  
+                  <!-- 保存按钮 -->
+                  <button style="width: 100%; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 12px; margin-top: 12px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" id="saveConfigBtn">
+                    <span>💾</span> 保存资料
+                  </button>
+                </div>
+              </div>
+
+              <!-- 多仓库管理 (保留原有功能) -->
+              <div style="border: 1px solid #1e3f5a; border-radius: 16px; overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #0a1a2a;">
+                  <span style="font-weight: 600; color: #7eb8cc;">📋 多仓库管理</span>
+                </div>
+                <div style="padding: 12px; background: #0a1a2a; border-top: 1px solid #1e3f5a;">
+                  <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" id="showRepoListBtn">
+                      <span>📋</span> 显示列表
+                    </button>
+                    <button style="flex: 1; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;" id="addCurrentRepoBtn">
+                      <span>➕</span> 添加当前
+                    </button>
+                  </div>
+                  
+                  <div id="repoListContainer" style="display: none; margin-bottom: 12px; max-height: 150px; overflow-y: auto; background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 12px; padding: 4px;">
+                    <div id="repoList">
+                      <div style="color: #5f7a8c; text-align: center; padding: 8px;">暂无仓库，点击【添加当前】保存</div>
+                    </div>
+                  </div>
+                  
+                  <div style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="checkbox" id="autoUpload" class="switch-checkbox">
+                      <span style="color: #9cb8cc;">自动上传（生成后自动上传）</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 右列 -->
+          <!-- 右列 (保持不变) -->
           <div class="right-stack" style="display: flex; flex-direction: column; gap: 12px;">
             <!-- 操作区 -->
             <div class="block">
@@ -1323,7 +1767,7 @@
                 </div>
                 <div class="action-item">
                   <button class="action-button" id="btnUpload">
-                    <span>📤</span> 上传到 GitHub
+                    <span>📤</span> 上传
                   </button>
                   <div class="action-desc">PUT index.html/style.css/app.js/图标</div>
                 </div>
@@ -1336,7 +1780,7 @@
               </div>
             </div>
 
-            <!-- 备份管理区块 (可折叠) -->
+            <!-- 备份管理区块 -->
             <div class="block delete-block collapsible" id="backupBlock">
               <div class="collapsible-header" id="toggleBackup">
                 <span class="arrow" id="backupArrow">▼</span>
@@ -1350,6 +1794,15 @@
                 <div class="action-desc" style="border-left-color:#5a3f3f; margin-bottom:12px;">
                   → 点击后选择：只删除 或 备份<br>
                   → 自动更新 configuration.json
+                </div>
+
+                <div class="action-button" id="btnShowApps" style="margin-bottom:8px; background:#1e3a4a;">
+                  <span>📋</span> 已安装应用
+                </div>
+                <div id="appListContainer" style="display: none; margin-top: 8px;">
+                  <div class="app-list" id="appList">
+                    <div style="color: #5f7a8c; text-align: center; padding: 10px;">点击加载应用列表</div>
+                  </div>
                 </div>
                 
                 <div class="action-button" id="btnShowBackups" style="margin-bottom:8px; background:#1e3a4a;">
@@ -1366,7 +1819,7 @@
           </div>
         </div>
 
-        <!-- 日志框 - 可滚动 -->
+        <!-- 日志框 -->
         <div class="log-box">
           <pre id="logOutput">>> 系统就绪 · 科技感边框高亮版</pre>
         </div>
@@ -1424,6 +1877,7 @@
     const deleteBtn = document.getElementById('deleteBtn');
     const pasteBtn = document.getElementById('pasteBtn');
     const themeToggle = document.getElementById('themeToggleBtn');
+    const clearAllBtn = document.getElementById('clearAllBtn');
 
     const fullTextarea = document.getElementById('fullCodeTextarea');
     const splitHtml = document.getElementById('splitHtmlTextarea');
@@ -1436,11 +1890,22 @@
 
     let currentMode = 'full';
 
-    // 清空示例代码，保留空编辑器
     fullTextarea.value = '';
     splitHtml.value = '';
     splitCss.value = '';
     splitJs.value = '';
+
+    clearAllBtn.addEventListener('click', () => {
+      fullTextarea.value = '';
+      splitHtml.value = '';
+      splitCss.value = '';
+      splitJs.value = '';
+      document.getElementById('appName').value = '';
+      document.getElementById('iconFile').value = '';
+      document.getElementById('autoUpload').checked = false;
+      updatePreview();
+      log('🧹 已清空所有输入框');
+    });
 
     function setMode(mode) {
       currentMode = mode;
@@ -1498,105 +1963,237 @@
       URL.revokeObjectURL(a.href);
     }
 
-    exportBtn.addEventListener('click', () => {
-      if (currentMode === 'full') {
-        downloadFile('index.html', fullTextarea.value);
+          // ========== 导出弹窗 ==========
+const exportModal = document.getElementById('exportModal');
+const confirmExport = document.getElementById('confirmExport');
+const cancelExport = document.getElementById('cancelExport');
+const exportFull = document.getElementById('exportFull');
+const exportSplit = document.getElementById('exportSplit');
+const exportZip = document.getElementById('exportZip');
+const exportButton = document.getElementById('exportBtn');   // 改用 exportButton
+
+// 导出按钮点击事件
+if (exportButton) {
+  exportButton.addEventListener('click', () => {
+    exportModal.classList.add('active');
+  });
+} else {
+  console.error('导出按钮未找到');
+}
+
+// 取消按钮
+if (cancelExport) {
+  cancelExport.addEventListener('click', () => {
+    exportModal.classList.remove('active');
+  });
+}
+
+// 确认导出按钮
+if (confirmExport) {
+  confirmExport.addEventListener('click', () => {
+    exportModal.classList.remove('active');
+    
+    const useZip = exportZip.checked;
+    
+    if (exportFull.checked) {
+      const content = fullTextarea.value || '<!-- 空内容 -->';
+      if (useZip) {
+        // 打包单个文件为ZIP
+        if (typeof JSZip === 'undefined') {
+          alert('JSZip 库未加载，请刷新页面');
+          return;
+        }
+        const zip = new JSZip();
+        zip.file('index.html', content);
+        zip.generateAsync({ type: 'blob' }).then(blob => {
+          downloadBlob(blob, 'export.zip');
+        }).catch(err => {
+          console.error('ZIP生成失败', err);
+          alert('ZIP生成失败，请重试');
+        });
       } else {
-        downloadFile('index.html', splitHtml.value);
-        downloadFile('style.css', splitCss.value);
-        downloadFile('app.js', splitJs.value);
+        downloadFile('index.html', content);
       }
-    });
-
-    function isCompleteHtml(content) {
-      const hasHtml = /<html/i.test(content);
-      const hasHead = /<head/i.test(content);
-      const hasBody = /<body/i.test(content);
-      const hasStyle = /<style/i.test(content);
-      const hasScript = /<script/i.test(content);
-      return (hasHtml || (hasHead && hasBody)) && (hasStyle || hasScript);
+    } else if (exportSplit.checked) {
+      if (useZip) {
+        if (typeof JSZip === 'undefined') {
+          alert('JSZip 库未加载，请刷新页面');
+          return;
+        }
+        // 打包三个文件为ZIP
+        const zip = new JSZip();
+        zip.file('index.html', splitHtml.value || '');
+        zip.file('style.css', splitCss.value || '');
+        zip.file('app.js', splitJs.value || '');
+        zip.generateAsync({ type: 'blob' }).then(blob => {
+          downloadBlob(blob, 'export.zip');
+        }).catch(err => {
+          console.error('ZIP生成失败', err);
+          alert('ZIP生成失败，请重试');
+        });
+      } else {
+        downloadFile('index.html', splitHtml.value || '');
+        downloadFile('style.css', splitCss.value || '');
+        downloadFile('app.js', splitJs.value || '');
+      }
     }
+  });
+}
 
-    batchImportBtn.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.multiple = true;
-      input.accept = '.html,.htm,.css,.js';
-      
-      input.onchange = (e) => {
+/**
+ * 辅助函数：下载Blob对象（用于ZIP文件）
+ */
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function isCompleteHtml(content) {
+  const hasHtml = /<html/i.test(content);
+  const hasHead = /<head/i.test(content);
+  const hasBody = /<body/i.test(content);
+  const hasStyle = /<style/i.test(content);
+  const hasScript = /<script/i.test(content);
+  return (hasHtml || (hasHead && hasBody)) && (hasStyle || hasScript);
+}
+
+                        // ========= 批量导入 =========
+   batchImportBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    
+    // 根据当前模式设置不同的导入规则
+    if (currentMode === 'full') {
+        // 完整模式：只能选一个HTML文件
+        input.accept = '.html,.htm';
+        input.multiple = false;
+    } else {
+        // 三文件模式：可以选HTML、CSS、JS文件
+        input.accept = '.html,.htm,.css,.js';
+        input.multiple = true;
+    }
+    
+    input.onchange = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
         
+        // ========== 完整模式处理 ==========
         if (currentMode === 'full') {
-          const htmlFile = files.find(f => f.name.match(/\.html?$/i));
-          if (htmlFile) {
+            // 完整模式：只能有一个HTML文件
+            if (files.length !== 1) {
+                alert('❌ 完整模式只能导入一个HTML文件');
+                return;
+            }
+            
+            const file = files[0];
+            if (!file.name.match(/\.html?$/i)) {
+                alert('❌ 完整模式只能导入HTML文件');
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = (ev) => {
-              fullTextarea.value = ev.target.result;
-              updatePreview();
-              alert('✅ HTML文件已导入到完整编辑器');
-            };
-            reader.readAsText(htmlFile);
-          } else {
-            alert('完整模式只能导入HTML文件，请选择.html文件');
-          }
-        } else {
-          const htmlFile = files.find(f => f.name.match(/\.html?$/i));
-          
-          if (htmlFile) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-              const content = ev.target.result;
-              
-              if (isCompleteHtml(content)) {
-                fullTextarea.value = content;
+                fullTextarea.value = ev.target.result;
                 setMode('full');
                 updatePreview();
-                alert('✅ 检测到完整HTML，已自动切换到完整模式并导入');
-              } else {
-                splitHtml.value = content;
-                
-                files.forEach(file => {
-                  if (file === htmlFile) return;
-                  
-                  const fileReader = new FileReader();
-                  fileReader.onload = (ev2) => {
-                    const fileContent = ev2.target.result;
-                    if (file.name.match(/\.css$/i)) {
-                      splitCss.value = fileContent;
-                    } else if (file.name.match(/\.js$/i)) {
-                      splitJs.value = fileContent;
-                    }
-                    updatePreview();
-                  };
-                  fileReader.readAsText(file);
-                });
-                
-                updatePreview();
-                alert('✅ 已导入HTML片段到拆分模式');
-              }
+                alert('✅ HTML完整文件导入成功');
             };
-            reader.readAsText(htmlFile);
-          } else {
-            files.forEach(file => {
-              const fileReader = new FileReader();
-              fileReader.onload = (ev) => {
-                const content = ev.target.result;
-                if (file.name.match(/\.css$/i)) {
-                  splitCss.value = content;
-                } else if (file.name.match(/\.js$/i)) {
-                  splitJs.value = content;
-                }
-                updatePreview();
-              };
-              fileReader.readAsText(file);
-            });
-            alert('✅ 已导入CSS/JS文件到拆分模式');
-          }
+            reader.readAsText(file);
         }
-      };
-      input.click();
-    });
+        
+        // ========== 三文件模式处理 ==========
+        else {
+            // 分离不同类型的文件
+            const htmlFiles = files.filter(f => f.name.match(/\.html?$/i));
+            const cssFiles = files.filter(f => f.name.match(/\.css$/i));
+            const jsFiles = files.filter(f => f.name.match(/\.js$/i));
+            
+            // 检查是否有不支持的文件类型
+            const totalValidFiles = htmlFiles.length + cssFiles.length + jsFiles.length;
+            if (totalValidFiles !== files.length) {
+                alert('❌ 只能导入HTML、CSS或JS文件');
+                return;
+            }
+            
+            // 检查每种类型是否超过一个
+            if (htmlFiles.length > 1) {
+                alert('❌ 只能选择一个HTML文件');
+                return;
+            }
+            if (cssFiles.length > 1) {
+                alert('❌ 只能选择一个CSS文件');
+                return;
+            }
+            if (jsFiles.length > 1) {
+                alert('❌ 只能选择一个JS文件');
+                return;
+            }
+            
+            // 读取文件内容的辅助函数
+            const readFileContent = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsText(file);
+                });
+            };
+            
+            // 执行导入
+            (async () => {
+                let htmlContent = '';
+                let cssContent = '';
+                let jsContent = '';
+                
+                // 读取所有文件
+                for (const file of files) {
+                    const content = await readFileContent(file);
+                    
+                    if (file.name.match(/\.html?$/i)) {
+                        htmlContent = content;
+                    } else if (file.name.match(/\.css$/i)) {
+                        cssContent = content;
+                    } else if (file.name.match(/\.js$/i)) {
+                        jsContent = content;
+                    }
+                }
+                
+                // 更新对应的textarea
+                if (htmlContent) {
+                    splitHtml.value = htmlContent;
+                }
+                if (cssContent) {
+                    splitCss.value = cssContent;
+                }
+                if (jsContent) {
+                    splitJs.value = jsContent;
+                }
+                
+                // 确保在三文件模式
+                setMode('split');
+                
+                // 更新预览
+                updatePreview();
+                
+                // 显示导入成功的文件列表
+                const importedTypes = [];
+                if (htmlContent) importedTypes.push('HTML');
+                if (cssContent) importedTypes.push('CSS');
+                if (jsContent) importedTypes.push('JS');
+                
+                alert(`✅ 导入成功：${importedTypes.join('、')}`);
+            })();
+        }
+    };
+    
+    input.click();
+});
 
     clearBtn.addEventListener('click', () => {
       if (currentMode === 'full') {
@@ -1711,7 +2308,6 @@ ${splitHtml.value}
       updatePreview();
     });
 
-    // 主题切换
     themeToggle.addEventListener('click', () => {
       if (document.body.classList.contains('light-mode')) {
         document.body.classList.remove('light-mode');
@@ -1738,11 +2334,21 @@ ${splitHtml.value}
 
     function getConfig() {
       const appName = document.getElementById('appName').value.trim();
-      const gitUser = document.getElementById('gitUser').value.trim();
-      const gitRepo = document.getElementById('gitRepo').value.trim();
-      const gitToken = document.getElementById('gitToken').value.trim();
       const autoUpload = document.getElementById('autoUpload').checked;
-      return { appName, gitUser, gitRepo, gitToken, autoUpload };
+      
+      // 获取当前选中的平台
+      const platform = document.querySelector('input[name="platform"]:checked')?.value || 'github';
+      
+      // 从 localStorage 读取对应平台的配置
+      const gitUser = localStorage.getItem(platform + '_user') || '';
+      const gitRepo = localStorage.getItem(platform + '_repo') || '';
+      const gitToken = localStorage.getItem(platform + '_token') || '';
+      
+      return { appName, gitUser, gitRepo, gitToken, autoUpload, platform };
+    }
+
+    function getApiBase(platform) {
+      return platform === 'github' ? 'https://api.github.com' : 'https://gitee.com/api/v5';
     }
 
     // 高亮控制
@@ -1767,144 +2373,273 @@ ${splitHtml.value}
 
     const iconFile = document.getElementById('iconFile');
     const iconFileRow = document.getElementById('iconFileRow');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
 
     iconFile.addEventListener('change', function() {
       if (this.files && this.files.length > 0) {
         iconFileRow.classList.add('highlight');
-        fileNameDisplay.textContent = this.files[0].name;
       } else {
         iconFileRow.classList.remove('highlight');
-        fileNameDisplay.textContent = '';  // 清空而不是设置为默认文本
       }
     });
 
-    // Token 开关 + 缓存 (修复: 增加用户名和仓库名缓存)
-    const tokenSwitch = document.getElementById('tokenSwitch');
-    const lockIcon = document.getElementById('lockIcon');
-    const tokenText = document.getElementById('tokenText');
-    const gitTokenInput = document.getElementById('gitToken');
-    const gitTokenRow = document.getElementById('gitTokenRow');
+    // ========== 新卡片核心功能 ==========
+    const currentUserDisplay = document.getElementById('currentUserDisplay');
+    const currentRepoDisplay = document.getElementById('currentRepoDisplay');
+    const currentTokenDisplay = document.getElementById('currentTokenDisplay');
+    const currentPlatformBadge = document.getElementById('currentPlatformBadge');
+    const editingPlatformHint = document.getElementById('editingPlatformHint');
+    const selectGithubBtn = document.getElementById('selectGithubBtn');
+    const selectGiteeBtn = document.getElementById('selectGiteeBtn');
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
     const gitUserInput = document.getElementById('gitUser');
     const gitRepoInput = document.getElementById('gitRepo');
+    const gitTokenInput = document.getElementById('gitToken');
+    const autoUploadCheckbox = document.getElementById('autoUpload');
 
-    // 加载所有缓存
-    function loadAllCache() {
-      // 加载用户名
-      const cachedUser = localStorage.getItem('github_user');
-      if (cachedUser) {
-        gitUserInput.value = cachedUser;
+    // 更新所有显示
+    function updateDisplay() {
+      const platform = document.querySelector('input[name="platform"]:checked')?.value || 'github';
+      
+      // 更新当前使用配置卡片（显示选中平台的配置）
+      const user = localStorage.getItem(platform + '_user') || '未设置';
+      const repo = localStorage.getItem(platform + '_repo') || '未设置';
+      const token = localStorage.getItem(platform + '_token') ? '已设置' : '未设置';
+      
+      if (currentUserDisplay) currentUserDisplay.textContent = user;
+      if (currentRepoDisplay) currentRepoDisplay.textContent = repo;
+      if (currentTokenDisplay) currentTokenDisplay.textContent = token;
+      if (currentPlatformBadge) {
+        currentPlatformBadge.innerHTML = platform === 'github' ? '🐙 GitHub' : '🦊 Gitee';
       }
       
-      // 加载仓库名
-      const cachedRepo = localStorage.getItem('github_repo');
-      if (cachedRepo) {
-        gitRepoInput.value = cachedRepo;
+      // 更新编辑提示
+      if (editingPlatformHint) {
+        editingPlatformHint.textContent = platform === 'github' ? '当前编辑: GitHub' : '当前编辑: Gitee';
       }
       
-      // 加载 Token 状态
-      const cachedToken = localStorage.getItem('github_token');
-      const cachedEnabled = localStorage.getItem('token_enabled') === 'true';
-      
-      if (cachedEnabled && cachedToken) {
-        tokenEnabled = true;
-        tokenSwitch.classList.add('active');
-        lockIcon.textContent = '🔓';
-        gitTokenInput.disabled = false;
-        gitTokenInput.value = cachedToken;
-        gitTokenRow.classList.add('highlight');
-        log('🔓 Token 已从缓存加载');
+      // 更新按钮高亮
+      if (selectGithubBtn && selectGiteeBtn) {
+        if (platform === 'github') {
+          selectGithubBtn.style.background = '#2c5f7a';
+          selectGithubBtn.style.borderColor = '#00ccff';
+          selectGiteeBtn.style.background = '#1e3a4a';
+          selectGiteeBtn.style.borderColor = '#2c5f7a';
+        } else {
+          selectGiteeBtn.style.background = '#2c5f7a';
+          selectGiteeBtn.style.borderColor = '#00ccff';
+          selectGithubBtn.style.background = '#1e3a4a';
+          selectGithubBtn.style.borderColor = '#2c5f7a';
+        }
       }
     }
 
-    // 保存用户名和仓库名
-    function saveGitConfig() {
-      const gitUser = gitUserInput.value.trim();
-      const gitRepo = gitRepoInput.value.trim();
+    // 加载当前选中平台的配置到输入框
+    function loadCurrentPlatformToInputs() {
+      const platform = document.querySelector('input[name="platform"]:checked')?.value || 'github';
       
-      if (gitUser) {
-        localStorage.setItem('github_user', gitUser);
+      const user = localStorage.getItem(platform + '_user') || '';
+      const repo = localStorage.getItem(platform + '_repo') || '';
+      const token = localStorage.getItem(platform + '_token') || '';
+      
+      if (gitUserInput) gitUserInput.value = user;
+      if (gitRepoInput) gitRepoInput.value = repo;
+      if (gitTokenInput) gitTokenInput.value = token;
+      
+      log(`📂 已加载 ${platform === 'github' ? 'GitHub' : 'Gitee'} 的配置到编辑框`);
+    }
+
+    // 保存配置
+    function saveConfig() {
+      const platform = document.querySelector('input[name="platform"]:checked')?.value || 'github';
+      const user = gitUserInput?.value.trim() || '';
+      const repo = gitRepoInput?.value.trim() || '';
+      const token = gitTokenInput?.value.trim() || '';
+      
+      if (!user || !repo) {
+        log('❌ 请填写用户和仓库名');
+        return false;
       }
-      if (gitRepo) {
-        localStorage.setItem('github_repo', gitRepo);
+      
+      localStorage.setItem(platform + '_user', user);
+      localStorage.setItem(platform + '_repo', repo);
+      if (token) {
+        localStorage.setItem(platform + '_token', token);
+      }
+      
+      updateDisplay();
+      log(`✅ 已保存到 ${platform === 'github' ? 'GitHub' : 'Gitee'}`);
+      return true;
+    }
+
+    // 平台切换事件
+    if (selectGithubBtn) {
+      selectGithubBtn.addEventListener('click', function() {
+        const radio = document.querySelector('input[name="platform"][value="github"]');
+        if (radio) radio.checked = true;
+        updateDisplay();
+        loadCurrentPlatformToInputs();
+      });
+    }
+    
+    if (selectGiteeBtn) {
+      selectGiteeBtn.addEventListener('click', function() {
+        const radio = document.querySelector('input[name="platform"][value="gitee"]');
+        if (radio) radio.checked = true;
+        updateDisplay();
+        loadCurrentPlatformToInputs();
+      });
+    }
+
+    // 保存按钮
+    if (saveConfigBtn) {
+      saveConfigBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        saveConfig();
+      });
+    }
+
+    // 自动上传
+    if (autoUploadCheckbox) {
+      const savedAutoUpload = localStorage.getItem('autoUpload') === 'true';
+      autoUploadCheckbox.checked = savedAutoUpload;
+      autoUploadCheckbox.addEventListener('change', function() {
+        localStorage.setItem('autoUpload', this.checked);
+      });
+    }
+
+    // 初始化加载
+    function initPlatformConfig() {
+      // 确保有默认平台选中
+      const savedPlatform = localStorage.getItem('last_used_platform') || 'github';
+      const radio = document.querySelector(`input[name="platform"][value="${savedPlatform}"]`);
+      if (radio) radio.checked = true;
+      
+      updateDisplay();
+      loadCurrentPlatformToInputs();
+      
+      // 监听平台变化，保存最后使用的平台
+      document.querySelectorAll('input[name="platform"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+          localStorage.setItem('last_used_platform', this.value);
+        });
+      });
+    }
+
+    // ========== 多仓库管理 (简化版) ==========
+    const showRepoListBtn = document.getElementById('showRepoListBtn');
+    const addCurrentRepoBtn = document.getElementById('addCurrentRepoBtn');
+    const repoListContainer = document.getElementById('repoListContainer');
+    const repoListDiv = document.getElementById('repoList');
+    
+    let repositories = [];
+
+    function loadReposFromStorage() {
+      const saved = localStorage.getItem('repositories');
+      if (saved) {
+        try {
+          repositories = JSON.parse(saved);
+        } catch (e) {
+          repositories = [];
+        }
       }
     }
 
-    gitUserInput.addEventListener('blur', saveGitConfig);
-    gitRepoInput.addEventListener('blur', saveGitConfig);
+    function saveReposToStorage() {
+      localStorage.setItem('repositories', JSON.stringify(repositories));
+    }
 
-    let tokenEnabled = false;
-    loadAllCache();
+    function renderRepoList() {
+      if (!repoListDiv) return;
+      
+      if (repositories.length === 0) {
+        repoListDiv.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 8px;">暂无仓库，点击【添加当前】保存</div>';
+        return;
+      }
+      
+      repoListDiv.innerHTML = '';
+      repositories.forEach((repo, index) => {
+        const platformIcon = repo.platform === 'github' ? '🐙' : '🦊';
+        const item = document.createElement('div');
+        item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e3f5a;';
+        item.innerHTML = `
+          <span style="color: #9cb8cc;">
+            ${platformIcon} ${repo.user}/${repo.repo}
+          </span>
+          <div>
+            <span style="background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 30px; padding: 2px 8px; margin-right: 4px; cursor: pointer;" class="use-repo" data-index="${index}">使用</span>
+            <span style="background: #3f2a2a; border: 1px solid #8f4a4a; border-radius: 30px; padding: 2px 8px; cursor: pointer;" class="delete-repo" data-index="${index}">删除</span>
+          </div>
+        `;
+        repoListDiv.appendChild(item);
+      });
 
-    tokenSwitch.addEventListener('click', function() {
-      tokenEnabled = !tokenEnabled;
-      if (tokenEnabled) {
-        tokenSwitch.classList.add('active');
-        lockIcon.textContent = '🔓';
-        gitTokenInput.disabled = false;
-        gitTokenRow.classList.add('highlight');
-        localStorage.setItem('token_enabled', 'true');
-        log('🔓 Token 已开启');
+      document.querySelectorAll('.use-repo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = btn.dataset.index;
+          const repo = repositories[index];
+          
+          // 切换到对应平台
+          const radio = document.querySelector(`input[name="platform"][value="${repo.platform}"]`);
+          if (radio) radio.checked = true;
+          
+          // 加载配置到输入框
+          if (gitUserInput) gitUserInput.value = repo.user;
+          if (gitRepoInput) gitRepoInput.value = repo.repo;
+          
+          // 令牌保持不变（不覆盖）
+          
+          updateDisplay();
+          log(`📋 已加载仓库: ${repo.user}/${repo.repo}`);
+        });
+      });
+
+      document.querySelectorAll('.delete-repo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = btn.dataset.index;
+          repositories.splice(index, 1);
+          saveReposToStorage();
+          renderRepoList();
+          log(`🗑️ 已删除仓库`);
+        });
+      });
+    }
+
+    if (showRepoListBtn) {
+      showRepoListBtn.addEventListener('click', function() {
+        if (repoListContainer.style.display === 'none') {
+          repoListContainer.style.display = 'block';
+          renderRepoList();
+        } else {
+          repoListContainer.style.display = 'none';
+        }
+      });
+    }
+
+    if (addCurrentRepoBtn) {
+      addCurrentRepoBtn.addEventListener('click', function() {
+        const platform = document.querySelector('input[name="platform"]:checked')?.value || 'github';
+        const user = gitUserInput?.value.trim();
+        const repo = gitRepoInput?.value.trim();
         
-        // 如果之前有缓存的Token，自动填入
-        const cachedToken = localStorage.getItem('github_token');
-        if (cachedToken) {
-          gitTokenInput.value = cachedToken;
+        if (!user || !repo) {
+          log('❌ 请填写用户和仓库名');
+          return;
         }
-      } else {
-        tokenSwitch.classList.remove('active');
-        lockIcon.textContent = '🔒';
-        gitTokenInput.disabled = true;
-        gitTokenInput.value = '';
-        gitTokenRow.classList.remove('highlight');
-        localStorage.setItem('token_enabled', 'false');
-        // 注意：不清除 localStorage 中的 token，只是禁用输入框
-        log('🔒 Token 已关闭');
-      }
-    });
-
-    gitTokenInput.addEventListener('input', () => {
-      if (tokenEnabled) {
-        localStorage.setItem('github_token', gitTokenInput.value);
-      }
-    });
-
-    const gitUserRow = document.getElementById('gitUserRow');
-    const gitRepoRow = document.getElementById('gitRepoRow');
-
-    function setupInputHighlight(input, row) {
-      input.addEventListener('input', function() {
-        if (this.value.trim().length > 0) {
-          row.classList.add('highlight');
-        } else {
-          row.classList.remove('highlight');
+        
+        const exists = repositories.some(r => r.user === user && r.repo === repo && r.platform === platform);
+        if (exists) {
+          log('⚠️ 仓库已存在');
+          return;
         }
-      });
-      input.addEventListener('blur', function() {
-        if (this.value.trim().length > 0) {
-          row.classList.add('highlight');
-        } else {
-          row.classList.remove('highlight');
-        }
+        
+        repositories.push({ user, repo, platform });
+        saveReposToStorage();
+        renderRepoList();
+        log(`✅ 已添加仓库: ${user}/${repo}`);
       });
     }
-    setupInputHighlight(gitUserInput, gitUserRow);
-    setupInputHighlight(gitRepoInput, gitRepoRow);
 
-    // 折叠功能
-    const githubBlock = document.getElementById('githubBlock');
-    document.getElementById('toggleGithub').addEventListener('click', (e) => {
-      e.preventDefault();
-      githubBlock.classList.toggle('collapsed');
-    });
-
-    // 备份管理折叠
-    const backupBlock = document.getElementById('backupBlock');
-    document.getElementById('toggleBackup').addEventListener('click', (e) => {
-      e.preventDefault();
-      backupBlock.classList.toggle('collapsed');
-    });
-
+    // ========== 原有功能函数 (保留) ==========
     function toBase64(str) {
       const bytes = new TextEncoder().encode(str);
       let binary = '';
@@ -1956,7 +2691,11 @@ ${splitHtml.value}
     }
 
     async function githubUpload({ user, repo, token, path, fileInfo, message }) {
-      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      const { platform } = getConfig();
+      const baseUrl = getApiBase(platform);
+      const url = platform === 'github' 
+        ? `${baseUrl}/repos/${user}/${repo}/contents/${path}`
+        : `${baseUrl}/repos/${user}/${repo}/contents/${path}?access_token=${token}`;
       
       let contentToUpload;
       if (fileInfo.isBinary) {
@@ -1982,12 +2721,13 @@ ${splitHtml.value}
         body.sha = sha;
       }
       
+      const headers = platform === 'github' 
+        ? { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json' };
+      
       const res = await fetch(url, {
         method: 'PUT',
-        headers: { 
-          'Authorization': `token ${token}`, 
-          'Content-Type': 'application/json' 
-        },
+        headers,
         body: JSON.stringify(body)
       });
       
@@ -1999,30 +2739,45 @@ ${splitHtml.value}
     }
 
     async function githubGetFile({ user, repo, token, path }) {
-      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-      const res = await fetch(url, {
-        headers: { 'Authorization': `token ${token}` }
-      });
+      const { platform } = getConfig();
+      const baseUrl = getApiBase(platform);
+      const url = platform === 'github'
+        ? `${baseUrl}/repos/${user}/${repo}/contents/${path}`
+        : `${baseUrl}/repos/${user}/${repo}/contents/${path}?access_token=${token}`;
+      
+      const headers = platform === 'github'
+        ? { 'Authorization': `token ${token}` }
+        : {};
+      
+      const res = await fetch(url, { headers });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('获取失败');
       return res.json();
     }
 
     async function githubDelete({ user, repo, token, path, sha, message }) {
-      const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+      const { platform } = getConfig();
+      const baseUrl = getApiBase(platform);
+      const url = platform === 'github'
+        ? `${baseUrl}/repos/${user}/${repo}/contents/${path}`
+        : `${baseUrl}/repos/${user}/${repo}/contents/${path}?access_token=${token}`;
+      
+      const headers = platform === 'github'
+        ? { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json' };
+      
+      const body = { message, sha };
+      
       const res = await fetch(url, {
         method: 'DELETE',
-        headers: { 
-          'Authorization': `token ${token}`, 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ message, sha })
+        headers,
+        body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error('删除失败');
       return res.json();
     }
 
-    // 生成文件夹
+    // ========== 操作面板按钮 ==========
     document.getElementById('btnGenerate').addEventListener('click', async () => {
       const { appName, autoUpload } = getConfig();
       if (!appName) return log('❌ 应用名不能为空');
@@ -2048,12 +2803,11 @@ ${splitHtml.value}
       }
     });
 
-    // 上传到 GitHub
     document.getElementById('btnUpload').addEventListener('click', async () => {
-      const { appName, gitUser, gitRepo, gitToken } = getConfig();
-      if (!gitUser || !gitRepo || !gitToken) return log('❌ 请填完整 GitHub 信息');
+      const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
       
-      log(`📤 上传到 GitHub: ${gitUser}/${gitRepo}`);
+      log(`📤 上传到 ${platform === 'github' ? 'GitHub' : 'Gitee'} ${gitUser}/${gitRepo}`);
       
       const files = await buildAppFiles(appName);
       
@@ -2076,10 +2830,9 @@ ${splitHtml.value}
       log(`✅ 第2步完成，可更新 configuration.json`);
     });
 
-    // 更新 configuration.json
     document.getElementById('btnUpdateJson').addEventListener('click', async () => {
-      const { appName, gitUser, gitRepo, gitToken } = getConfig();
-      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少 GitHub 信息');
+      const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
       if (!appName) return log('❌ 应用名不能为空');
       
       try {
@@ -2129,7 +2882,10 @@ ${splitHtml.value}
         const configContent = JSON.stringify(apps, null, 2);
         const contentBase64 = toBase64(configContent);
         
-        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/configuration.json`;
+        const baseUrl = getApiBase(platform);
+        const url = platform === 'github'
+          ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json`
+          : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json?access_token=${gitToken}`;
         
         const body = {
           message: `更新 configuration.json - 添加 ${appName}`,
@@ -2140,12 +2896,13 @@ ${splitHtml.value}
           body.sha = sha;
         }
         
+        const headers = platform === 'github'
+          ? { 'Authorization': `token ${gitToken}`, 'Content-Type': 'application/json' }
+          : { 'Content-Type': 'application/json' };
+        
         const res = await fetch(url, {
           method: 'PUT',
-          headers: { 
-            'Authorization': `token ${gitToken}`, 
-            'Content-Type': 'application/json' 
-          },
+          headers,
           body: JSON.stringify(body)
         });
         
@@ -2168,14 +2925,11 @@ ${splitHtml.value}
     const cancelDelete = document.getElementById('cancelDelete');
     const optionDeleteOnly = document.getElementById('optionDeleteOnly');
     const optionBackupOnly = document.getElementById('optionBackupOnly');
-    
-    let currentAction = null;
 
-    // 显示删除选项弹窗
     document.getElementById('btnDeleteApp').addEventListener('click', () => {
       const { appName, gitUser, gitRepo, gitToken } = getConfig();
       if (!gitUser || !gitRepo || !gitToken) {
-        log('❌ 需要 GitHub 认证');
+        log('❌ 需要认证');
         return;
       }
       if (!appName) {
@@ -2186,27 +2940,22 @@ ${splitHtml.value}
       deleteModal.classList.add('active');
     });
 
-    // 确认删除/备份
     confirmDelete.addEventListener('click', async () => {
       deleteModal.classList.remove('active');
       
       const { appName, gitUser, gitRepo, gitToken } = getConfig();
       
       if (optionDeleteOnly.checked) {
-        // 只删除（不备份）
         await performDelete(appName, gitUser, gitRepo, gitToken, false, false);
       } else if (optionBackupOnly.checked) {
-        // 只备份（不删除）
         await performDelete(appName, gitUser, gitRepo, gitToken, true, false);
       }
     });
 
-    // 取消
     cancelDelete.addEventListener('click', () => {
       deleteModal.classList.remove('active');
     });
 
-    // 执行操作
     async function performDelete(appName, gitUser, gitRepo, gitToken, backup, deleteAfterBackup) {
       log(`📦 开始${backup ? '备份' : ''}${deleteAfterBackup ? '并删除' : ''}应用: ${appName}`);
       
@@ -2233,7 +2982,6 @@ ${splitHtml.value}
           if (!file?.sha) continue;
           
           if (backup) {
-            // 备份
             const decoded = fromBase64(file.content);
             const filename = path.split('/').pop();
             
@@ -2253,13 +3001,19 @@ ${splitHtml.value}
               backupBody.sha = backupSha;
             }
             
-            const backupUrl = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/${backupBase}/${filename}`;
+            const { platform } = getConfig();
+            const baseUrl = getApiBase(platform);
+            const backupUrl = platform === 'github'
+              ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/${backupBase}/${filename}`
+              : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/${backupBase}/${filename}?access_token=${gitToken}`;
+            
+            const headers = platform === 'github'
+              ? { 'Authorization': `token ${gitToken}`, 'Content-Type': 'application/json' }
+              : { 'Content-Type': 'application/json' };
+            
             const backupRes = await fetch(backupUrl, {
               method: 'PUT',
-              headers: { 
-                'Authorization': `token ${gitToken}`, 
-                'Content-Type': 'application/json' 
-              },
+              headers,
               body: JSON.stringify(backupBody)
             });
             
@@ -2270,7 +3024,6 @@ ${splitHtml.value}
           }
           
           if (deleteAfterBackup || !backup) {
-            // 删除
             await githubDelete({ 
               user: gitUser, 
               repo: gitRepo, 
@@ -2283,9 +3036,7 @@ ${splitHtml.value}
             processedCount++;
           }
           
-        } catch (e) {
-          // 文件不存在跳过
-        }
+        } catch (e) {}
       }
       
       if (processedCount === 0 && backupCount === 0) {
@@ -2295,7 +3046,6 @@ ${splitHtml.value}
         if (deleteAfterBackup || (!backup && processedCount > 0)) log(`✅ 已删除 ${processedCount} 个文件`);
       }
       
-      // 更新 configuration.json（只在删除时更新）
       if (deleteAfterBackup || !backup) {
         try {
           log(`📖 更新 configuration.json...`);
@@ -2309,19 +3059,25 @@ ${splitHtml.value}
               const configContent = JSON.stringify(apps, null, 2);
               const contentBase64 = toBase64(configContent);
               
-              const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/configuration.json`;
+              const { platform } = getConfig();
+              const baseUrl = getApiBase(platform);
+              const url = platform === 'github'
+                ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json`
+                : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json?access_token=${gitToken}`;
+              
               const body = {
                 message: `移除 ${appName} 从 configuration.json`,
                 content: contentBase64,
                 sha: appsFile.sha
               };
               
+              const headers = platform === 'github'
+                ? { 'Authorization': `token ${gitToken}`, 'Content-Type': 'application/json' }
+                : { 'Content-Type': 'application/json' };
+              
               const res = await fetch(url, {
                 method: 'PUT',
-                headers: { 
-                  'Authorization': `token ${gitToken}`, 
-                  'Content-Type': 'application/json' 
-                },
+                headers,
                 body: JSON.stringify(body)
               });
               
@@ -2335,6 +3091,144 @@ ${splitHtml.value}
       
       log('>> 操作完成');
     }
+
+    // ========== 已安装应用列表 ==========
+    const btnShowApps = document.getElementById('btnShowApps');
+    const appListContainer = document.getElementById('appListContainer');
+    const appList = document.getElementById('appList');
+    const uninstallModal = document.getElementById('uninstallModal');
+    const confirmUninstall = document.getElementById('confirmUninstall');
+    const cancelUninstall = document.getElementById('cancelUninstall');
+    const uninstallAppName = document.getElementById('uninstallAppName');
+    
+    let currentUninstallApp = '';
+
+    btnShowApps.addEventListener('click', async () => {
+      const { gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) {
+        log('❌ 需要认证');
+        return;
+      }
+      
+      if (appListContainer.style.display === 'none') {
+        appListContainer.style.display = 'block';
+        await loadAppList(gitUser, gitRepo, gitToken);
+      } else {
+        appListContainer.style.display = 'none';
+      }
+    });
+
+    async function loadAppList(gitUser, gitRepo, gitToken) {
+      appList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">加载中...</div>';
+      
+      try {
+        const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: 'configuration.json' });
+        
+        if (!file?.content) {
+          appList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">暂无应用</div>';
+          return;
+        }
+        
+        const apps = JSON.parse(fromBase64(file.content));
+        
+        if (apps.length === 0) {
+          appList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">暂无应用</div>';
+          return;
+        }
+        
+        appList.innerHTML = '';
+        apps.sort((a, b) => a.name.localeCompare(b.name));
+        
+        apps.forEach(app => {
+          const item = document.createElement('div');
+          item.className = 'app-item';
+          
+          const iconEmoji = app.icon.includes('png') ? '🖼️' : '📱';
+          
+          item.innerHTML = `
+            <span class="app-name">
+              <span class="app-icon">${iconEmoji}</span>
+              ${app.name}
+            </span>
+            <div>
+              <span class="app-edit" data-name="${app.name}">编辑</span>
+              <span class="app-uninstall" data-name="${app.name}">卸载</span>
+            </div>
+          `;
+          appList.appendChild(item);
+        });
+        
+        document.querySelectorAll('.app-edit').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const name = btn.dataset.name;
+            document.getElementById('appName').value = name;
+            updateAppNameHighlight();
+            log(`✏️ 加载应用: ${name}`);
+            
+            try {
+              const htmlFile = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `apps/${name}/index.html` });
+              if (htmlFile?.content) {
+                fullTextarea.value = fromBase64(htmlFile.content);
+              }
+              
+              const cssFile = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `apps/${name}/style.css` });
+              if (cssFile?.content) {
+                splitCss.value = fromBase64(cssFile.content);
+              }
+              
+              const jsFile = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `apps/${name}/app.js` });
+              if (jsFile?.content) {
+                splitJs.value = fromBase64(jsFile.content);
+              }
+              
+              if (fullTextarea.value) {
+                setMode('full');
+              }
+              
+              updatePreview();
+              log(`✅ 已加载 ${name} 的代码文件`);
+            } catch (e) {
+              log(`⚠️ 加载代码文件失败: ${e.message}`);
+            }
+          });
+        });
+        
+        document.querySelectorAll('.app-uninstall').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const name = btn.dataset.name;
+            showUninstallModal(name);
+          });
+        });
+        
+      } catch (e) {
+        appList.innerHTML = `<div style="color: #ff8a8a; text-align: center; padding: 10px;">加载失败: ${e.message}</div>`;
+      }
+    }
+
+    function showUninstallModal(name) {
+      currentUninstallApp = name;
+      uninstallAppName.textContent = `确定卸载应用: ${name}?`;
+      uninstallModal.classList.add('active');
+    }
+
+    confirmUninstall.addEventListener('click', async () => {
+      uninstallModal.classList.remove('active');
+      
+      const { gitUser, gitRepo, gitToken } = getConfig();
+      if (!gitUser || !gitRepo || !gitToken) {
+        log('❌ 需要认证');
+        return;
+      }
+      
+      await performDelete(currentUninstallApp, gitUser, gitRepo, gitToken, false, true);
+      await loadAppList(gitUser, gitRepo, gitToken);
+    });
+
+    cancelUninstall.addEventListener('click', () => {
+      uninstallModal.classList.remove('active');
+    });
 
     // ========== 备份管理 ==========
     const btnShowBackups = document.getElementById('btnShowBackups');
@@ -2351,7 +3245,7 @@ ${splitHtml.value}
     btnShowBackups.addEventListener('click', async () => {
       const { gitUser, gitRepo, gitToken } = getConfig();
       if (!gitUser || !gitRepo || !gitToken) {
-        log('❌ 需要 GitHub 认证');
+        log('❌ 需要认证');
         return;
       }
       
@@ -2367,10 +3261,17 @@ ${splitHtml.value}
       backupList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">加载中...</div>';
       
       try {
-        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/backup`;
-        const res = await fetch(url, {
-          headers: { 'Authorization': `token ${gitToken}` }
-        });
+        const { platform } = getConfig();
+        const baseUrl = getApiBase(platform);
+        const url = platform === 'github'
+          ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/backup`
+          : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/backup?access_token=${gitToken}`;
+        
+        const headers = platform === 'github'
+          ? { 'Authorization': `token ${gitToken}` }
+          : {};
+        
+        const res = await fetch(url, { headers });
         
         if (res.status === 404) {
           backupList.innerHTML = '<div style="color: #5f7a8c; text-align: center; padding: 10px;">暂无备份</div>';
@@ -2388,7 +3289,7 @@ ${splitHtml.value}
         }
         
         backupList.innerHTML = '';
-        folders.sort((a, b) => b.name.localeCompare(a.name)); // 最新的在前面
+        folders.sort((a, b) => b.name.localeCompare(a.name));
         
         folders.forEach(folder => {
           const item = document.createElement('div');
@@ -2400,7 +3301,6 @@ ${splitHtml.value}
           backupList.appendChild(item);
         });
         
-        // 添加删除事件
         document.querySelectorAll('.backup-delete').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2427,7 +3327,7 @@ ${splitHtml.value}
       
       const { gitUser, gitRepo, gitToken } = getConfig();
       if (!gitUser || !gitRepo || !gitToken) {
-        log('❌ 需要 GitHub 认证');
+        log('❌ 需要认证');
         return;
       }
       
@@ -2442,17 +3342,22 @@ ${splitHtml.value}
       log(`🗑️ 开始删除备份: ${folderName}`);
       
       try {
-        // 获取文件夹内容
-        const url = `https://api.github.com/repos/${gitUser}/${gitRepo}/contents/${folderPath}`;
-        const res = await fetch(url, {
-          headers: { 'Authorization': `token ${gitToken}` }
-        });
+        const { platform } = getConfig();
+        const baseUrl = getApiBase(platform);
+        const url = platform === 'github'
+          ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/${folderPath}`
+          : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/${folderPath}?access_token=${gitToken}`;
+        
+        const headers = platform === 'github'
+          ? { 'Authorization': `token ${gitToken}` }
+          : {};
+        
+        const res = await fetch(url, { headers });
         
         if (!res.ok) throw new Error('获取备份文件列表失败');
         
         const files = await res.json();
         
-        // 删除所有文件
         for (const file of files) {
           if (file.type === 'file') {
             await githubDelete({
@@ -2468,8 +3373,6 @@ ${splitHtml.value}
         }
         
         log(`✅ 备份已删除: ${folderName}`);
-        
-        // 刷新备份列表
         await loadBackupList(gitUser, gitRepo, gitToken);
         
       } catch (e) {
@@ -2477,11 +3380,13 @@ ${splitHtml.value}
       }
     }
 
-    // 初始化
+    // ========== 初始化 ==========
     setMode('full');
     updatePreview();
     showMainPage();
-    log('科技感控制台启动 · 最终版');
+    loadReposFromStorage();
+    initPlatformConfig();
+    log('✅ 系统启动 · 平台配置分离 · 切换自动加载');
   })();
 </script>
 </body>
