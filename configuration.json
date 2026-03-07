@@ -23,5 +23,10 @@
     "name": "AI编辑",
     "icon": "apps/ai-editor/z9vxx.jpg",
     "url": "apps/ai-editor/"
+  },
+  {
+    "name": "研究与开发看",
+    "icon": "apps/研究与开发看/logo.webp",
+    "url": "apps/研究与开发看/"
   }
 ]
