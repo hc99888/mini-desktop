@@ -2560,7 +2560,7 @@ ${splitHtml.value}
       repositories.forEach((repo, index) => {
         const platformIcon = repo.platform === 'github' ? '🐙' : '🦊';
         const item = document.createElement('div');
-        item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e3f5a; font-size: 0.5rem;';
+        item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e3f5a; font-size: 0.8rem;';
         item.innerHTML = `
           <span style="color: #9cb8cc;">
             ${platformIcon} ${repo.user}/${repo.repo}
