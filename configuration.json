@@ -18,10 +18,5 @@
     "name": "仓库资源",
     "icon": "apps/仓库资源/icon.webp",
     "url": "apps/仓库资源/"
-  },
-  {
-    "name": "AI编辑",
-    "icon": "apps/ai-editor/z9vxx.jpg",
-    "url": "apps/ai-editor/"
   }
 ]
