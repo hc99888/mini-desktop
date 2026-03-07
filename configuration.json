@@ -23,5 +23,10 @@
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.jpg",
     "url": "apps/编辑AI/"
+  },
+  {
+    "name": "高高兴兴",
+    "icon": "apps/高高兴兴/logo.png",
+    "url": "apps/高高兴兴/"
   }
 ]
