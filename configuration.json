@@ -103,5 +103,10 @@
     "name": "右页01",
     "icon": "apps/右页01/logo.png",
     "url": "apps/右页01/"
+  },
+  {
+    "name": "呸呸呸01",
+    "icon": "apps/呸呸呸01/logo.png",
+    "url": "apps/呸呸呸01/"
   }
 ]
