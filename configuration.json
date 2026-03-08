@@ -38,5 +38,10 @@
     "name": "还吃东西",
     "icon": "apps/还吃东西/logo.png",
     "url": "apps/还吃东西/"
+  },
+  {
+    "name": "以后多吃菜",
+    "icon": "apps/以后多吃菜/logo.png",
+    "url": "apps/以后多吃菜/"
   }
 ]
