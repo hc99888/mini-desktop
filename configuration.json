@@ -28,5 +28,10 @@
     "name": "天天01",
     "icon": "apps/天天01/logo.png",
     "url": "apps/天天01/"
+  },
+  {
+    "name": "到多00",
+    "icon": "apps/到多00/logo.png",
+    "url": "apps/到多00/"
   }
 ]
