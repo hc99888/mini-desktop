@@ -33,5 +33,10 @@
     "name": "到多00",
     "icon": "apps/到多00/logo.png",
     "url": "apps/到多00/"
+  },
+  {
+    "name": "到多01",
+    "icon": "apps/到多01/logo.png",
+    "url": "apps/到多01/"
   }
 ]
