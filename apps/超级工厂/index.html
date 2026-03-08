@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>代码编辑器 · 一键清空 + Token历史 + 应用加载修复</title>
+  <title>代码编辑器 ·超级工厂</title>
   <style>
     /* ===== 全局重置 ===== */
     * {
@@ -2319,6 +2319,7 @@ ${splitHtml.value}
     });
 
     // ========== 科技感控制台功能 ==========
+     let _autoChainActive = false; // 标记是否正在执行自动链式操作
     const logEl = document.getElementById('logOutput');
     function log(msg) {
       if (!logEl) return;
@@ -2777,147 +2778,161 @@ ${splitHtml.value}
       return res.json();
     }
 
-    // ========== 操作面板按钮 ==========
-    document.getElementById('btnGenerate').addEventListener('click', async () => {
-      const { appName, autoUpload } = getConfig();
-      if (!appName) return log('❌ 应用名不能为空');
-      
-      if (!fullTextarea.value.trim() && !splitHtml.value.trim() && !splitCss.value.trim() && !splitJs.value.trim()) {
-        return log('❌ 编辑器内容为空，无法生成文件夹');
-      }
-      
-      const files = await buildAppFiles(appName);
-      const fileCount = Object.keys(files).length;
-      log(`🏭 生成文件夹: apps/${appName}/ (${fileCount} 个文件)`);
-      
-      Object.keys(files).forEach(path => {
-        const filename = path.split('/').pop();
-        log(`   📄 ${filename}`);
+              // ========== 操作面板按钮 ==========
+document.getElementById('btnGenerate').addEventListener('click', async () => {
+  const { appName, autoUpload } = getConfig();
+  if (!appName) return log('❌ 应用名不能为空');
+  
+  if (!fullTextarea.value.trim() && !splitHtml.value.trim() && !splitCss.value.trim() && !splitJs.value.trim()) {
+    return log('❌ 编辑器内容为空，无法生成文件夹');
+  }
+  
+  const files = await buildAppFiles(appName);
+  const fileCount = Object.keys(files).length;
+  log(`🏭 生成文件夹: apps/${appName}/ (${fileCount} 个文件)`);
+  
+  Object.keys(files).forEach(path => {
+    const filename = path.split('/').pop();
+    log(`   📄 ${filename}`);
+  });
+  
+  log(`✅ 第1步完成，可进行上传`);
+  
+  if (autoUpload) {
+    console.log('【调试】自动上传开启，设置 _autoChainActive = true');
+    _autoChainActive = true;
+    setTimeout(() => document.getElementById('btnUpload').click(), 500);
+  }
+});
+
+document.getElementById('btnUpload').addEventListener('click', async () => {
+  const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
+  if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
+  
+  log(`📤 上传到 ${platform === 'github' ? 'GitHub' : 'Gitee'} ${gitUser}/${gitRepo}`);
+  
+  const files = await buildAppFiles(appName);
+  
+  for (const [path, fileInfo] of Object.entries(files)) {
+    try {
+      await githubUpload({ 
+        user: gitUser, 
+        repo: gitRepo, 
+        token: gitToken, 
+        path, 
+        fileInfo,
+        message: `上传 ${appName} - ${path.split('/').pop()}` 
       });
-      
-      log(`✅ 第1步完成，可进行上传`);
-      
-      if (autoUpload) {
-        log('⚡ 自动上传已开启，开始上传...');
-        setTimeout(() => document.getElementById('btnUpload').click(), 500);
-      }
-    });
+      log(`✔ 上传: ${path}`);
+    } catch (e) { 
+      log(`❌ 失败: ${path} - ${e.message}`); 
+    }
+  }
 
-    document.getElementById('btnUpload').addEventListener('click', async () => {
-      const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
-      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
-      
-      log(`📤 上传到 ${platform === 'github' ? 'GitHub' : 'Gitee'} ${gitUser}/${gitRepo}`);
-      
-      const files = await buildAppFiles(appName);
-      
-      for (const [path, fileInfo] of Object.entries(files)) {
-        try {
-          await githubUpload({ 
-            user: gitUser, 
-            repo: gitRepo, 
-            token: gitToken, 
-            path, 
-            fileInfo,
-            message: `上传 ${appName} - ${path.split('/').pop()}` 
-          });
-          log(`✔ 上传: ${path}`);
-        } catch (e) { 
-          log(`❌ 失败: ${path} - ${e.message}`); 
-        }
-      }
-      
-      log(`✅ 第2步完成，可更新 configuration.json`);
-    });
+  log(`✅ 第2步完成，可更新 configuration.json`);
 
-    document.getElementById('btnUpdateJson').addEventListener('click', async () => {
-      const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
-      if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
-      if (!appName) return log('❌ 应用名不能为空');
-      
+  // 如果是自动上传触发的，则继续更新配置并复位开关
+  if (_autoChainActive) {
+    _autoChainActive = false; // 重置标志
+    log('⚡ 上传完成，自动更新 configuration.json...');
+    document.getElementById('btnUpdateJson').click();
+
+    // 复位自动上传复选框
+    if (autoUploadCheckbox) {
+      autoUploadCheckbox.checked = false;
+      localStorage.setItem('autoUpload', 'false');
+    }
+  }
+});
+
+document.getElementById('btnUpdateJson').addEventListener('click', async () => {
+  const { appName, gitUser, gitRepo, gitToken, platform } = getConfig();
+  if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
+  if (!appName) return log('❌ 应用名不能为空');
+  
+  try {
+    let iconPath = `apps/${appName}/logo`;
+    const iconFileInput = document.getElementById('iconFile');
+    if (iconFileInput.files && iconFileInput.files.length > 0) {
+      const ext = iconFileInput.files[0].name.split('.').pop().toLowerCase();
+      if (['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
+        iconPath = `apps/${appName}/logo.${ext}`;
+      }
+    }
+    
+    log(`📖 读取 configuration.json...`);
+    
+    const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: 'configuration.json' });
+    let apps = [];
+    let sha = null;
+    
+    if (file?.content) {
       try {
-        let iconPath = `apps/${appName}/logo`;
-        const iconFileInput = document.getElementById('iconFile');
-        if (iconFileInput.files && iconFileInput.files.length > 0) {
-          const ext = iconFileInput.files[0].name.split('.').pop().toLowerCase();
-          if (['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext)) {
-            iconPath = `apps/${appName}/logo.${ext}`;
-          }
-        }
-        
-        log(`📖 读取 configuration.json...`);
-        
-        const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: 'configuration.json' });
-        let apps = [];
-        let sha = null;
-        
-        if (file?.content) {
-          try {
-            apps = JSON.parse(fromBase64(file.content));
-            sha = file.sha;
-            log(`   已存在 ${apps.length} 个应用配置`);
-          } catch (e) {
-            log(`   ⚠️ 解析失败，将创建新文件`);
-            apps = [];
-          }
-        } else {
-          log(`   ⚠️ 文件不存在，将创建新文件`);
-        }
-        
-        const oldCount = apps.length;
-        apps = apps.filter(a => a.name !== appName);
-        if (apps.length < oldCount) {
-          log(`   已移除旧配置: ${appName}`);
-        }
-        
-        apps.push({ 
-          name: appName, 
-          icon: iconPath,
-          url: `apps/${appName}/`
-        });
-        
-        log(`   添加新配置: ${appName}`);
-        log(`   图标路径: ${iconPath}`);
-        
-        const configContent = JSON.stringify(apps, null, 2);
-        const contentBase64 = toBase64(configContent);
-        
-        const baseUrl = getApiBase(platform);
-        const url = platform === 'github'
-          ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json`
-          : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json?access_token=${gitToken}`;
-        
-        const body = {
-          message: `更新 configuration.json - 添加 ${appName}`,
-          content: contentBase64
-        };
-        
-        if (sha) {
-          body.sha = sha;
-        }
-        
-        const headers = platform === 'github'
-          ? { 'Authorization': `token ${gitToken}`, 'Content-Type': 'application/json' }
-          : { 'Content-Type': 'application/json' };
-        
-        const res = await fetch(url, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(body)
-        });
-        
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || `HTTP ${res.status}`);
-        }
-        
-        log('✅ configuration.json 已更新');
-        log(`   当前共有 ${apps.length} 个应用`);
-        
-      } catch (e) { 
-        log('❌ 更新失败: ' + e.message); 
+        apps = JSON.parse(fromBase64(file.content));
+        sha = file.sha;
+        log(`   已存在 ${apps.length} 个应用配置`);
+      } catch (e) {
+        log(`   ⚠️ 解析失败，将创建新文件`);
+        apps = [];
       }
+    } else {
+      log(`   ⚠️ 文件不存在，将创建新文件`);
+    }
+    
+    const oldCount = apps.length;
+    apps = apps.filter(a => a.name !== appName);
+    if (apps.length < oldCount) {
+      log(`   已移除旧配置: ${appName}`);
+    }
+    
+    apps.push({ 
+      name: appName, 
+      icon: iconPath,
+      url: `apps/${appName}/`
     });
+    
+    log(`   添加新配置: ${appName}`);
+    log(`   图标路径: ${iconPath}`);
+    
+    const configContent = JSON.stringify(apps, null, 2);
+    const contentBase64 = toBase64(configContent);
+    
+    const baseUrl = getApiBase(platform);
+    const url = platform === 'github'
+      ? `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json`
+      : `${baseUrl}/repos/${gitUser}/${gitRepo}/contents/configuration.json?access_token=${gitToken}`;
+    
+    const body = {
+      message: `更新 configuration.json - 添加 ${appName}`,
+      content: contentBase64
+    };
+    
+    if (sha) {
+      body.sha = sha;
+    }
+    
+    const headers = platform === 'github'
+      ? { 'Authorization': `token ${gitToken}`, 'Content-Type': 'application/json' }
+      : { 'Content-Type': 'application/json' };
+    
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || `HTTP ${res.status}`);
+    }
+    
+    log('✅ configuration.json 已更新');
+    log(`   当前共有 ${apps.length} 个应用`);
+    
+  } catch (e) { 
+    log('❌ 更新失败: ' + e.message); 
+  }
+});
 
     // ========== 删除/备份弹窗逻辑 ==========
     const deleteModal = document.getElementById('deleteModal');
