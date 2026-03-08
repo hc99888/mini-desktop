@@ -53,5 +53,10 @@
     "name": "大修基金",
     "icon": "apps/大修基金/logo.png",
     "url": "apps/大修基金/"
+  },
+  {
+    "name": "佛系洗",
+    "icon": "apps/佛系洗/logo.png",
+    "url": "apps/佛系洗/"
   }
 ]
