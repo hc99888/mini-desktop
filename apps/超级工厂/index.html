@@ -1686,37 +1686,36 @@
               </div>
 
               <!-- 编辑配置区域 (一套输入框) -->
-              <div style="margin-bottom: 16px; border: 1px solid #1e3f5a; border-radius: 16px; overflow: hidden;">
-                <div style="padding: 12px; background: #0a1a2a;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span style="font-weight: 600; color: #7eb8cc;">✏️ 编辑配置</span>
-                    <span style="color: #5f7a8c; font-size: 0.75rem; margin-left: auto;" id="editingPlatformHint">当前编辑: GitHub</span>
-                  </div>
-                  
-                  <!-- 用户输入 -->
-                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
-                    <span style="color: #9cb8cc; width: 50px;">用户</span>
-                    <input type="text" id="gitUser" placeholder="用户名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
-                  </div>
-                  
-                  <!-- 仓库输入 -->
-                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
-                    <span style="color: #9cb8cc; width: 50px;">仓库</span>
-                    <input type="text" id="gitRepo" placeholder="仓库名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
-                  </div>
-                  
-                  <!-- 令牌输入 -->
-                  <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
-                    <span style="color: #9cb8cc; width: 50px;">令牌</span>
-                    <input type="password" id="gitToken" placeholder="个人访问令牌" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
-                  </div>
-                  
-                  <!-- 保存按钮 -->
-                  <button style="width: 100%; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 12px; margin-top: 12px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" id="saveConfigBtn">
-                    <span>💾</span> 保存资料
-                  </button>
-                </div>
-              </div>
+              <div class="collapsible collapsed" id="editConfigCollapsible" style="margin-bottom: 16px; border: 1px solid #1e3f5a; border-radius: 16px; overflow: hidden;">
+  <!-- 折叠头：包含箭头和标题 -->
+  <div class="collapsible-header" id="toggleEditConfig" style="padding: 12px; background: #0a1a2a; cursor: pointer;">
+    <span class="arrow">▼</span>
+    <span style="font-weight: 600; color: #7eb8cc;">✏️ 编辑配置</span>
+    <span style="color: #5f7a8c; font-size: 0.75rem; margin-left: auto;" id="editingPlatformHint">当前编辑: GitHub</span>
+  </div>
+  <!-- 折叠体：包含输入框和按钮 -->
+  <div class="collapsible-body" id="editConfigBody" style="padding: 0 12px 12px 12px; background: #0a1a2a;">
+    <!-- 用户输入 -->
+    <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+      <span style="color: #9cb8cc; width: 50px;">用户</span>
+      <input type="text" id="gitUser" placeholder="用户名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+    </div>
+    <!-- 仓库输入 -->
+    <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+      <span style="color: #9cb8cc; width: 50px;">仓库</span>
+      <input type="text" id="gitRepo" placeholder="仓库名" value="" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+    </div>
+    <!-- 令牌输入 -->
+    <div style="background: #0f1f2f; border: 1px solid #1e3f5a; border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+      <span style="color: #9cb8cc; width: 50px;">令牌</span>
+      <input type="password" id="gitToken" placeholder="个人访问令牌" style="flex: 1; background: transparent; border: none; color: #fff; padding: 10px 0;">
+    </div>
+    <!-- 保存按钮 -->
+    <button style="width: 100%; background: #1e3a4a; border: 1px solid #2c5f7a; border-radius: 40px; padding: 12px; margin-top: 12px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" id="saveConfigBtn">
+      <span>💾</span> 保存资料
+    </button>
+  </div>
+</div>
 
               <!-- 多仓库管理 (保留原有功能) -->
               <div style="border: 1px solid #1e3f5a; border-radius: 16px; overflow: hidden;">
@@ -3412,6 +3411,16 @@ const backupBase = "backup/" + getBackupName(appName);
     loadReposFromStorage();
     initPlatformConfig();
     log('✅ 系统启动 · 平台配置分离 · 切换自动加载');
+
+         // 编辑配置折叠
+  const toggleEditConfig = document.getElementById('toggleEditConfig');
+  const editConfigCollapsible = document.getElementById('editConfigCollapsible');
+  if (toggleEditConfig && editConfigCollapsible) {
+    toggleEditConfig.addEventListener('click', (e) => {
+      e.preventDefault();
+      editConfigCollapsible.classList.toggle('collapsed');
+    });
+  }
   })();
 </script>
 </body>
