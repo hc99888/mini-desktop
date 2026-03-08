@@ -68,5 +68,10 @@
     "name": "测试2",
     "icon": "apps/测试2/logo.png",
     "url": "apps/测试2/"
+  },
+  {
+    "name": "钓鱼节日",
+    "icon": "apps/钓鱼节日/logo.png",
+    "url": "apps/钓鱼节日/"
   }
 ]
