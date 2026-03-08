@@ -2970,8 +2970,16 @@ ${splitHtml.value}
         paths.push(`apps/${appName}/logo${ext}`);
       });
       
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0,19);
-      const backupBase = `backup/${appName}-${ts}`;
+      // 获取当天日期（YYYY-MM-DD）
+const today = new Date().toISOString().split('T')[0]; // 2026-03-08
+
+      // 从 localStorage 读取当天的备份计数
+const countKey = `backup_count_${appName}_${today}`;
+let count = parseInt(localStorage.getItem(countKey) || '0') + 1;
+localStorage.setItem(countKey, count);
+
+// 生成备份文件夹名：应用名-日期T序号
+const backupBase = `backup/${appName}-${today}T${count}`;
       
       let processedCount = 0;
       let backupCount = 0;
