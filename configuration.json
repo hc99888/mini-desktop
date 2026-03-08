@@ -73,5 +73,10 @@
     "name": "钓鱼节日",
     "icon": "apps/钓鱼节日/logo.png",
     "url": "apps/钓鱼节日/"
+  },
+  {
+    "name": "钓鱼节日01",
+    "icon": "apps/钓鱼节日01/logo.png",
+    "url": "apps/钓鱼节日01/"
   }
 ]
