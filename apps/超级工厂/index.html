@@ -2970,19 +2970,18 @@ ${splitHtml.value}
         paths.push(`apps/${appName}/logo${ext}`);
       });
       
-      // 获取当天日期（YYYY-MM-DD）
-const today = new Date().toISOString().split('T')[0]; // 2026-03-08
+      function getBackupName(appName) {
+  const date = new Date().toISOString().slice(0, 10);
+  const key = `backup_index_${date}`;
 
-      // 获取当天日期（YYYY-MM-DD）
-const today = new Date().toISOString().split('T')[0]; // 2026-03-08
+  let index = parseInt(localStorage.getItem(key) || "0", 10) + 1;
+  localStorage.setItem(key, index);
 
-// 从 localStorage 读取当天的备份计数（区分应用）
-const countKey = `backup_count_${appName}_${today}`;
-let count = parseInt(localStorage.getItem(countKey) || '0') + 1;
-localStorage.setItem(countKey, count);
+  return `${appName}-${date}T${index}`;
+}
 
-// 生成备份文件夹名：应用名-日期T序号
-const backupBase = `backup/${appName}-${today}T${count}`;
+const backupBase = "backup/" + getBackupName(appName);
+
       
       let processedCount = 0;
       let backupCount = 0;
@@ -3198,16 +3197,6 @@ const backupBase = `backup/${appName}-${today}T${count}`;
               }
               
               updatePreview();
- gitToken, path: `apps/${name}/app.js` });
-              if (jsFile?.content) {
-                splitJs.value = fromBase64(jsFile.content);
-              }
-              
-              if (fullTextarea.value) {
-                setMode('full');
-              }
-              
-              updatePreview();
               log(`✅ 已加载 ${name} 的代码文件`);
             } catch (e) {
               log(`⚠️ 加载代码文件失败: ${e.message}`);
@@ -3397,4 +3386,18 @@ const backupBase = `backup/${appName}-${today}T${count}`;
         await loadBackupList(gitUser, gitRepo, gitToken);
         
       } catch (e) {
-        log(`❌ 删除备份�
+        log(`❌ 删除备份失败: ${e.message}`);
+      }
+    }
+
+    // ========== 初始化 ==========
+    setMode('full');
+    updatePreview();
+    showMainPage();
+    loadReposFromStorage();
+    initPlatformConfig();
+    log('✅ 系统启动 · 平台配置分离 · 切换自动加载');
+  })();
+</script>
+</body>
+</html>
