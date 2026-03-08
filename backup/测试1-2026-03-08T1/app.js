@@ -1,0 +1,59 @@
+
+async function fetchRepoInfo(url) {
+    const repoPath = url.replace("https://github.com/", "").trim();
+    const apiUrl = "https://api.github.com/repos/" + repoPath;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) return formatOutput("未知用户", url, "获取失败", "无", "无");
+        const data = await res.json();
+        const name = data.full_name || repoPath;
+        const desc = data.description || "无简介";
+        const owner = data.owner ? data.owner.login : "未知用户";
+        return formatOutput(owner, url, desc, "待补充", "待补充");
+    } catch (e) {
+        return formatOutput("未知用户", url, "获取失败", "无", "无");
+    }
+}
+
+function formatOutput(user, url, usage, highlight, remark) {
+    return `用户名：${user}\n链接地址：${url}\n用途：${usage}\n亮点：${highlight}\n备注：${remark}\n\n`;
+}
+
+async function extract() {
+    const input = document.getElementById("input").value.trim();
+    const urls = input.split(/\s+/);
+    let result = "";
+    for (const url of urls) {
+        if (url.startsWith("https://github.com/")) {
+            result += await fetchRepoInfo(url);
+        }
+    }
+    document.getElementById("output").textContent = result;
+}
+
+function copyResult() {
+    const text = document.getElementById("output").textContent;
+    if (!text) {
+        alert("没有内容可以复制！");
+        return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("结果已复制到剪贴板！");
+        }).catch(() => {
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const temp = document.createElement("textarea");
+    temp.value = text;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    document.body.removeChild(temp);
+    alert("结果已复制到剪贴板！（兼容模式）");
+}
