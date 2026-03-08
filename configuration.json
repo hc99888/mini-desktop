@@ -48,5 +48,10 @@
     "name": "戏剧性能效",
     "icon": "apps/戏剧性能效/logo.png",
     "url": "apps/戏剧性能效/"
+  },
+  {
+    "name": "大修基金",
+    "icon": "apps/大修基金/logo.png",
+    "url": "apps/大修基金/"
   }
 ]
