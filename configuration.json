@@ -93,5 +93,10 @@
     "name": "非递01",
     "icon": "apps/非递01/logo.png",
     "url": "apps/非递01/"
+  },
+  {
+    "name": "552",
+    "icon": "apps/552/logo.png",
+    "url": "apps/552/"
   }
 ]
