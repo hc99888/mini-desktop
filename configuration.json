@@ -58,5 +58,10 @@
     "name": "佛系洗",
     "icon": "apps/佛系洗/logo.png",
     "url": "apps/佛系洗/"
+  },
+  {
+    "name": "测试1",
+    "icon": "apps/测试1/logo.png",
+    "url": "apps/测试1/"
   }
 ]
