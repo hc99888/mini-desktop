@@ -23,10 +23,5 @@
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.jpg",
     "url": "apps/编辑AI/"
-  },
-  {
-    "name": "测试01",
-    "icon": "apps/测试01/logo.png",
-    "url": "apps/测试01/"
   }
 ]
