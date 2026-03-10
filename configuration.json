@@ -28,5 +28,10 @@
     "name": "三片段工具",
     "icon": "apps/三片段工具/logo.png",
     "url": "apps/三片段工具/"
+  },
+  {
+    "name": "自身拆解",
+    "icon": "apps/自身拆解/logo.jpg",
+    "url": "apps/自身拆解/"
   }
 ]
