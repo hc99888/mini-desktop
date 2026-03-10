@@ -38,5 +38,10 @@
     "name": "自身测试",
     "icon": "apps/自身测试/logo.jpg",
     "url": "apps/自身测试/"
+  },
+  {
+    "name": "888",
+    "icon": "apps/888/logo.jpg",
+    "url": "apps/888/"
   }
 ]
