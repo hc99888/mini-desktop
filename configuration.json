@@ -28,10 +28,5 @@
     "name": "三片段工具",
     "icon": "apps/三片段工具/logo.png",
     "url": "apps/三片段工具/"
-  },
-  {
-    "name": "汉中",
-    "icon": "apps/汉中/logo.jpg",
-    "url": "apps/汉中/"
   }
 ]
