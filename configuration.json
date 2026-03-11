@@ -28,5 +28,10 @@
     "name": "三片段工具",
     "icon": "apps/三片段工具/logo.png",
     "url": "apps/三片段工具/"
+  },
+  {
+    "name": "JJ",
+    "icon": "apps/JJ/logo.jpg",
+    "url": "apps/JJ/"
   }
 ]
