@@ -43,10 +43,5 @@
     "name": "888",
     "icon": "apps/888/logo.jpg",
     "url": "apps/888/"
-  },
-  {
-    "name": "555",
-    "icon": "apps/555/logo.jpg",
-    "url": "apps/555/"
   }
 ]
