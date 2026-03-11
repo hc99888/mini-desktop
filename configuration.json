@@ -33,5 +33,10 @@
     "name": "自身拆解",
     "icon": "apps/自身拆解/logo.jpg",
     "url": "apps/自身拆解/"
+  },
+  {
+    "name": "行行行",
+    "icon": "apps/行行行/logo.jpg",
+    "url": "apps/行行行/"
   }
 ]
