@@ -33,5 +33,10 @@
     "name": "非常非常",
     "icon": "apps/非常非常/logo.jpg",
     "url": "apps/非常非常/"
+  },
+  {
+    "name": "22544",
+    "icon": "apps/22544/logo.jpg",
+    "url": "apps/22544/"
   }
 ]
