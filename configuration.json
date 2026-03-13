@@ -23,5 +23,10 @@
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.jpg",
     "url": "apps/编辑AI/"
+  },
+  {
+    "name": "3333",
+    "icon": "apps/3333/logo.jpg",
+    "url": "apps/3333/"
   }
 ]
