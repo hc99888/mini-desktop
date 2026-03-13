@@ -28,5 +28,10 @@
     "name": "3333",
     "icon": "apps/3333/logo.jpg",
     "url": "apps/3333/"
+  },
+  {
+    "name": "非常非常",
+    "icon": "apps/非常非常/logo.jpg",
+    "url": "apps/非常非常/"
   }
 ]
