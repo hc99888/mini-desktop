@@ -360,7 +360,7 @@ body {
 .full-textarea {
   width: 100%;
   min-height: auto;
-  height: 600px;
+  height: 630px;
   background: var(--bg-secondary);
   border: 2px solid var(--border-light);
   color: var(--text-primary);
@@ -436,7 +436,7 @@ body {
 .split-textarea {
   width: 100%;
   min-height: auto;
-  height: 600px;
+  height: 630px;
   background: var(--bg-secondary);
   border: none;
   color: var(--text-primary);
@@ -897,4 +897,5 @@ input[type="file"]::file-selector-button:hover {
 }
 @media (max-width: 600px) {
   .grid-2 { grid-template-columns: 1fr; }
+
 }
