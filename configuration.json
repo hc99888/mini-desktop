@@ -23,10 +23,5 @@
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.jpg",
     "url": "apps/编辑AI/"
-  },
-  {
-    "name": "都告诉",
-    "icon": "apps/都告诉/logo.jpg",
-    "url": "apps/都告诉/"
   }
 ]
