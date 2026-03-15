@@ -28,5 +28,10 @@
     "name": "33233",
     "icon": "apps/33233/logo.png",
     "url": "apps/33233/"
+  },
+  {
+    "name": "出差出差",
+    "icon": "apps/出差出差/logo.png",
+    "url": "apps/出差出差/"
   }
 ]
