@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <title>超级工厂 · 双主题 · 模式切换合一</title>
+  
+
+ <!-- 默认设置为暗黑模式 -->
+
+  <!-- 导出弹窗、删除弹窗等 -->
+  <div class="export-modal" id="exportModal"><h3>📦 导出选项</h3><div class="export-option"><input type="radio" name="exportFormat" id="exportFull" value="full" checked><label for="exportFull">完整HTML</label></div><div class="export-option"><input type="radio" name="exportFormat" id="exportSplit" value="split"><label for="exportSplit">三文件 (HTML/CSS/JS)</label></div><div class="export-option"><input type="checkbox" id="exportZip" value="zip"><label for="exportZip">压缩为ZIP</label></div><div class="modal-buttons"><div class="modal-button confirm" id="confirmExport">确认</div><div class="modal-button cancel" id="cancelExport">取消</div></div></div>
+  <div class="delete-modal" id="deleteModal"><h3>⚠️ 删除选项</h3><div class="delete-option"><input type="radio" name="deleteOption" id="optionDeleteOnly" value="deleteOnly" checked><label for="optionDeleteOnly">只删除（不备份）</label></div><div class="delete-option"><input type="radio" name="deleteOption" id="optionBackupOnly" value="backupOnly"><label for="optionBackupOnly">备份（不删除）</label></div><div class="modal-buttons"><div class="modal-button confirm" id="confirmDelete">确认</div><div class="modal-button cancel" id="cancelDelete">取消</div></div></div>
+  <div class="delete-modal" id="backupDeleteModal" style="width: 320px;"><h3>🗑️ 删除备份</h3><div style="color: var(--text-primary); text-align: center; margin: 16px 0;" id="backupDeleteName">确定删除备份文件?</div><div class="modal-buttons"><div class="modal-button confirm" id="confirmBackupDelete">确认</div><div class="modal-button cancel" id="cancelBackupDelete">取消</div></div></div>
+  <div class="delete-modal" id="uninstallModal" style="width: 320px;"><h3>🗑️ 卸载应用</h3><div style="color: var(--text-primary); text-align: center; margin: 16px 0;" id="uninstallAppName">确定卸载该应用?</div><div class="modal-buttons"><div class="modal-button confirm" id="confirmUninstall">确认</div><div class="modal-button cancel" id="cancelUninstall">取消</div></div></div>
+
+<div class="app-container">
+  <!-- 主页面：代码编辑器 -->
+  <div class="main-page" id="mainPage">
+    <div class="editor-page">
+      <!-- 工具栏：始终可见，包含模式切换按钮 -->
+      <div class="editor-toolbar" id="editorToolbar">
+        <button id="modeToggleBtn" class="active-mode">📄 完整HTML</button> <!-- 模式切换按钮，默认完整模式 -->
+        <button id="runBtn">▶ 运行</button>
+        <button id="exportBtn">📦 导出</button>
+        <button id="batchImportBtn">📎 批量导入</button>
+        <button id="clearBtn">🗑️ 清空</button>
+        <button id="themeToggleBtn">🌙 柔光</button> <!-- 暗黑模式下显示"柔光" -->
+        <button id="clearAllBtn">🧹 一键清空</button>
+        <button id="editProfileBtn">✏️ 编辑资料</button>
+      </div>
+
+      <!-- 操作栏：始终可见 -->
+      <div class="action-bar">
+        <button id="copyBtn">📋 复制</button>
+        <button id="deleteBtn">❌ 删除</button>
+        <button id="pasteBtn">📎 粘贴</button>
+        <button id="parseToSplitBtn">🔍 解析→拆分</button>
+        <button id="mergeToFullBtn" style="display: none;">🔗 合并→完整</button>
+      </div>
+
+      <!-- 滚动区域 -->
+      <div class="scroll-area" id="mainScrollArea">
+        <div id="editorFullMode" style="height:100%;">
+          <textarea id="fullCodeTextarea" class="full-textarea" placeholder="<!-- 完整HTML -->" spellcheck="false"></textarea>
+        </div>
+        <div id="editorSplitMode" style="height:100%; display: none;">
+          <div class="split-container">
+            <div class="split-tabs">
+              <div class="split-tab active" data-split="html">HTML</div>
+              <div class="split-tab" data-split="css">CSS</div>
+              <div class="split-tab" data-split="js">JS</div>
+            </div>
+            <div class="split-content">
+              <div class="split-pane active-pane" id="splitPaneHtml">
+                <textarea id="splitHtmlTextarea" class="split-textarea" placeholder="<!-- HTML -->"></textarea>
+              </div>
+              <div class="split-pane" id="splitPaneCss">
+                <textarea id="splitCssTextarea" class="split-textarea" placeholder="/* CSS */"></textarea>
+              </div>
+              <div class="split-pane" id="splitPaneJs">
+                <textarea id="splitJsTextarea" class="split-textarea" placeholder="// app.js"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 预览页面 -->
+  <div class="preview-page" id="previewPage">
+    <div class="preview-header"><button class="back-to-editor" id="backToEditorBtn"><span>←</span> 返回编辑器</button><span class="preview-title">预览</span></div>
+    <iframe id="previewIframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-same-origin allow-modals allow-popups allow-top-navigation" src="about:blank"></iframe>
+  </div>
+
+               <!-- 编辑资料页面 -->
+<div class="profile-page" id="profilePage">
+  <div class="profile-header">
+    <button class="back-button" id="backFromProfileBtn">
+      <span>←</span> 返回
+    </button>
+    <span class="profile-title">编辑资料 · 科技感控制台</span>
+  </div>
+  <div class="profile-content">
+    <div class="console">
+      <div class="grid-2">
+        <!-- 左列 -->
+        <div class="left-stack" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- 基本信息区 -->
+          <div class="block">
+            <div class="block-header">
+              <span class="block-tag">#01</span>
+              <span class="block-title">📱 基本信息</span>
+            </div>
+            <div class="field-row" id="appNameRow">
+              <div class="field-label">名称</div>
+              <div class="field-input">
+                <input type="text" id="appName" placeholder="输入应用名称" value="">
+              </div>
+            </div>
+            <div class="path-preview">
+              路径: apps/<strong id="pathPreview">应用名称</strong>/
+            </div>
+            <div class="file-row" id="iconFileRow">
+              <span class="file-label">图标</span>
+              <input type="file" id="iconFile" accept="image/*">
+            </div>
+          </div>
+
+          <!-- 代码仓库设置卡片 -->
+          <div class="block" id="githubBlock" style="padding: 12px;">
+            <!-- 大标题 -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 1.2rem;">🔧</span>
+              <span class="block-title" style="font-size: 1.1rem;">代码仓库设置</span>
+            </div>
+            
+            <!-- 当前使用配置卡片 -->
+            <div style="background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 16px; padding: 12px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">📌 当前使用配置 (API调用)</span>
+                <span style="background: var(--tag-bg); padding: 2px 10px; border-radius: 30px; font-size: 0.8rem; color: var(--text-primary); border: 2px solid var(--border-color);" id="currentPlatformBadge">🐙 GitHub</span>
+              </div>
+              
+              <div style="display: grid; grid-template-columns: 60px 1fr; gap: 8px;">
+                <span style="color: var(--text-secondary);">用户</span>
+                <span style="color: var(--text-primary); font-weight: 500;" id="currentUserDisplay">未设置</span>
+                
+                <span style="color: var(--text-secondary);">仓库</span>
+                <span style="color: var(--text-primary); font-weight: 500;" id="currentRepoDisplay">未设置</span>
+                
+                <span style="color: var(--text-secondary);">令牌</span>
+                <span style="color: var(--accent-warning);" id="currentTokenDisplay">未设置</span>
+              </div>
+            </div>
+
+            <!-- 平台切换 -->
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; gap: 12px;">
+                <label style="flex: 1; text-align: center; padding: 10px 0; border-radius: 40px; background: var(--button-bg); border: 2px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; transition: all 0.2s;" id="selectGithubBtn">
+                  <span style="font-size: 1.2rem;">🐙</span> GitHub
+                  <input type="radio" name="platform" value="github" checked style="display: none;">
+                </label>
+                <label style="flex: 1; text-align: center; padding: 10px 0; border-radius: 40px; background: var(--button-bg); border: 2px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; transition: all 0.2s;" id="selectGiteeBtn">
+                  <span style="font-size: 1.2rem;">🦊</span> Gitee
+                  <input type="radio" name="platform" value="gitee" style="display: none;">
+                </label>
+              </div>
+            </div>
+
+            <!-- 编辑配置区域 -->
+            <div class="collapsible collapsed" id="editConfigCollapsible" style="margin-bottom: 16px; border: 2px solid var(--border-color); border-radius: 16px; overflow: hidden;">
+              <div class="collapsible-header" id="toggleEditConfig" style="padding: 12px; background: var(--header-bg); cursor: pointer; border-bottom: 2px solid var(--border-color);">
+                <span class="arrow">▼</span>
+                <span style="font-weight: 600; color: var(--text-secondary);">✏️ 编辑配置</span>
+                <span style="color: var(--text-secondary); font-size: 0.75rem; margin-left: auto;" id="editingPlatformHint">当前编辑: GitHub</span>
+              </div>
+              <div class="collapsible-body" id="editConfigBody" style="padding: 0 12px 12px 12px; background: var(--card-bg);">
+                <div style="background: var(--input-bg); border: 2px solid var(--border-light); border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                  <span style="color: var(--text-secondary); width: 50px;">用户</span>
+                  <input type="text" id="gitUser" placeholder="用户名" value="" style="flex: 1; background: transparent; border: none; color: var(--text-primary); padding: 10px 0;">
+                </div>
+                <div style="background: var(--input-bg); border: 2px solid var(--border-light); border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                  <span style="color: var(--text-secondary); width: 50px;">仓库</span>
+                  <input type="text" id="gitRepo" placeholder="仓库名" value="" style="flex: 1; background: transparent; border: none; color: var(--text-primary); padding: 10px 0;">
+                </div>
+                <div style="background: var(--input-bg); border: 2px solid var(--border-light); border-radius: 40px; padding: 4px 12px; display: flex; align-items: center; margin-bottom: 8px;">
+                  <span style="color: var(--text-secondary); width: 50px;">令牌</span>
+                  <input type="password" id="gitToken" placeholder="个人访问令牌" style="flex: 1; background: transparent; border: none; color: var(--text-primary); padding: 10px 0;">
+                </div>
+                <button style="width: 100%; background: var(--button-bg); border: 2px solid var(--border-color); border-radius: 40px; padding: 12px; margin-top: 12px; color: var(--text-primary); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;" id="saveConfigBtn">
+                  <span>💾</span> 保存资料
+                </button>
+              </div>
+            </div>
+
+            <!-- 多仓库管理 -->
+            <div style="border: 2px solid var(--border-color); border-radius: 16px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--card-bg);">
+                <span style="font-weight: 600; color: var(--text-secondary);">📋 多仓库管理</span>
+              </div>
+              <div style="padding: 12px; background: var(--card-bg); border-top: 2px solid var(--border-color);">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                  <button style="flex: 1; background: var(--button-bg); border: 2px solid var(--border-color); border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--text-primary);" id="showRepoListBtn">
+                    <span>📋</span> 显示列表
+                  </button>
+                  <button style="flex: 1; background: var(--button-bg); border: 2px solid var(--border-color); border-radius: 40px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--text-primary);" id="addCurrentRepoBtn">
+                    <span>➕</span> 添加当前
+                  </button>
+                </div>
+                
+                <div id="repoListContainer" style="display: none; margin-bottom: 12px; max-height: 150px; overflow-y: auto; background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 4px;">
+                  <div id="repoList">
+                    <div style="color: var(--text-secondary); text-align: center; padding: 8px;">暂无仓库，点击【添加当前】保存</div>
+                  </div>
+                </div>
+                
+                <div style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="autoUpload" class="switch-checkbox">
+                    <span style="color: var(--text-secondary);">自动上传（生成后自动上传）</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右列 -->
+        <div class="right-stack" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- 操作区 -->
+          <div class="block">
+            <div class="block-header">
+              <span class="block-tag">#03</span>
+              <span class="block-title">⚙️ 操作面板</span>
+            </div>
+            <div class="action-group">
+              <div class="action-item">
+                <button class="action-button" id="btnGenerate">
+                  <span>🏭</span> 生成文件夹
+                </button>
+                <div class="action-desc">生成 apps/名称/ 三文件</div>
+              </div>
+              <div class="action-item">
+                <button class="action-button" id="btnUpload">
+                  <span>📤</span> 上传
+                </button>
+                <div class="action-desc">PUT index.html/style.css/app.js/图标</div>
+              </div>
+              <div class="action-item">
+                <button class="action-button" id="btnUpdateJson">
+                  <span>🖥</span> 更新 configuration.json
+                </button>
+                <div class="action-desc">写入桌面图标配置 {name, icon, url}</div>
+              </div>
+              <!-- 新增：清除编辑资料按钮 -->
+              <div class="action-item">
+                <button class="action-button" id="btnClearProfile">
+                  <span>🧹</span> 清除资料
+                </button>
+                <div class="action-desc">清除所有保存的仓库配置和令牌</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 备份管理区块 -->
+          <div class="block delete-block collapsible" id="backupBlock">
+            <div class="collapsible-header" id="toggleBackup">
+              <span class="arrow" id="backupArrow">▼</span>
+              <span class="block-tag">#04</span>
+              <span class="block-title">⚠️ 备份管理</span>
+            </div>
+            <div class="collapsible-body" id="backupBody">
+              <button class="action-button" id="btnDeleteApp" style="margin-bottom:8px;">
+                <span>🗑️</span> 删除 / 备份
+              </button>
+              <div class="action-desc" style="border-left-color: var(--accent-danger); margin-bottom:12px;">
+                → 点击后选择：只删除 或 备份<br>
+                → 自动更新 configuration.json
+              </div>
+
+              <div class="action-button" id="btnShowApps" style="margin-bottom:8px; background: var(--button-bg);">
+                <span>📋</span> 已安装应用
+              </div>
+              <div id="appListContainer" style="display: none; margin-top: 8px;">
+                <div class="app-list" id="appList">
+                  <div style="color: var(--text-secondary); text-align: center; padding: 10px;">点击加载应用列表</div>
+                </div>
+              </div>
+              
+              <div class="action-button" id="btnShowBackups" style="margin-bottom:8px; background: var(--button-bg);">
+                <span>📦</span> 备份目录
+              </div>
+              
+              <div id="backupListContainer" style="display: none; margin-top: 8px;">
+                <div class="backup-list" id="backupList">
+                  <div style="color: var(--text-secondary); text-align: center; padding: 10px;">点击加载备份列表</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日志框 -->
+      <div class="log-box">
+        <pre id="logOutput">>> 系统就绪 · 双主题切换 · 三文件导出已修复</pre>
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="app.js"></script>
+</body>
+</html>
