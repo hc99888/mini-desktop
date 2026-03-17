@@ -38,5 +38,10 @@
     "name": "测试00",
     "icon": "apps/测试00/logo.png",
     "url": "apps/测试00/"
+  },
+  {
+    "name": "测试11",
+    "icon": "apps/测试11/logo.png",
+    "url": "apps/测试11/"
   }
 ]
