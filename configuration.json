@@ -38,5 +38,10 @@
     "name": "测试音乐工厂",
     "icon": "apps/测试音乐工厂/logo.png",
     "url": "apps/测试音乐工厂/"
+  },
+  {
+    "name": "测试00",
+    "icon": "apps/测试00/logo.png",
+    "url": "apps/测试00/"
   }
 ]
