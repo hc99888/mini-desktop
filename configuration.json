@@ -28,5 +28,10 @@
     "name": "手指画画",
     "icon": "apps/手指画画/logo.png",
     "url": "apps/手指画画/"
+  },
+  {
+    "name": "音乐工厂",
+    "icon": "apps/音乐工厂/logo.png",
+    "url": "apps/音乐工厂/"
   }
 ]
