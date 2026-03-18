@@ -1,0 +1,141 @@
+/* 全局样式 */
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f5f5f5;
+}
+
+/* 导航栏：横向滚动 */
+#navBar {
+  background: #333;
+  color: #fff;
+  display: flex;
+  overflow-x: auto;   /* 允许横向滚动 */
+  white-space: nowrap; /* 按钮不换行 */
+  -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
+}
+
+#navBar .tabBtn {
+  flex: 0 0 auto;       /* 按钮固定大小，不被压缩 */
+  background: #444;
+  color: #fff;
+  border: none;
+  margin: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#navBar .tabBtn:hover {
+  background: #555;
+}
+
+#navBar .tabBtn.active {
+  background: #007bff;
+  color: #fff;
+}
+
+/* 导航栏滚动条隐藏优化 */
+#navBar {
+  scrollbar-width: none; /* Firefox */
+}
+#navBar::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
+}
+
+/* 复制按钮样式 */
+.outputBlock .copyBtn {
+  display: block;          /* 独占一行，避免被挤到右侧 */
+  margin-top: 6px;         /* 与输出区保持间距 */
+  margin-bottom: 10px;     /* 底部留空，避免被遮挡 */
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.outputBlock .copyBtn:hover {
+  background: #0056b3;
+}
+
+/* 主画布区 */
+#mainCanvas {
+  padding: 12px;
+}
+
+/* 模块容器 */
+.module {
+  background: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 12px;
+}
+
+/* 输入框和下拉框 */
+.module label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+.module input,
+.module select {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  margin-top: 5px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* 按钮 */
+.module button {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.module button:hover {
+  background: #555;
+}
+
+/* 输出区容器 */
+.outputBlock {
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+/* 输出区样式 */
+.outputBlock pre {
+  margin: 0;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  min-height: 60px;
+  font-size: 13px;
+  white-space: pre-wrap;   /* 保留换行符并自动换行 */
+  word-wrap: break-word;   /* 长单词或长链接自动断行 */
+  overflow-x: auto;        /* 超长内容仍可横向滚动 */
+}
+
+/* 底部状态栏 */
+#statusBar {
+  background: #eee;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  color: #333;
+}
