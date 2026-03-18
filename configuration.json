@@ -43,5 +43,10 @@
     "name": "测试11",
     "icon": "apps/测试11/logo.png",
     "url": "apps/测试11/"
+  },
+  {
+    "name": "3D福彩",
+    "icon": "apps/3D福彩/logo.png",
+    "url": "apps/3D福彩/"
   }
 ]
