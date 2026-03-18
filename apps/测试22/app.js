@@ -162,6 +162,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       pipelineData.prompt = base || `${t.title} / ${t.mood} / ${t.scene}`;
 
+             // 修改这里：使用任务单数据，可选添加用户输入
+    pipelineData.prompt = `${t.title} / ${t.mood} / ${t.scene}`;
+    if (base) {
+      pipelineData.prompt += ` / ${base}`;
+    }
+
       const result =
         `【生成的 Prompt】\n${pipelineData.prompt}\n\n质量：高\n长度：中等\n风格：通用`;
 
