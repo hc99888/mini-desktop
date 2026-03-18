@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>福彩3D智能过滤分析系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+        body { background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); color: #e0e0e0; min-height: 100vh; }
+        .container { width: 100%; max-width: none; margin: 0; padding: 20px; }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            padding: 20px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border-radius: 12px; 
+            border: 1px solid rgba(255, 215, 0, 0.2); 
+            position: relative; 
+            overflow: hidden; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #ffd700, #ffaa00, #ffd700); }
+        .header-content { flex: 1; }
+        .header h1 { font-size: 2rem; margin-bottom: 5px; background: linear-gradient(90deg, #ffd700, #ffaa00); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .header .subtitle { font-size: 0.9rem; color: #a0a0a0; }
+        
+        .import-icon {
+            background: linear-gradient(145deg, #ffd700, #ffaa00);
+            color: #1a1a2e;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            margin-left: 15px;
+            flex-shrink: 0;
+        }
+        .import-icon:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        
+        .control-panel { margin-bottom: 20px; }
+        .control-row { display: flex; gap: 12px; margin-bottom: 12px; }
+        .control-select { flex: 1; padding: 12px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 8px; color: #e0e0e0; text-align: center; cursor: pointer; }
+        
+        .stats-panel { 
+            display: flex; 
+            background: rgba(30, 41, 59, 0.8); 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255, 215, 0, 0.2); 
+            gap: 20px; 
+            margin: 20px 0;
+            justify-content: center;
+        }
+        .stat-item { display: flex; align-items: center; gap: 6px; }
+        .stat-label { font-size: 0.75rem; color: #a0a0a0; }
+        .stat-value { font-size: 0.85rem; color: #ffd700; font-weight: 600; }
+        .stat-divider { width: 1px; height: 20px; background: rgba(255, 215, 0, 0.3); }
+        
+        .project { background: rgba(15, 23, 42, 0.8); border-radius: 12px; border: 1px solid rgba(255, 215, 0, 0.2); margin-bottom: 20px; overflow: hidden; }
+        .project-header { padding: 15px; background: rgba(30, 41, 59, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .project-title { font-size: 20px; font-weight: bold; color: #ffd700; }
+        .project-arrow { transition: transform 0.3s; color: #ffd700; }
+        .project-content { transition: all 0.3s ease; }
+        .project-footer { text-align: center; padding: 6px; background: rgba(30, 41, 59, 0.9); color: #ffd700; cursor: pointer; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; align-items: center; justify-content: center; gap: 5px; }
+        
+        .table-wrapper { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+        .data-table th, .data-table td { border: 1px solid rgba(255, 255, 255, 0.3); padding: 8px 2px; text-align: center; }
+        .data-table th { background: #3A4A5F; color: white; position: sticky; top: 0; }
+        .data-table tbody tr:nth-child(odd) { background: rgba(255, 255, 255, 0.05); }
+        .data-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.1); }
+        
+        .ball-set { display: flex; justify-content: center; gap: 6px; }
+        .ball { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(to bottom, #4A90E2, #2C5AA0); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.3); }
+        .number-cell { position: relative; height: 40px; }
+        .dist-ball { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(to bottom, #4A90E2, #2C5AA0); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; margin: 0 auto; }
+        .select-ball { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(to bottom, #ffd700, #ffaa00); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #000; margin: 0 auto; cursor: pointer; }
+        .select-placeholder { height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .inc-number { color: #cccccc; font-size: 10px; }
+        
+        .hot { color: #FF0000; font-weight: bold; }
+        .cold { color: #00FF99; font-weight: bold; }
+        .num-header { color: #FFFF00; }
+        .empty-col { width: 8px; background: rgba(255, 215, 0, 0.1); }
+        
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 1200px; }
+        .detail-table th, .detail-table td { border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 3px; text-align: center; }
+        .detail-table th { background: #3A4A5F; color: white; position: sticky; top: 0; }
+        .detail-table tbody tr:nth-child(odd) { background: rgba(255, 255, 255, 0.05); }
+        .detail-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.1); }
+        
+        .detail-table thead tr:nth-child(2) th:nth-child(8),
+        .detail-table thead tr:nth-child(2) th:nth-child(15),
+        .detail-table thead tr:nth-child(2) th:nth-child(21),
+        .detail-table thead tr:nth-child(2) th:nth-child(27) {
+            border-right: 3px solid #ffd700 !important;
+        }
+
+        .detail-table tbody td:nth-child(8),
+        .detail-table tbody td:nth-child(15),
+        .detail-table tbody td:nth-child(21),
+        .detail-table tbody td:nth-child(27) {
+            border-right: 3px solid #ffd700 !important;
+        }
+
+        .detail-table thead tr:first-child th:nth-child(1) { color: #ffd700 !important; }
+        .detail-table thead tr:first-child th:nth-child(2) { color: #FF00FF !important; }
+        .detail-table thead tr:first-child th:nth-child(4) { color: #00FFFF !important; }
+        .detail-table thead tr:first-child th:nth-child(5) { color: #FFFF00 !important; }
+        .detail-table thead tr:first-child th:nth-child(7) { color: #00B050 !important; }
+        .detail-table thead tr:first-child th:nth-child(8) { color: #FFC000 !important; }
+        .detail-table thead tr:first-child th:nth-child(10) { color: #00FFFF !important; }
+        .detail-table thead tr:first-child th:nth-child(11) { color: #FF00FF !important; }
+        .detail-table thead tr:first-child th:nth-child(13) { color: #FFC000 !important; }
+        .detail-table thead tr:first-child th:nth-child(14) { color: #00B050 !important; }
+        
+        .detail-table tbody td { font-size: 14px !important; font-weight: 500; }
+        
+        .red { color: #FF0000; } .pink { color: #FFC000; } .green { color: #00B050; } .cyan { color: #00FFFF; } .yellow { color: #FFFF00; } .orange { color: #FFC000; } .blue { color: #0070C0; } .light-green { color: #00FF00; } .brown { color: #C55A11; } .dark-orange { color: #DE6114; } .dark-blue { color: #0070C0; } .white { color: #FFFFFF; } .sum-yellow { color: #FF00FF !important; font-weight: bold; }
+        
+        .filter-panel { padding: 15px; }
+        .filter-group { background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .filter-title { font-size: 16px; margin-bottom: 10px; color: #e0e0e0; font-weight: 500; }
+        .filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
+        .filter-option { padding: 5px 10px; border-radius: 16px; font-size: 14px; cursor: pointer; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #e0e0e0; }
+        .filter-option.active { background: #3498db; color: white; border-color: #3498db; }
+        
+        /* 修改杀码范围样式 - 球体占满左右两边 */
+        .kill-panel { margin: 15px 0; }
+        .kill-balls { 
+            display: flex; 
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .kill-ball {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .kill-ball.include {
+            background: linear-gradient(to bottom, #4A90E2, #2C5AA0);
+        }
+        .kill-ball.exclude {
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            transform: scale(0.9);
+        }
+        
+        /* 修改定位选择样式 - 去除文字标签，球体占满左右两边 */
+        .position-panel { margin: 15px 0; }
+        .position-row { 
+            margin-bottom: 15px; 
+        }
+        .position-balls-container {
+            width: 100%;
+        }
+        .position-balls { 
+            display: flex; 
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .pos-ball {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            background: linear-gradient(to bottom, #4A90E2, #2C5AA0);
+            flex-shrink: 0;
+        }
+        .pos-ball.selected {
+            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+        }
+        
+        /* 012路快捷选择按钮样式 - 修改为未选中状态灰色，选中状态金色 */
+        .path-quick-select { 
+            display: flex; 
+            gap: 8px; 
+            margin-bottom: 8px;
+            justify-content: space-between;
+        }
+        .path-btn {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e0e0e0;
+            flex: 1;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .path-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .path-btn.active {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .action-buttons { display: flex; gap: 10px; margin: 15px 0; }
+        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .clear-btn { background: linear-gradient(145deg, #e74c3c, #c0392b); color: #000000; box-shadow: 0 6px 0 #ffd700; }
+        .copy-btn { background: linear-gradient(145deg, #2ecc71, #27ae60); color: #000000; box-shadow: 0 6px 0 #ffffff; }
+        
+        .result-stats { display: flex; justify-content: space-between; background: rgba(52, 152, 219, 0.2); padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .result-stat { text-align: center; flex: 1; }
+        .result-value { font-size: 18px; font-weight: 700; color: #ffff00; }
+        .result-label { font-size: 10px; color: rgba(255, 255, 255, 0.8); }
+        
+        .result-table { background: rgba(255, 255, 255, 0.05); }
+        .num-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        .num-table th { background: #3A4A5F; padding: 8px 2px; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 20px; }
+        .num-table td { padding: 4px 1px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); height: 40px; }
+        .num-group { display: flex; justify-content: center; align-items: center; gap: 1px; }
+        .num-digit { font-weight: 600; color: white; }
+        .selected-digit { color: #2ecc71; font-weight: 800; }
+        
+        .hidden { display: none; }
+        .collapsed .project-arrow { transform: rotate(180deg); }
+        
+        /* 导入成功提示样式 */
+        .import-success {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #2ecc71;
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 2px solid #2ecc71;
+            z-index: 1000;
+            text-align: center;
+            font-size: 16px;
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+        }
+        
+        /* 网格弹窗样式 - 全屏显示 */
+        .grid-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            z-index: 2000;
+            overflow: hidden;
+        }
+        
+        .grid-container {
+            background: rgba(15, 23, 42, 0.98);
+            border: none;
+            padding: 10px;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .number-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .number-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            align-items: center;
+        }
+        
+        .number-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            color: #000;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 900;
+            font-family: 'Arial Black', sans-serif;
+            box-shadow: 0 3px 6px rgba(255, 215, 0, 0.4);
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        }
+        
+        .grid-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 0 10px;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+        
+        .grid-close-btn {
+            background: linear-gradient(145deg, #e74c3c, #ffffff);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Arial Black', sans-serif;
+            box-shadow: 0 6px 0 #ffffff;
+            flex: 1;
+            max-width: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .grid-copy-btn {
+            background: linear-gradient(145deg, #2ecc71, #ffffff);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Arial Black', sans-serif;
+            box-shadow: 0 6px 0 #ffffff;
+            flex: 1;
+            max-width: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .grid-stats {
+            color: #9b59b6;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .copy-notice {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #9b59b6;
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 2px solid #9b59b6;
+            font-size: 16px;
+            z-index: 1000;
+            text-align: center;
+            animation: showHide 2.5s ease-in-out;
+            font-weight: bold;
+        }
+        
+        @keyframes showHide {
+            0% { opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .header h1 { font-size: 1.6rem; }
+            .header { padding: 15px; }
+            .import-icon { width: 36px; height: 36px; }
+            .control-row { gap: 10px; }
+            .stats-panel { gap: 15px; padding: 12px; }
+            .number-item { width: 40px; height: 40px; font-size: 15px; }
+            .grid-copy-btn, .grid-close-btn { padding: 10px 15px; font-size: 14px; }
+            .pos-ball, .kill-ball { width: 28px; height: 28px; font-size: 13px; }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.4rem; }
+            .import-icon { width: 32px; height: 32px; margin-left: 10px; }
+            .number-item { width: 38px; height: 38px; font-size: 14px; }
+            .grid-controls { flex-direction: row; gap: 10px; }
+            .grid-copy-btn, .grid-close-btn { max-width: 100%; }
+            .grid-stats { text-align: center; }
+            .pos-ball, .kill-ball { width: 26px; height: 26px; font-size: 12px; }
+            .path-btn { padding: 5px 8px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>福彩3D智能过滤分析系统</h1>
+            </div>
+            <div class="import-icon" id="importIcon" title="导入Excel数据">
+                <i class="fas fa-file-excel"></i>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="control-row">
+                <select class="control-select" id="yearSelect" disabled>
+                    <option value="">请先导入数据</option>
+                </select>
+                <select class="control-select" id="periodSelect" disabled>
+                    <option value="">请先导入数据</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-label">总数量</div>
+                <div class="stat-value" id="totalCount">--</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <div class="stat-label">当前期号</div>
+                <div class="stat-value" id="currentPeriod">--</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <div class="stat-label">导入范围</div>
+                <div class="stat-value" id="importRange">--</div>
+            </div>
+        </div>
+        
+        <div class="project">
+            <div class="project-header" id="project1Header">
+                <div class="project-title">项目1：热球 > 冷球区 > 号码分布区</div>
+                <div class="project-arrow">▼</div>
+            </div>
+            <div class="project-content hidden" id="project1Content">
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>期号</th><th>奖号</th><th class="empty-col"></th><th>热球区</th><th>冷球区</th>
+                                <th class="num-header">0</th><th class="num-header">1</th><th class="num-header">2</th><th class="num-header">3</th><th class="num-header">4</th>
+                                <th class="num-header">5</th><th class="num-header">6</th><th class="num-header">7</th><th class="num-header">8</th><th class="num-header">9</th>
+                            </tr>
+                        </thead>
+                        <tbody id="project1Body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="project-footer" id="project1Footer">
+                <span class="project-arrow">︾</span>
+                <span>展开</span>
+            </div>
+        </div>
+        
+        <div class="project">
+            <div class="project-header" id="project2Header">
+                <div class="project-title">项目2：详细分析</div>
+                <div class="project-arrow">▼</div>
+            </div>
+            <div class="project-content hidden" id="project2Content">
+                <div class="table-wrapper">
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2">奖号信息</th><th colspan="2">基础信息</th><th class="empty-col"></th>
+                                <th colspan="3">012路</th><th colspan="3">012路统计</th><th class="empty-col"></th>
+                                <th colspan="3">奇偶形态</th><th colspan="2">奇偶统计</th><th class="empty-col"></th>
+                                <th colspan="3">大小形态</th><th colspan="2">大小统计</th><th class="empty-col"></th>
+                                <th colspan="3">质合形态</th><th colspan="2">质合统计</th>
+                            </tr>
+                            <tr>
+                                <th>期号</th><th>奖号</th><th>和值</th><th>跨度</th><th class="empty-col"></th>
+                                <th>百位</th><th>十位</th><th>个位</th><th>0统计</th><th>1统计</th><th>2统计</th><th class="empty-col"></th>
+                                <th>百位</th><th>十位</th><th>个位</th><th>奇统计</th><th>偶统计</th><th class="empty-col"></th>
+                                <th>百位</th><th>十位</th><th>个位</th><th>小统计</th><th>大统计</th><th class="empty-col"></th>
+                                <th>百位</th><th>十位</th><th>个位</th><th>质统计</th><th>合统计</th>
+                            </tr>
+                        </thead>
+                        <tbody id="project2Body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="project-footer" id="project2Footer">
+                <span class="project-arrow">︾</span>
+                <span>展开</span>
+            </div>
+        </div>
+        
+        <div class="project">
+            <div class="project-header" id="project3Header">
+                <div class="project-title">项目3：智能过滤分析</div>
+                <div class="project-arrow">▼</div>
+            </div>
+            <div class="project-content hidden" id="project3Content">
+                <div class="filter-panel" id="project3FilterPanel"></div>
+            </div>
+            <div class="project-footer" id="project3Footer">
+                <span class="project-arrow">︾</span>
+                <span>展开</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LotterySystem {
+            constructor() {
+                this.data = [];
+                this.filteredData = [];
+                this.project3State = {
+                    filters: { size: 'all', parity: 'all', prime: 'all', repeat: 'all', span: 'all', sum: 'all' },
+                    killNumbers: [],
+                    positionSelection: { hundred: [], ten: [], unit: [] }
+                };
+                this.isCopying = false; // 防止重复点击
+                this.init();
+            }
+            
+            init() {
+                this.bindEvents();
+                this.initProject3();
+                this.resetStats();
+                this.loadDataFromCache();
+            }
+            
+            // 保存数据到持久化存储
+            saveDataToCache() {
+                try {
+                    localStorage.setItem('3d_lottery_cache', JSON.stringify(this.data));
+                } catch (e) {
+                    console.error("保存缓存失败:", e);
+                }
+            }
+
+            // 从持久化存储加载数据
+            loadDataFromCache() {
+                try {
+                    const cachedData = localStorage.getItem('3d_lottery_cache');
+                    if (cachedData) {
+                        this.data = JSON.parse(cachedData);
+                        this.filteredData = [...this.data];
+                        this.updateSelectors();
+                        this.updateDisplay();
+                    }
+                } catch (e) {
+                    console.error("加载缓存失败:", e);
+                }
+            }
+            
+            resetStats() {
+                document.getElementById('totalCount').textContent = '--';
+                document.getElementById('currentPeriod').textContent = '--';
+                document.getElementById('importRange').textContent = '--';
+            }
+            
+            bindEvents() {
+                document.getElementById('importIcon').addEventListener('click', () => this.importExcel());
+                ['project1', 'project2', 'project3'].forEach(project => {
+                    const header = document.getElementById(`${project}Header`);
+                    const footer = document.getElementById(`${project}Footer`);
+                    header.addEventListener('click', () => this.toggleProject(project));
+                    footer.addEventListener('click', () => this.toggleProject(project));
+                });
+                document.getElementById('yearSelect').addEventListener('change', () => this.filterData());
+                document.getElementById('periodSelect').addEventListener('change', () => this.filterData());
+            }
+            
+            toggleProject(project) {
+                const content = document.getElementById(`${project}Content`);
+                const header = document.getElementById(`${project}Header`);
+                const footer = document.getElementById(`${project}Footer`);
+                content.classList.toggle('hidden');
+                header.classList.toggle('collapsed');
+                footer.classList.toggle('collapsed');
+                const isHidden = content.classList.contains('hidden');
+                header.querySelector('.project-arrow').textContent = isHidden ? '▲' : '▼';
+                footer.querySelector('.project-arrow').textContent = isHidden ? '︽' : '︾';
+                footer.querySelector('span:last-child').textContent = isHidden ? '展开' : '折叠';
+            }
+            
+            importExcel() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.xlsx,.xls,.csv,.txt';
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) this.processExcelFile(file);
+                };
+                fileInput.click();
+            }
+            
+            processExcelFile(file) {
+                const reader = new FileReader();
+                const importIcon = document.getElementById('importIcon');
+                
+                importIcon.style.opacity = '0.5';
+                importIcon.style.pointerEvents = 'none';
+                importIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        this.parseWorkbook(workbook);
+                        
+                        this.saveDataToCache();
+                        this.showImportSuccess(`成功导入 ${this.data.length} 条数据到缓存`);
+                        
+                        setTimeout(() => {
+                            this.resetImportIcon();
+                        }, 3000);
+                        
+                    } catch (error) {
+                        alert('文件解析失败：' + error.message);
+                        this.resetImportIcon();
+                    }
+                };
+                reader.onerror = () => {
+                    alert('文件读取失败');
+                    this.resetImportIcon();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            resetImportIcon() {
+                const importIcon = document.getElementById('importIcon');
+                importIcon.innerHTML = '<i class="fas fa-file-excel"></i>';
+                importIcon.style.background = 'linear-gradient(145deg, #ffd700, #ffaa00)';
+                importIcon.style.opacity = '1';
+                importIcon.style.pointerEvents = 'auto';
+            }
+
+            showImportSuccess(message) {
+                const existingMessage = document.getElementById('importSuccess');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+                
+                const successDiv = document.createElement('div');
+                successDiv.className = 'import-success';
+                successDiv.id = 'importSuccess';
+                successDiv.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <i class="fas fa-check-circle" style="font-size: 24px;"></i>
+                    </div>
+                    <div>${message}</div>
+                `;
+                document.body.appendChild(successDiv);
+                
+                setTimeout(() => {
+                    this.hideImportSuccess();
+                }, 3000);
+            }
+            
+            hideImportSuccess() {
+                const existingMessage = document.getElementById('importSuccess');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+            }
+
+            parseWorkbook(workbook) {
+                this.data = [];
+                if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error('Excel文件中没有工作表');
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                if (!worksheet) throw new Error('工作表不存在或为空');
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                if (jsonData.length <= 1) throw new Error('Excel文件中没有数据行');
+                let validDataCount = 0;
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row || row.length < 2) continue;
+                    try {
+                        let period = row[0] ? row[0].toString().trim() : '';
+                        let prizeNumber = row[1] ? row[1].toString().trim() : '';
+                        if (!period || !prizeNumber) continue;
+                        period = period.replace(/\s+/g, '');
+                        prizeNumber = prizeNumber.replace(/\s+/g, '');
+                        if (/^\d+$/.test(prizeNumber)) {
+                            const numValue = parseInt(prizeNumber);
+                            if (numValue < 100) prizeNumber = numValue.toString().padStart(3, '0');
+                        }
+                        if (prizeNumber.length !== 3) continue;
+                        const numbers = [parseInt(prizeNumber[0]), parseInt(prizeNumber[1]), parseInt(prizeNumber[2])];
+                        if (numbers.some(isNaN) || !numbers.every(num => num >= 0 && num <= 9)) continue;
+                        const year = period.substring(0, 4);
+                        this.data.push({ period: period, numbers: numbers, displayNumber: prizeNumber, year: parseInt(year) || new Date().getFullYear() });
+                        validDataCount++;
+                    } catch (error) { continue; }
+                }
+                if (validDataCount === 0) throw new Error('没有找到有效的彩票数据');
+                this.data.sort((a, b) => a.period.localeCompare(b.period));
+                this.filteredData = [...this.data];
+                this.updateSelectors();
+                this.updateDisplay();
+            }
+            
+            updateSelectors() {
+                const yearSelect = document.getElementById('yearSelect');
+                const periodSelect = document.getElementById('periodSelect');
+                const years = [...new Set(this.data.map(item => item.year))].sort((a, b) => b - a);
+                yearSelect.innerHTML = '<option value="">全部年份</option>';
+                years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = `${year}年`;
+                    if (year === years[0]) option.selected = true;
+                    yearSelect.appendChild(option);
+                });
+                yearSelect.disabled = false;
+                periodSelect.innerHTML = '<option value="10" selected>最近10期</option><option value="30">最近30期</option><option value="50">最近50期</option><option value="100">最近100期</option><option value="200">最近200期</option><option value="300">最近300期</option><option value="all">全部数据</option>';
+                periodSelect.disabled = false;
+                this.filterData();
+            }
+            
+            filterData() {
+                const selectedYear = document.getElementById('yearSelect').value;
+                const selectedPeriod = document.getElementById('periodSelect').value;
+                let filtered = [...this.data];
+                if (selectedYear) filtered = filtered.filter(item => item.year === parseInt(selectedYear));
+                if (selectedPeriod !== 'all') filtered = filtered.slice(-parseInt(selectedPeriod));
+                this.filteredData = filtered;
+                this.updateDisplay();
+            }
+            
+            updateDisplay() {
+                this.updateStats();
+                this.updateProject1();
+                this.updateProject2();
+            }
+            
+            updateStats() {
+                if (this.filteredData.length === 0) {
+                    this.resetStats();
+                    return;
+                }
+                document.getElementById('totalCount').textContent = this.filteredData.length + '条';
+                document.getElementById('currentPeriod').textContent = this.filteredData[this.filteredData.length - 1].period;
+                document.getElementById('importRange').textContent = `${this.filteredData[0].period}-${this.filteredData[this.filteredData.length - 1].period}`;
+            }
+            
+            updateProject1() {
+                const tbody = document.getElementById('project1Body');
+                tbody.innerHTML = '';
+                if (this.filteredData.length === 0) return;
+                const numberCounters = Array(10).fill(0);
+                this.filteredData.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    const hotCold = this.calculateHotCold(index);
+                    item.numbers.forEach(num => numberCounters[num] = 0);
+                    for (let i = 0; i < 10; i++) if (!item.numbers.includes(i)) numberCounters[i]++;
+                    row.innerHTML = `<td>${item.period}</td><td><div class="ball-set">${item.numbers.map(num => `<div class="ball">${num}</div>`).join('')}</div></td><td class="empty-col"></td><td class="hot">${hotCold.hot.join(' ')}</td><td class="cold">${hotCold.cold.join(' ')}</td>${Array.from({length: 10}, (_, i) => item.numbers.includes(i) ? `<td><div class="dist-ball">${i}</div></td>` : `<td><div class="inc-number">${numberCounters[i]}</div></td>`).join('')}`;
+                    tbody.appendChild(row);
+                });
+                this.addPredictionRow();
+            }
+            
+            calculateHotCold(currentIndex) {
+                if (currentIndex < 3 || this.filteredData.length < 4) return { hot: ['-'], cold: ['-'] };
+                const startIndex = Math.max(0, currentIndex - 3);
+                const recentData = this.filteredData.slice(startIndex, currentIndex);
+                const appearedNumbers = new Set();
+                recentData.forEach(item => item.numbers.forEach(num => appearedNumbers.add(num)));
+                const hot = Array.from(appearedNumbers).sort((a, b) => a - b);
+                const allNumbers = new Set([0,1,2,3,4,5,6,7,8,9]);
+                const cold = Array.from(allNumbers).filter(num => !appearedNumbers.has(num));
+                return { hot: hot.length > 0 ? hot : ['-'], cold: cold.length > 0 ? cold : ['-'] };
+            }
+            
+            addPredictionRow() {
+                const tbody = document.getElementById('project1Body');
+                if (this.filteredData.length === 0) return;
+                const lastItem = this.filteredData[this.filteredData.length - 1];
+                const nextPeriod = (parseInt(lastItem.period) + 1).toString();
+                const hotCold = this.calculateHotCold(this.filteredData.length);
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${nextPeriod}</td><td style="color: #888; font-style: italic;">未出球</td><td class="empty-col"></td><td class="hot">${hotCold.hot.join(' ')}</td><td class="cold">${hotCold.cold.join(' ')}</td>${Array.from({length: 10}, (_, i) => `<td class="number-cell selectable" data-number="${i}"><div class="select-placeholder" data-number="${i}"></div></td>`).join('')}`;
+                tbody.appendChild(row);
+                
+                this.initManualSelection();
+            }
+            
+            initManualSelection() {
+                const selectableCells = document.querySelectorAll('.number-cell.selectable');
+                selectableCells.forEach(cell => {
+                    cell.addEventListener('click', (e) => {
+                        const placeholder = cell.querySelector('.select-placeholder');
+                        if (placeholder.innerHTML === '') {
+                            const number = cell.getAttribute('data-number');
+                            placeholder.innerHTML = `<div class="select-ball">${number}</div>`;
+                        } else {
+                            placeholder.innerHTML = '';
+                        }
+                        e.stopPropagation();
+                    });
+                });
+            }
+            
+            updateProject2() {
+                const tbody = document.getElementById('project2Body');
+                tbody.innerHTML = '';
+                this.filteredData.forEach(item => {
+                    const analysis = this.analyzeNumbers(item.numbers);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${item.period}</td><td><div class="ball-set">${item.numbers.map(num => `<div class="ball">${num}</div>`).join('')}</div></td><td class="${analysis.sum >= 14 && analysis.sum <= 20 ? 'sum-yellow' : 'white'}">${analysis.sum}</td><td class="white">${analysis.span}</td><td class="empty-col"></td><td class="${this.get012Color(analysis.paths[0])}">${analysis.paths[0]}</td><td class="${this.get012Color(analysis.paths[1])}">${analysis.paths[1]}</td><td class="${this.get012Color(analysis.paths[2])}">${analysis.paths[2]}</td><td class="${this.get012CountColor(analysis.pathCounts[0])}">${analysis.pathCounts[0]}</td><td class="${this.get012CountColor(analysis.pathCounts[1])}">${analysis.pathCounts[1]}</td><td class="${this.get012CountColor(analysis.pathCounts[2])}">${analysis.pathCounts[2]}</td><td class="empty-col"></td><td class="${this.getOddEvenColor(analysis.oddEven[0])}">${analysis.oddEven[0]}</td><td class="${this.getOddEvenColor(analysis.oddEven[1])}">${analysis.oddEven[1]}</td><td class="${this.getOddEvenColor(analysis.oddEven[2])}">${analysis.oddEven[2]}</td><td class="${this.getOddEvenCountColor(analysis.oddCount)}">${analysis.oddCount}</td><td class="${this.getOddEvenCountColor(analysis.evenCount)}">${analysis.evenCount}</td><td class="empty-col"></td><td class="${this.getSizeColor(analysis.size[0])}">${analysis.size[0]}</td><td class="${this.getSizeColor(analysis.size[1])}">${analysis.size[1]}</td><td class="${this.getSizeColor(analysis.size[2])}">${analysis.size[2]}</td><td class="${this.getSizeCountColor(analysis.smallCount)}">${analysis.smallCount}</td><td class="${this.getSizeCountColor(analysis.bigCount)}">${analysis.bigCount}</td><td class="empty-col"></td><td class="${this.getPrimeColor(analysis.prime[0])}">${analysis.prime[0]}</td><td class="${this.getPrimeColor(analysis.prime[1])}">${analysis.prime[1]}</td><td class="${this.getPrimeColor(analysis.prime[2])}">${analysis.prime[2]}</td><td class="${this.getPrimeCountColor(analysis.primeCount)}">${analysis.primeCount}</td><td class="${this.getPrimeCountColor(analysis.compositeCount)}">${analysis.compositeCount}</td>`;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            analyzeNumbers(numbers) {
+                const sum = numbers.reduce((a, b) => a + b, 0);
+                const span = Math.max(...numbers) - Math.min(...numbers);
+                const paths = numbers.map(num => num % 3);
+                const pathCounts = [0, 0, 0];
+                paths.forEach(path => pathCounts[path]++);
+                const oddEven = numbers.map(num => num % 2 === 0 ? '偶' : '奇');
+                const oddCount = oddEven.filter(val => val === '奇').length;
+                const evenCount = oddEven.filter(val => val === '偶').length;
+                const size = numbers.map(num => num < 5 ? '小' : '大');
+                const smallCount = size.filter(val => val === '小').length;
+                const bigCount = size.filter(val => val === '大').length;
+                const primes = [2, 3, 5, 7];
+                const prime = numbers.map(num => primes.includes(num) ? '质' : '合');
+                const primeCount = prime.filter(val => val === '质').length;
+                const compositeCount = prime.filter(val => val === '合').length;
+                return { sum, span, paths, pathCounts, oddEven, oddCount, evenCount, size, smallCount, bigCount, prime, primeCount, compositeCount };
+            }
+            
+            get012Color(value) { const colors = {0: 'pink', 1: 'light-green', 2: 'cyan'}; return colors[value] || 'white'; }
+            get012CountColor(count) { if (count === 3) return 'red'; if (count === 2) return 'yellow'; if (count === 1) return 'dark-blue'; return 'dark-orange'; }
+            getOddEvenColor(value) { return value === '奇' ? 'green' : 'brown'; }
+            getOddEvenCountColor(count) { if (count === 3) return 'red'; if (count === 2) return 'yellow'; return count === 1 ? 'light-green' : 'pink'; }
+            getSizeColor(value) { return value === '小' ? 'cyan' : 'pink'; }
+            getSizeCountColor(count) { if (count === 3) return 'red'; if (count === 2) return 'yellow'; return count === 1 ? 'cyan' : 'pink'; }
+            getPrimeColor(value) { return value === '质' ? 'orange' : 'blue'; }
+            getPrimeCountColor(count) { if (count === 3) return 'red'; if (count === 2) return 'yellow'; return count === 1 ? 'light-green' : 'pink'; }
+            
+            initProject3() {
+                const panel = document.getElementById('project3FilterPanel');
+                panel.innerHTML = this.getProject3HTML();
+                this.initProject3Events();
+                // 初始化时显示0组号码
+                this.clearProject3Table();
+            }
+            
+            getProject3HTML() {
+                return `
+                <div class="filter-group"><div class="filter-title">1. 大小形态：小 0-4  >< 大 5-9</div><div class="filter-options" data-type="size"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="all-big">全大</div><div class="filter-option" data-value="all-small">全小</div><div class="filter-option" data-value="2big1small">2大1小</div><div class="filter-option" data-value="2small1big">2小1大</div></div></div>
+                <div class="filter-group"><div class="filter-title">2. 奇偶形态：奇 1 3 5 7 9 >< 偶 0 2 4 6 8</div><div class="filter-options" data-type="parity"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="all-odd">全奇</div><div class="filter-option" data-value="all-even">全偶</div><div class="filter-option" data-value="2odd1even">2奇1偶</div><div class="filter-option" data-value="2even1odd">2偶1奇</div></div></div>
+                <div class="filter-group"><div class="filter-title">3. 质合形态：质 2 3 5 7  >< 合 0 1 4 6 8 9</div><div class="filter-options" data-type="prime"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="all-prime">全质</div><div class="filter-option" data-value="all-composite">全合</div><div class="filter-option" data-value="2prime1composite">2质1合</div><div class="filter-option" data-value="2composite1prime">2合1质</div></div></div>
+                <div class="filter-group"><div class="filter-title">4. 重号条件</div><div class="filter-options" data-type="repeat"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="has-repeat">有重号</div><div class="filter-option" data-value="no-repeat">无重号</div></div></div>
+                <div class="filter-group"><div class="filter-title">5. 跨度范围</div><div class="filter-options" data-type="span"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="small">小跨度(0-4)</div><div class="filter-option" data-value="medium">中跨度(5-7)</div><div class="filter-option" data-value="large">大跨度(8-9)</div></div></div>
+                <div class="filter-group"><div class="filter-title">6. 和值范围</div><div class="filter-options" data-type="sum"><div class="filter-option active" data-value="all">全部不选</div><div class="filter-option" data-value="small">小和值(0-13)</div><div class="filter-option" data-value="medium">中和值(14-20)</div><div class="filter-option" data-value="large">大和值(21-27)</div></div></div>
+                <div class="kill-panel"><div class="filter-title">7. 杀码范围 (绿色选择，红色排除)</div><div class="kill-balls" id="killBalls">${Array.from({length: 10}, (_, i) => `<div class="kill-ball include" data-number="${i}">${i}</div>`).join('')}</div></div>
+                <div class="position-panel"><div class="filter-title">8. 定位选择 (点亮球体表示选中)</div>
+                    <!-- 百位选择 -->
+                    <div class="position-row">
+                        <div class="position-balls-container">
+                            <div class="path-quick-select">
+                                <div class="path-btn" data-position="hundred" data-path="0">0路</div>
+                                <div class="path-btn" data-position="hundred" data-path="1">1路</div>
+                                <div class="path-btn" data-position="hundred" data-path="2">2路</div>
+                            </div>
+                            <div class="position-balls" data-position="hundred">${Array.from({length: 10}, (_, i) => `<div class="pos-ball" data-number="${i}">${i}</div>`).join('')}</div>
+                        </div>
+                    </div>
+                    <!-- 十位选择 -->
+                    <div class="position-row">
+                        <div class="position-balls-container">
+                            <div class="path-quick-select">
+                                <div class="path-btn" data-position="ten" data-path="0">0路</div>
+                                <div class="path-btn" data-position="ten" data-path="1">1路</div>
+                                <div class="path-btn" data-position="ten" data-path="2">2路</div>
+                            </div>
+                            <div class="position-balls" data-position="ten">${Array.from({length: 10}, (_, i) => `<div class="pos-ball" data-number="${i}">${i}</div>`).join('')}</div>
+                        </div>
+                    </div>
+                    <!-- 个位选择 -->
+                    <div class="position-row">
+                        <div class="position-balls-container">
+                            <div class="path-quick-select">
+                                <div class="path-btn" data-position="unit" data-path="0">0路</div>
+                                <div class="path-btn" data-position="unit" data-path="1">1路</div>
+                                <div class="path-btn" data-position="unit" data-path="2">2路</div>
+                            </div>
+                            <div class="position-balls" data-position="unit">${Array.from({length: 10}, (_, i) => `<div class="pos-ball" data-number="${i}">${i}</div>`).join('')}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn clear-btn" id="clearFilterBtn"><i class="fas fa-eraser"></i>一键清除</button>
+                    <button class="action-btn" id="showGridBtn" style="background: linear-gradient(145deg, #9b59b6, #8e44ad); color: #000000; box-shadow: 0 6px 0 #ffffff;"><i class="fas fa-copy"></i>显示网格号码</button>
+                </div>
+                <div class="result-stats">
+                    <div class="result-stat"><div class="result-value" id="totalRecommendations">0</div><div class="result-label">推荐号码</div></div>
+                    <div class="result-stat"><div class="result-value" id="filterCount">0</div><div class="result-label">过滤条件</div></div>
+                    <div class="result-stat"><div class="result-value" id="killCount">0</div><div class="result-label">杀码数量</div></div>
+                    <div class="result-stat"><div class="result-value" id="positionCount">0</div><div class="result-label">定位选择</div></div>
+                </div>
+                <div class="table-wrapper result-table"><table class="num-table"><thead><tr>${Array.from({length: 10}, (_, i) => `<th>${i}</th>`).join('')}</tr></thead><tbody id="project3Results"></tbody></table></div>`;
+            }
+            
+            initProject3Events() {
+                document.querySelectorAll('.filter-options').forEach(container => {
+                    container.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('filter-option')) {
+                            const options = container.querySelectorAll('.filter-option');
+                            options.forEach(opt => opt.classList.remove('active'));
+                            e.target.classList.add('active');
+                            const type = container.getAttribute('data-type');
+                            const value = e.target.getAttribute('data-value');
+                            this.project3State.filters[type] = value;
+                            this.generateFilteredNumbers();
+                        }
+                    });
+                });
+                
+                document.getElementById('killBalls').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('kill-ball')) {
+                        e.target.classList.toggle('include');
+                        e.target.classList.toggle('exclude');
+                        const number = parseInt(e.target.getAttribute('data-number'));
+                        const index = this.project3State.killNumbers.indexOf(number);
+                        if (index === -1) this.project3State.killNumbers.push(number);
+                        else this.project3State.killNumbers.splice(index, 1);
+                        this.generateFilteredNumbers();
+                    }
+                });
+                
+                // 修改：为每个位置的球体添加点击事件
+                document.querySelectorAll('.position-balls').forEach(container => {
+                    container.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('pos-ball')) {
+                            e.target.classList.toggle('selected');
+                            const position = container.getAttribute('data-position');
+                            const number = parseInt(e.target.getAttribute('data-number'));
+                            const index = this.project3State.positionSelection[position].indexOf(number);
+                            if (index === -1) this.project3State.positionSelection[position].push(number);
+                            else this.project3State.positionSelection[position].splice(index, 1);
+                            this.generateFilteredNumbers();
+                        }
+                    });
+                });
+                
+                // 新增：012路快捷选择功能
+                document.querySelectorAll('.path-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const position = e.target.getAttribute('data-position');
+                        const path = parseInt(e.target.getAttribute('data-path'));
+                        
+                        // 获取该路对应的所有数字
+                        const pathNumbers = [];
+                        for (let i = 0; i <= 9; i++) {
+                            if (i % 3 === path) {
+                                pathNumbers.push(i);
+                            }
+                        }
+                        
+                        // 获取该位置的所有球体
+                        const ballsContainer = document.querySelector(`.position-balls[data-position="${position}"]`);
+                        const balls = ballsContainer.querySelectorAll('.pos-ball');
+                        
+                        // 判断是选中还是取消
+                        const allSelected = pathNumbers.every(num => {
+                            const ball = ballsContainer.querySelector(`.pos-ball[data-number="${num}"]`);
+                            return ball.classList.contains('selected');
+                        });
+                        
+                        // 切换选中状态
+                        pathNumbers.forEach(num => {
+                            const ball = ballsContainer.querySelector(`.pos-ball[data-number="${num}"]`);
+                            if (allSelected) {
+                                // 如果已经全选中，则取消选中
+                                ball.classList.remove('selected');
+                                const index = this.project3State.positionSelection[position].indexOf(num);
+                                if (index !== -1) this.project3State.positionSelection[position].splice(index, 1);
+                            } else {
+                                // 如果没有全选中，则选中
+                                ball.classList.add('selected');
+                                if (!this.project3State.positionSelection[position].includes(num)) {
+                                    this.project3State.positionSelection[position].push(num);
+                                }
+                            }
+                        });
+                        
+                        // 更新012路按钮的选中状态
+                        this.updatePathButtonState(position);
+                        
+                        this.generateFilteredNumbers();
+                    });
+                });
+                
+                document.getElementById('clearFilterBtn').addEventListener('click', () => {
+                    this.clearProject3Filters();
+                });
+                
+                document.getElementById('showGridBtn').addEventListener('click', () => {
+                    this.showNumberGrid();
+                });
+            }
+            
+            // 新增：更新012路按钮的选中状态
+            updatePathButtonState(position) {
+                const pathButtons = document.querySelectorAll(`.path-btn[data-position="${position}"]`);
+                
+                pathButtons.forEach(btn => {
+                    const path = parseInt(btn.getAttribute('data-path'));
+                    const ballsContainer = document.querySelector(`.position-balls[data-position="${position}"]`);
+                    
+                    // 获取该路对应的所有数字
+                    const pathNumbers = [];
+                    for (let i = 0; i <= 9; i++) {
+                        if (i % 3 === path) {
+                            pathNumbers.push(i);
+                        }
+                    }
+                    
+                    // 检查该路的所有数字是否都被选中
+                    const allSelected = pathNumbers.every(num => {
+                        const ball = ballsContainer.querySelector(`.pos-ball[data-number="${num}"]`);
+                        return ball.classList.contains('selected');
+                    });
+                    
+                    // 更新按钮状态
+                    if (allSelected) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+            
+            generateFilteredNumbers() {
+                const allNumbers = this.generateAllPossibleNumbers();
+                const filteredNumbers = this.applyFilters(allNumbers);
+                
+                // 更新统计信息
+                document.getElementById('totalRecommendations').textContent = filteredNumbers.length;
+                document.getElementById('filterCount').textContent = this.getActiveFilterCount();
+                document.getElementById('killCount').textContent = this.getKillCount();
+                document.getElementById('positionCount').textContent = this.getPositionCount();
+                
+                // 更新项目3表格
+                this.updateProject3Table(filteredNumbers);
+            }
+            
+            generateAllPossibleNumbers() {
+                const numbers = [];
+                for (let i = 0; i <= 9; i++) {
+                    for (let j = 0; j <= 9; j++) {
+                        for (let k = 0; k <= 9; k++) {
+                            numbers.push([i, j, k]);
+                        }
+                    }
+                }
+                return numbers;
+            }
+            
+            applyFilters(numbers) {
+                // 如果是默认状态，返回空数组
+                if (this.isDefaultFilterState()) {
+                    return [];
+                }
+                
+                return numbers.filter(number => {
+                    return this.passSizeFilter(number) &&
+                           this.passParityFilter(number) &&
+                           this.passPrimeFilter(number) &&
+                           this.passRepeatFilter(number) &&
+                           this.passSpanFilter(number) &&
+                           this.passSumFilter(number) &&
+                           this.passKillFilter(number) &&
+                           this.passPositionFilter(number);
+                });
+            }
+            
+            // 检查是否为默认过滤状态
+            isDefaultFilterState() {
+                const { filters, killNumbers, positionSelection } = this.project3State;
+                
+                // 检查所有过滤器是否为"all"（全部不选）
+                const allFiltersDefault = Object.values(filters).every(value => value === 'all');
+                
+                // 检查杀码数组是否为空
+                const noKillNumbers = killNumbers.length === 0;
+                
+                // 检查定位选择是否全部为空
+                const noPositionSelection = Object.values(positionSelection).every(arr => arr.length === 0);
+                
+                return allFiltersDefault && noKillNumbers && noPositionSelection;
+            }
+            
+            passSizeFilter(number) {
+                const filter = this.project3State.filters.size;
+                if (filter === 'all') return true;
+                const bigCount = number.filter(n => n >= 5).length;
+                const smallCount = number.filter(n => n < 5).length;
+                switch(filter) {
+                    case 'all-big': return bigCount === 3;
+                    case 'all-small': return smallCount === 3;
+                    case '2big1small': return bigCount === 2 && smallCount === 1;
+                    case '2small1big': return smallCount === 2 && bigCount === 1;
+                    default: return true;
+                }
+            }
+            
+            passParityFilter(number) {
+                const filter = this.project3State.filters.parity;
+                if (filter === 'all') return true;
+                const oddCount = number.filter(n => n % 2 === 1).length;
+                const evenCount = number.filter(n => n % 2 === 0).length;
+                switch(filter) {
+                    case 'all-odd': return oddCount === 3;
+                    case 'all-even': return evenCount === 3;
+                    case '2odd1even': return oddCount === 2 && evenCount === 1;
+                    case '2even1odd': return evenCount === 2 && oddCount === 1;
+                    default: return true;
+                }
+            }
+            
+            passPrimeFilter(number) {
+                const filter = this.project3State.filters.prime;
+                if (filter === 'all') return true;
+                const primes = [2, 3, 5, 7];
+                const primeCount = number.filter(n => primes.includes(n)).length;
+                const compositeCount = 3 - primeCount;
+                switch(filter) {
+                    case 'all-prime': return primeCount === 3;
+                    case 'all-composite': return compositeCount === 3;
+                    case '2prime1composite': return primeCount === 2 && compositeCount === 1;
+                    case '2composite1prime': return compositeCount === 2 && primeCount === 1;
+                    default: return true;
+                }
+            }
+            
+            passRepeatFilter(number) {
+                const filter = this.project3State.filters.repeat;
+                if (filter === 'all') return true;
+                const uniqueNumbers = new Set(number);
+                const hasRepeat = uniqueNumbers.size < 3;
+                switch(filter) {
+                    case 'has-repeat': return hasRepeat;
+                    case 'no-repeat': return !hasRepeat;
+                    default: return true;
+                }
+            }
+            
+            passSpanFilter(number) {
+                const filter = this.project3State.filters.span;
+                if (filter === 'all') return true;
+                const span = Math.max(...number) - Math.min(...number);
+                switch(filter) {
+                    case 'small': return span >= 0 && span <= 4;
+                    case 'medium': return span >= 5 && span <= 7;
+                    case 'large': return span >= 8 && span <= 9;
+                    default: return true;
+                }
+            }
+            
+            passSumFilter(number) {
+                const filter = this.project3State.filters.sum;
+                if (filter === 'all') return true;
+                const sum = number.reduce((a, b) => a + b, 0);
+                switch(filter) {
+                    case 'small': return sum >= 0 && sum <= 13;
+                    case 'medium': return sum >= 14 && sum <= 20;
+                    case 'large': return sum >= 21 && sum <= 27;
+                    default: return true;
+                }
+            }
+            
+            passKillFilter(number) {
+                return !number.some(n => this.project3State.killNumbers.includes(n));
+            }
+            
+            passPositionFilter(number) {
+                const [hundred, ten, unit] = number;
+                const pos = this.project3State.positionSelection;
+                if (pos.hundred.length > 0 && !pos.hundred.includes(hundred)) return false;
+                if (pos.ten.length > 0 && !pos.ten.includes(ten)) return false;
+                if (pos.unit.length > 0 && !pos.unit.includes(unit)) return false;
+                return true;
+            }
+            
+            getActiveFilterCount() {
+                let count = 0;
+                Object.values(this.project3State.filters).forEach(value => { if (value !== 'all') count++; });
+                return count;
+            }
+            
+            getKillCount() { return this.project3State.killNumbers.length; }
+            getPositionCount() { return Object.values(this.project3State.positionSelection).reduce((sum, arr) => sum + arr.length, 0); }
+            
+            updateProject3Table(filteredNumbers) {
+                const tbody = document.getElementById('project3Results');
+                tbody.innerHTML = '';
+                if (filteredNumbers.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="10" style="text-align: center; padding: 20px; color: #888;">没有符合条件的号码</td>`;
+                    tbody.appendChild(row);
+                    return;
+                }
+                const groupedNumbers = {};
+                for (let i = 0; i <= 9; i++) {
+                    groupedNumbers[i] = [];
+                }
+                filteredNumbers.forEach(number => {
+                    const hundredDigit = number[0];
+                    groupedNumbers[hundredDigit].push(number);
+                });
+                const maxRows = Math.max(...Object.values(groupedNumbers).map(arr => arr.length));
+                for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+                    const row = document.createElement('tr');
+                    for (let colIndex = 0; colIndex <= 9; colIndex++) {
+                        const cell = document.createElement('td');
+                        if (rowIndex < groupedNumbers[colIndex].length) {
+                            const number = groupedNumbers[colIndex][rowIndex];
+                            const [hundred, ten, unit] = number;
+                            const hundredClass = this.project3State.positionSelection.hundred.length > 0 && this.project3State.positionSelection.hundred.includes(hundred) ? 'selected-digit' : '';
+                            const tenClass = this.project3State.positionSelection.ten.length > 0 && this.project3State.positionSelection.ten.includes(ten) ? 'selected-digit' : '';
+                            const unitClass = this.project3State.positionSelection.unit.length > 0 && this.project3State.positionSelection.unit.includes(unit) ? 'selected-digit' : '';
+                            cell.innerHTML = `
+                                <div class="num-group">
+                                    <span class="num-digit ${hundredClass}">${hundred}</span>
+                                    <span class="num-digit ${tenClass}">${ten}</span>
+                                    <span class="num-digit ${unitClass}">${unit}</span>
+                                </div>
+                            `;
+                        }
+                        row.appendChild(cell);
+                    }
+                    tbody.appendChild(row);
+                }
+            }
+            
+            clearProject3Table() {
+                const tbody = document.getElementById('project3Results');
+                tbody.innerHTML = '';
+                document.getElementById('totalRecommendations').textContent = '0';
+                document.getElementById('filterCount').textContent = '0';
+                document.getElementById('killCount').textContent = '0';
+                document.getElementById('positionCount').textContent = '0';
+            }
+            
+            clearProject3Filters() {
+                this.project3State = {
+                    filters: { size: 'all', parity: 'all', prime: 'all', repeat: 'all', span: 'all', sum: 'all' },
+                    killNumbers: [],
+                    positionSelection: { hundred: [], ten: [], unit: [] }
+                };
+                
+                // 重置UI状态
+                document.querySelectorAll('.filter-options').forEach(container => {
+                    const options = container.querySelectorAll('.filter-option');
+                    options.forEach(opt => opt.classList.remove('active'));
+                    const allOption = container.querySelector('[data-value="all"]');
+                    if (allOption) allOption.classList.add('active');
+                });
+                
+                document.querySelectorAll('.kill-ball').forEach(ball => {
+                    ball.classList.remove('exclude');
+                    ball.classList.add('include');
+                });
+                
+                document.querySelectorAll('.pos-ball').forEach(ball => {
+                    ball.classList.remove('selected');
+                });
+                
+                // 重置012路按钮状态
+                document.querySelectorAll('.path-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 清除项目3表格
+                this.clearProject3Table();
+                
+                // 重新生成过滤号码（此时应该是默认状态）
+                this.generateFilteredNumbers();
+                
+                // 如果有打开的弹窗，重新生成弹窗内容
+                const existingModal = document.querySelector('.grid-modal');
+                if (existingModal) {
+                    // 移除现有弹窗
+                    document.body.removeChild(existingModal);
+                    
+                    // 重新创建弹窗（会显示默认空状态）
+                    this.showNumberGrid();
+                }
+            }
+            
+            // 修复：显示号码网格弹窗 - 优化事件处理和复制功能
+            showNumberGrid() {
+                // 获取当前过滤后的号码
+                const filteredNumbers = this.applyFilters(this.generateAllPossibleNumbers());
+                
+                // 创建全屏网格弹窗
+                const modal = document.createElement('div');
+                modal.className = 'grid-modal';
+                modal.innerHTML = `
+                    <div class="grid-container">
+                        <div class="number-grid" id="modalGridContainer"></div>
+                        <div class="grid-controls">
+                            <button class="grid-close-btn" id="modalCloseBtn" type="button">
+                                <i class="fas fa-times"></i>退出
+                            </button>
+                            <div class="grid-stats" id="modalGridStats">
+                                总计 ${filteredNumbers.length} 个号码
+                            </div>
+                            <button class="grid-copy-btn" id="modalCopyBtn" type="button">
+                                <i class="fas fa-copy"></i>复制号码
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // 填充网格内容
+                const gridContainer = modal.querySelector('#modalGridContainer');
+                this.fillGridWithNumbers(gridContainer, filteredNumbers);
+                
+                // 修复：优化复制按钮事件处理
+                const copyBtn = modal.querySelector('#modalCopyBtn');
+                
+                const copyHandler = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 防止重复点击
+                    if (this.isCopying) return;
+                    this.isCopying = true;
+                    
+                    // 添加防抖，确保只执行一次
+                    setTimeout(() => {
+                        this.copyGridNumbers(modal);
+                        this.isCopying = false;
+                    }, 300);
+                };
+                
+                copyBtn.addEventListener('click', copyHandler, { once: false });
+                
+                // 修复：绑定退出按钮
+                const closeBtn = modal.querySelector('#modalCloseBtn');
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.body.removeChild(modal);
+                });
+                
+                // 点击背景关闭
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                });
+                
+                // 修复：阻止网格区域内的点击事件冒泡
+                gridContainer.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                
+                document.body.appendChild(modal);
+                
+                // 修复：确保按钮不会自动获取焦点
+                setTimeout(() => {
+                    copyBtn.blur();
+                    closeBtn.blur();
+                }, 100);
+            }
+            
+            // 用过滤号码填充网格 - 按百位分组显示，去除百位标识
+            fillGridWithNumbers(container, numbers) {
+                container.innerHTML = '';
+                
+                // 检查是否所有过滤器都是默认状态（全部不选）
+                const isDefaultState = this.isDefaultFilterState();
+                
+                if (numbers.length === 0 || isDefaultState) {
+                    const emptyRow = document.createElement('div');
+                    emptyRow.className = 'number-row';
+                    if (isDefaultState) {
+                        emptyRow.innerHTML = '<div style="color: #888; padding: 20px; text-align: center; width: 100%;">请选择过滤条件显示号码</div>';
+                    } else {
+                        emptyRow.innerHTML = '<div style="color: #888; padding: 20px; text-align: center; width: 100%;">没有符合条件的号码</div>';
+                    }
+                    container.appendChild(emptyRow);
+                    return;
+                }
+                
+                // 按百位分组
+                const groupedNumbers = {};
+                for (let i = 0; i <= 9; i++) {
+                    groupedNumbers[i] = [];
+                }
+                
+                numbers.forEach(number => {
+                    const hundredDigit = number[0];
+                    groupedNumbers[hundredDigit].push(number.join(''));
+                });
+                
+                // 创建网格行 - 按百位分组显示，去除百位标识
+                for (let hundred = 0; hundred <= 9; hundred++) {
+                    const numbersForHundred = groupedNumbers[hundred].sort();
+                    
+                    // 只显示有号码的百位行
+                    if (numbersForHundred.length > 0) {
+                        const row = document.createElement('div');
+                        row.className = 'number-row';
+                        
+                        // 去除百位标识，直接显示号码
+                        numbersForHundred.forEach(number => {
+                            const numberItem = document.createElement('div');
+                            numberItem.className = 'number-item';
+                            numberItem.textContent = number;
+                            row.appendChild(numberItem);
+                        });
+                        
+                        container.appendChild(row);
+                    }
+                }
+            }
+            
+            // 修复：复制网格号码功能 - 优化复制逻辑
+            copyGridNumbers(modal) {
+                try {
+                    const numbers = [];
+                    const rows = modal.querySelectorAll('.number-row');
+                    
+                    rows.forEach(row => {
+                        const rowNumbers = [];
+                        const numberItems = row.querySelectorAll('.number-item');
+                        
+                        numberItems.forEach(item => {
+                            const number = item.textContent.trim();
+                            if (number.length === 3 && /^\d+$/.test(number)) {
+                                rowNumbers.push(number);
+                            }
+                        });
+                        
+                        if (rowNumbers.length > 0) {
+                            numbers.push(rowNumbers.join(' '));
+                        }
+                    });
+                    
+                    if (numbers.length > 0) {
+                        const text = numbers.join('\n');
+                        this.executeCopy(text);
+                    } else {
+                        this.showCopyMessage('❌ 没有号码可复制！');
+                    }
+                } catch (error) {
+                    console.error('复制失败:', error);
+                    this.showCopyMessage('❌ 复制失败！');
+                }
+            }
+            
+            // 新增：专门处理复制操作的函数
+            executeCopy(text) {
+                // 创建临时的隐藏textarea
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                textArea.style.opacity = '0';
+                textArea.style.pointerEvents = 'none';
+                document.body.appendChild(textArea);
+                
+                // 修复：使用更可靠的选择方法
+                textArea.select();
+                textArea.setSelectionRange(0, 99999); // 对于移动设备
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    if (successful) {
+                        this.showCopyMessage('✅ 号码已复制到剪贴板！');
+                    } else {
+                        // 如果execCommand失败，尝试使用Clipboard API
+                        this.tryClipboardAPI(text);
+                    }
+                } catch (err) {
+                    document.body.removeChild(textArea);
+                    // 如果execCommand失败，尝试使用Clipboard API
+                    this.tryClipboardAPI(text);
+                }
+            }
+            
+            // 新增：尝试使用Clipboard API
+            tryClipboardAPI(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.showCopyMessage('✅ 号码已复制到剪贴板！');
+                    }).catch(err => {
+                        console.error('Clipboard API 失败:', err);
+                        this.showCopyMessage('❌ 复制失败，请手动选择复制');
+                    });
+                } else {
+                    this.showCopyMessage('❌ 复制失败，请手动选择复制');
+                }
+            }
+            
+            // 修复：显示复制消息
+            showCopyMessage(message) {
+                const existingMsg = document.querySelector('.copy-notice');
+                if (existingMsg) {
+                    existingMsg.remove();
+                }
+                
+                const msgElement = document.createElement('div');
+                msgElement.className = 'copy-notice';
+                msgElement.textContent = message;
+                
+                document.body.appendChild(msgElement);
+                
+                setTimeout(() => {
+                    if (msgElement.parentNode) {
+                        msgElement.remove();
+                    }
+                }, 2000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.lotterySystem = new LotterySystem();
+        });
+    </script>
+</body>
+</html>
