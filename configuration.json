@@ -48,10 +48,5 @@
     "name": "测试22",
     "icon": "apps/测试22/logo.jpg",
     "url": "apps/测试22/"
-  },
-  {
-    "name": "测试33",
-    "icon": "apps/测试33/logo.jpg",
-    "url": "apps/测试33/"
   }
 ]
