@@ -2,396 +2,146 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <style>/* ========== 全局重置 ========== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+  <style>/* 全局样式 */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: sans-serif;
   background: #f5f5f5;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
-/* ========== 导航栏 ========== */
+/* 导航栏：横向滚动 */
 #navBar {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: #333;
   color: #fff;
   display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-  flex-shrink: 0;
-  scrollbar-width: none;
-  padding: 4px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-#navBar::-webkit-scrollbar {
-  display: none;
+  overflow-x: auto;   /* 允许横向滚动 */
+  white-space: nowrap; /* 按钮不换行 */
+  -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
 }
 
 #navBar .tabBtn {
-  flex: 0 0 auto;
-  background: rgba(255,255,255,0.1);
+  flex: 0 0 auto;       /* 按钮固定大小，不被压缩 */
+  background: #444;
   color: #fff;
   border: none;
   margin: 4px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  border-radius: 30px;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
+  border-radius: 4px;
 }
 
 #navBar .tabBtn:hover {
-  background: rgba(255,255,255,0.2);
-  transform: translateY(-2px);
+  background: #555;
 }
 
 #navBar .tabBtn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #007bff;
   color: #fff;
-  box-shadow: 0 4px 15px rgba(102,126,234,0.4);
 }
 
-/* ========== 主画布区 ========== */
+/* 导航栏滚动条隐藏优化 */
+#navBar {
+  scrollbar-width: none; /* Firefox */
+}
+#navBar::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
+}
+
+/* 复制按钮样式 */
+.outputBlock .copyBtn {
+  display: block;          /* 独占一行，避免被挤到右侧 */
+  margin-top: 6px;         /* 与输出区保持间距 */
+  margin-bottom: 10px;     /* 底部留空，避免被遮挡 */
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.outputBlock .copyBtn:hover {
+  background: #0056b3;
+}
+
+/* 主画布区 */
 #mainCanvas {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 16px;
-  background: #f5f5f5;
+  padding: 12px;
 }
 
 /* 模块容器 */
 .module {
   background: #fff;
-  padding: 20px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  margin-bottom: 16px;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
-}
-
-.module:hover {
-  box-shadow: 0 15px 40px rgba(0,0,0,0.1);
-}
-
-.module h2 {
-  margin: 0 0 20px 0;
-  font-size: 22px;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* API选择器 */
-.api-selector {
-  background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
-  padding: 16px;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(102,126,234,0.2);
-}
-
-.api-selector label {
-  display: block;
-  margin-bottom: 8px;
-  color: #667eea;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.api-selector select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 30px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.api-selector select:hover {
-  border-color: #667eea;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 12px;
 }
 
 /* 输入框和下拉框 */
 .module label {
   display: block;
-  margin-top: 16px;
-  margin-bottom: 6px;
+  margin-top: 10px;
   font-size: 14px;
-  font-weight: 500;
-  color: #555;
+  color: #333;
 }
 
 .module input,
 .module select {
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px;
   font-size: 14px;
+  margin-top: 5px;
   box-sizing: border-box;
-  border: 2px solid #e0e0e0;
-  border-radius: 30px;
-  transition: all 0.3s;
-  background: #fff;
-}
-
-.module input:focus,
-.module select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 /* 按钮 */
 .module button {
-  margin-top: 20px;
+  margin-top: 12px;
   width: 100%;
-  padding: 14px;
-  font-size: 16px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 10px;
+  font-size: 15px;
+  background: #333;
   color: #fff;
   border: none;
-  border-radius: 30px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(102,126,234,0.3);
 }
 
 .module button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102,126,234,0.4);
+  background: #555;
 }
 
-/* 输出区 */
+/* 输出区容器 */
 .outputBlock {
-  margin-top: 20px;
-  margin-bottom: 10px;
+  margin-top: 10px;
+  margin-bottom: 15px;
 }
 
+/* 输出区样式 */
 .outputBlock pre {
   margin: 0;
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 16px;
-  min-height: 80px;
-  font-size: 14px;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  border: 1px solid #e0e0e0;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-}
-
-/* 复制按钮 */
-.outputBlock .copyBtn {
-  margin-top: 8px;
-  margin-bottom: 0;
-  padding: 10px 16px;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  min-height: 60px;
   font-size: 13px;
-  background: #6c757d;
-  border-radius: 20px;
-  width: auto;
-  display: inline-block;
-}
-
-.outputBlock .copyBtn:hover {
-  background: #5a6268;
-}
-
-/* 音乐播放器样式 */
-.music-player-card {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 20px;
-  padding: 24px;
-  color: white;
-  margin: 20px 0;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-}
-
-.music-player-card h3 {
-  margin: 0 0 15px 0;
-  font-size: 20px;
-  color: #ffd700;
-}
-
-.music-player-card audio {
-  width: 100%;
-  margin: 15px 0;
-}
-
-.music-player-card audio::-webkit-media-controls-panel {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.music-info {
-  display: flex;
-  gap: 20px;
-  font-size: 14px;
-  color: #a0a0a0;
-  margin-top: 10px;
-}
-
-/* 加载动画 */
-.loading-animation {
-  text-align: center;
-  padding: 40px;
-  background: #f8f9fa;
-  border-radius: 16px;
-}
-
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #e0e0e0;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 依赖提示 */
-.dependency-hint {
-  animation: slideDown 0.3s ease;
-  margin-bottom: 16px;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  white-space: pre-wrap;   /* 保留换行符并自动换行 */
+  word-wrap: break-word;   /* 长单词或长链接自动断行 */
+  overflow-x: auto;        /* 超长内容仍可横向滚动 */
 }
 
 /* 底部状态栏 */
 #statusBar {
-  background: #fff;
+  background: #eee;
   text-align: center;
-  padding: 12px;
-  font-size: 14px;
+  padding: 10px;
+  font-size: 13px;
   color: #333;
-  flex-shrink: 0;
-  border-top: 1px solid #e0e0e0;
-  box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
-}
-
-/* 一键运行按钮 */
-#runPipelineBtn {
-  display: block;
-  width: calc(100% - 32px);
-  margin: 0 16px 16px 16px;
-  padding: 16px;
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-  color: #fff;
-  border: none;
-  border-radius: 30px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 4px 15px rgba(40,167,69,0.3);
-  transition: all 0.3s;
-}
-
-#runPipelineBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(40,167,69,0.4);
-}
-
-/* 模态框 */
-.modal {
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 20px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-
-.close {
-  position: absolute;
-  right: 20px;
-  top: 15px;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-}
-
-.close:hover {
-  color: #333;
-}
-
-.modal input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.modal button {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .module {
-    padding: 16px;
-  }
-  
-  .module h2 {
-    font-size: 20px;
-  }
-  
-  #navBar .tabBtn {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
 }</style>
 </head>
 <body>
@@ -399,500 +149,800 @@ body {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>音乐工厂 · 多引擎AI音乐生成</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>音乐工厂 APP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
-  <style>
-    /* 临时修复样式 */
-    .api-selector {
-      background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
-      padding: 16px;
-      border-radius: 16px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(102,126,234,0.2);
-    }
-    .api-selector label {
-      display: block;
-      margin-bottom: 8px;
-      color: #667eea;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .api-selector select {
-      width: 100%;
-      padding: 12px 16px;
-      border: 2px solid #e0e0e0;
-      border-radius: 30px;
-      font-size: 14px;
-      background: white;
-      cursor: pointer;
-    }
-  </style>
 </head>
 <body>
 
-  <!-- 顶部导航栏（横向滚动） -->
   <div id="navBar">
-    <button class="tabBtn active" data-target="module1">📋 任务单</button>
-    <button class="tabBtn" data-target="module2">💬 Prompt</button>
-    <button class="tabBtn" data-target="module3">🎵 音乐生成</button>
-    <button class="tabBtn" data-target="module4">🔍 筛选</button>
-    <button class="tabBtn" data-target="module5">🎛 后期处理</button>
-    <button class="tabBtn" data-target="module6">📢 发布</button>
-    <button class="tabBtn" data-target="module7">📦 归档</button>
+    <button class="tabBtn active" data-target="module1">任务单</button>
+    <button class="tabBtn" data-target="module2">Prompt</button>
+    <button class="tabBtn" data-target="module3">音乐生成</button>
+    <button class="tabBtn" data-target="module4">筛选</button>
+    <button class="tabBtn" data-target="module5">后期处理</button>
+    <button class="tabBtn" data-target="module6">发布</button>
+    <button class="tabBtn" data-target="module7">归档</button>
   </div>
 
-  <!-- 主内容区域：可上下滑动，保证底部信息可见 -->
-  <div id="mainCanvas">
+<div id="mainCanvas">
 
-    <!-- 模块1 任务单（默认显示） -->
     <div id="module1" class="module">
-      <h2>📋 任务单</h2>
+      <h2>任务单</h2>
 
       <label>主题（title）</label>
-      <input id="titleInput" type="text" placeholder="例如：夏日午后">
+      <input id="titleInput" type="text">
 
       <label>情绪（mood）</label>
-      <input id="moodInput" type="text" placeholder="例如：欢快、平静">
+      <input id="moodInput" type="text">
 
       <label>BPM（bpm）</label>
-      <input id="bpmInput" type="number" placeholder="120">
+      <input id="bpmInput" type="number">
 
       <label>场景（scene）</label>
-      <input id="sceneInput" type="text" placeholder="例如：咖啡馆、运动">
+      <input id="sceneInput" type="text">
 
       <label>标签（tags）</label>
-      <input id="tagsInput" type="text" placeholder="例如：钢琴、电子">
+      <input id="tagsInput" type="text">
 
       <label>备注（notes）</label>
-      <input id="notesInput" type="text" placeholder="其他说明">
+      <input id="notesInput" type="text">
 
-      <button id="generateBtn">✨ 生成任务单</button>
+      <button id="generateBtn">生成任务单</button>
 
       <div class="outputBlock">
         <pre id="outputBox"></pre>
-        <button class="copyBtn" data-target="outputBox">📋 复制内容</button>
+        <button class="copyBtn" data-target="outputBox">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块2 Prompt (初始隐藏) -->
     <div id="module2" class="module" style="display:none;">
-      <h2>💬 Prompt</h2>
+      <h2>Prompt</h2>
 
       <label>输入提示词</label>
-      <input id="promptInput" type="text" placeholder="例如：轻快的钢琴旋律">
+      <input id="promptInput" type="text">
 
-      <button id="promptBtn">✨ 生成 Prompt</button>
+      <button id="promptBtn">生成 Prompt</button>
 
       <div class="outputBlock">
         <pre id="promptOutput"></pre>
-        <button class="copyBtn" data-target="promptOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="promptOutput">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块3 音乐生成（API选择下拉框在这里！） -->
     <div id="module3" class="module" style="display:none;">
-      <h2>🎵 音乐生成</h2>
-
-      <!-- API选择下拉框 - 正确位置 -->
-      <div class="api-selector">
-        <label>🎛 选择音乐引擎</label>
-        <select id="apiSelect">
-          <option value="webaudio">🎵 Web Audio API (浏览器合成)</option>
-          <option value="mureka">🤖 Mureka AI (专业AI音乐)</option>
-          <option value="suno">🎼 Suno AI (AI音乐生成)</option>
-          <option value="library" selected>📚 预置音乐库 (演示模式)</option>
-        </select>
-        <p style="font-size: 12px; color: #666; margin-top: 8px;">💡 选择不同的引擎会生成不同风格的音乐</p>
-      </div>
+      <h2>音乐生成</h2>
 
       <label>输入旋律描述</label>
-      <input id="melodyInput" type="text" placeholder="例如：C大调 4/4拍">
+      <input id="melodyInput" type="text">
 
       <label>选择风格</label>
       <select id="styleSelect">
-        <option value="pop">🎸 流行</option>
-        <option value="rock">🤘 摇滚</option>
-        <option value="jazz">🎺 爵士</option>
-        <option value="classical">🎻 古典</option>
-        <option value="electronic">💿 电子</option>
-        <option value="hiphop">🎤 嘻哈</option>
+        <option value="pop">流行</option>
+        <option value="rock">摇滚</option>
+        <option value="jazz">爵士</option>
+        <option value="classical">古典</option>
       </select>
 
-      <button id="musicBtn">🎵 生成音乐</button>
+      <button id="musicBtn">生成音乐</button>
 
       <div class="outputBlock">
         <pre id="musicOutput"></pre>
-        <button class="copyBtn" data-target="musicOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="musicOutput">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块4 筛选 -->
-    <div id="module4" class="module" style="display:none;">
-      <h2>🔍 筛选</h2>
+<div id="module4" class="module" style="display:none;">
+      <h2>筛选</h2>
 
       <label>输入待筛选的任务单 ID</label>
-      <input id="filterInput" type="text" placeholder="例如：TASK-001">
+      <input id="filterInput" type="text">
 
       <label>选择筛选条件</label>
       <select id="filterSelect">
-        <option value="quality">⭐ 质量</option>
-        <option value="length">⏱ 长度</option>
-        <option value="style">🎵 风格</option>
+        <option value="quality">质量</option>
+        <option value="length">长度</option>
+        <option value="style">风格</option>
       </select>
 
-      <button id="filterBtn">🔍 开始筛选</button>
+      <button id="filterBtn">开始筛选</button>
 
       <div class="outputBlock">
         <pre id="filterOutput"></pre>
-        <button class="copyBtn" data-target="filterOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="filterOutput">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块5 后期处理 -->
     <div id="module5" class="module" style="display:none;">
-      <h2>🎛 后期处理</h2>
+      <h2>后期处理</h2>
 
       <label>上传音频文件</label>
-      <input id="postFile" type="file" accept="audio/*">
+      <input id="postFile" type="file">
 
       <label>选择处理方式</label>
       <select id="postSelect">
-        <option value="mix">🎚 混音</option>
-        <option value="master">🎛 母带</option>
-        <option value="effect">✨ 加效果</option>
+        <option value="mix">混音</option>
+        <option value="master">母带</option>
+        <option value="effect">加效果</option>
       </select>
 
-      <button id="postBtn">🎛 开始处理</button>
+      <button id="postBtn">开始处理</button>
 
       <div class="outputBlock">
         <pre id="postOutput"></pre>
-        <button class="copyBtn" data-target="postOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="postOutput">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块6 发布 -->
     <div id="module6" class="module" style="display:none;">
-      <h2>📢 发布</h2>
+      <h2>发布</h2>
 
       <label>作品标题</label>
-      <input id="publishTitle" type="text" placeholder="例如：夏日协奏曲">
+      <input id="publishTitle" type="text">
 
       <label>选择平台</label>
       <select id="publishSelect">
-        <option value="netease">🎵 网易云</option>
-        <option value="qqmusic">🐧 QQ音乐</option>
-        <option value="spotify">🟢 Spotify</option>
+        <option value="netease">网易云</option>
+        <option value="qqmusic">QQ音乐</option>
+        <option value="spotify">Spotify</option>
       </select>
 
-      <button id="publishBtn">📢 发布作品</button>
+      <button id="publishBtn">发布作品</button>
 
       <div class="outputBlock">
         <pre id="publishOutput"></pre>
-        <button class="copyBtn" data-target="publishOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="publishOutput">复制内容</button>
       </div>
     </div>
 
-    <!-- 模块7 归档 -->
-    <div id="module7" class="module" style="display:none;">
-      <h2>📦 归档</h2>
+<div id="module7" class="module" style="display:none;">
+      <h2>归档</h2>
 
       <label>作品 ID</label>
-      <input id="archiveInput" type="text" placeholder="例如：PRJ-999">
+      <input id="archiveInput" type="text">
 
-      <button id="archiveBtn">📦 归档作品</button>
+      <button id="archiveBtn">归档作品</button>
 
       <div class="outputBlock">
         <pre id="archiveOutput"></pre>
-        <button class="copyBtn" data-target="archiveOutput">📋 复制内容</button>
+        <button class="copyBtn" data-target="archiveOutput">复制内容</button>
       </div>
     </div>
 
-  </div> <!-- end #mainCanvas -->
+  </div>
 
-  <!-- 一键运行流水线按钮 -->
-  <button id="runPipelineBtn">🚀 一键运行流水线</button>
+  <button id="runPipelineBtn">一键运行流水线</button>
 
-  <!-- 底部状态栏 -->
   <div id="statusBar">
-    <p>✨ 就绪 - 点击模块开始创作</p>
+    <p>状态栏：任务数 | 自动化进度 | 最近生成</p>
   </div>
 
-  <!-- API配置弹窗 -->
-  <div id="apiConfigModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h3>🔑 API 配置</h3>
-      <p>请输入您的API密钥：</p>
-      <input type="text" id="murekaApiKey" placeholder="Mureka AI API Key">
-      <input type="text" id="sunoApiKey" placeholder="Suno AI API Key">
-      <button id="saveApiKeys">保存</button>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-<script>// app.js - 简化修复版
-document.addEventListener("DOMContentLoaded", function() {
-  console.log("音乐工厂 - 简化版已启动");
 
-  // ========== 数据结构 ==========
+<script>document.addEventListener("DOMContentLoaded", function () {
+  console.log("应用已启动（整合版）");
+
+  // ============================
+  // 1. 全局流水线数据（含自动恢复）
+  // ============================
   let pipelineData = {
-    task: { id: null, title: "", mood: "", bpm: "", scene: "", tags: "", notes: "", time: null, output: "" },
-    prompt: { id: null, text: "", source: "", time: null, output: "" },
-    music: { id: null, melody: "", style: "", styleName: "", url: "", engine: "", time: null, output: "" },
-    filter: { id: null, taskId: "", condition: "", conditionName: "", score: 0, passed: false, time: null, output: "" },
-    post: { id: null, fileName: "", process: "", processName: "", outputFile: "", time: null, output: "" },
-    publish: { id: null, title: "", platform: "", platformName: "", url: "", time: null, output: "" },
-    archive: { id: null, archiveId: "", path: "", time: null, output: "" }
+    task: null,
+    prompt: null,
+    music: null,
+    filter: null,
+    post: null,
+    publish: null,
+    archive: null
   };
 
-  // ========== 预置音乐库 ==========
-  const MusicLibrary = {
-    tracks: [
-      { id: 'lib1', name: '夏日微风', mood: '欢快', style: 'pop', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-      { id: 'lib2', name: '雨夜沉思', mood: '平静', style: 'classical', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-      { id: 'lib3', name: '激情摇滚', mood: '激昂', style: 'rock', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' }
-    ],
-    findMatch(style) {
-      return this.tracks.find(t => t.style === style) || this.tracks[0];
+  // 从 localStorage 恢复
+  try {
+    const saved = localStorage.getItem("pipelineData");
+    if (saved) {
+      pipelineData = JSON.parse(saved);
+      console.log("已恢复 pipelineData：", pipelineData);
     }
-  };
+  } catch (e) {
+    console.warn("恢复失败：", e);
+  }
 
-  // ========== Web Audio引擎 ==========
-  const WebAudioEngine = {
-    context: null,
-    generate(params) {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const bpm = parseInt(params.bpm) || 120;
-        const notes = [261.63, 293.66, 329.63, 349.23];
-        const duration = 60 / bpm;
-        
-        let time = ctx.currentTime;
-        for (let i = 0; i < 4; i++) {
-          notes.forEach((freq, index) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            gain.gain.setValueAtTime(0.2, time + index * duration);
-            gain.gain.exponentialRampToValueAtTime(0.01, time + (index + 1) * duration);
-            osc.start(time + index * duration);
-            osc.stop(time + (index + 1) * duration);
-          });
-          time += notes.length * duration;
-        }
-        return { success: true, message: 'Web Audio播放中' };
-      } catch (e) {
-        return { success: false, error: e.message };
-      }
-    }
-  };
-
-  // ========== 获取元素 ==========
+  // ============================
+  // 2. 获取所有 DOM 元素
+  // ============================
   const statusBar = document.getElementById("statusBar");
   const tabButtons = document.querySelectorAll(".tabBtn");
   const modules = document.querySelectorAll(".module");
-  
+
+  // 任务单
   const titleInput = document.getElementById("titleInput");
   const moodInput = document.getElementById("moodInput");
   const bpmInput = document.getElementById("bpmInput");
+  const sceneInput = document.getElementById("sceneInput");
+  const tagsInput = document.getElementById("tagsInput");
+  const notesInput = document.getElementById("notesInput");
   const outputBox = document.getElementById("outputBox");
-  
+
+  // Prompt
   const promptInput = document.getElementById("promptInput");
   const promptOutput = document.getElementById("promptOutput");
-  
+
+  // 音乐
   const melodyInput = document.getElementById("melodyInput");
   const styleSelect = document.getElementById("styleSelect");
   const musicOutput = document.getElementById("musicOutput");
-  const apiSelect = document.getElementById("apiSelect");
-  
+
+  // 筛选
+  const filterInput = document.getElementById("filterInput");
+  const filterSelect = document.getElementById("filterSelect");
+  const filterOutput = document.getElementById("filterOutput");
+
+  // 后期
+  const postFile = document.getElementById("postFile");
+  const postSelect = document.getElementById("postSelect");
+  const postOutput = document.getElementById("postOutput");
+
+  // 发布
+  const publishTitle = document.getElementById("publishTitle");
+  const publishSelect = document.getElementById("publishSelect");
+  const publishOutput = document.getElementById("publishOutput");
+
+  // 归档
+  const archiveInput = document.getElementById("archiveInput");
+  const archiveOutput = document.getElementById("archiveOutput");
+
+  // 按钮
   const generateBtn = document.getElementById("generateBtn");
   const promptBtn = document.getElementById("promptBtn");
   const musicBtn = document.getElementById("musicBtn");
+  const filterBtn = document.getElementById("filterBtn");
+  const postBtn = document.getElementById("postBtn");
+  const publishBtn = document.getElementById("publishBtn");
+  const archiveBtn = document.getElementById("archiveBtn");
   const runPipelineBtn = document.getElementById("runPipelineBtn");
 
-  console.log('API Select found:', !!apiSelect);
-  console.log('Music Btn found:', !!musicBtn);
-
-  // ========== 导航栏切换 ==========
+  // ============================
+  // 3. 导航栏切换 + 自动滚动
+  // ============================
   tabButtons.forEach(btn => {
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", function () {
       const target = this.dataset.target;
-      modules.forEach(m => m.style.display = m.id === target ? "block" : "none");
+
+      // 切换模块显示
+      modules.forEach(m => {
+        m.style.display = (m.id === target) ? "block" : "none";
+      });
+
+      // 更新按钮激活状态
       tabButtons.forEach(b => b.classList.remove("active"));
       this.classList.add("active");
-      if (statusBar) statusBar.innerHTML = `<p>📌 当前模块：${this.textContent}</p>`;
+
+      // 自动滚动到当前按钮
+      this.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest"
+      });
+
+      // 状态栏提示
+      if (statusBar) {
+        statusBar.textContent = "当前模块：" + this.textContent;
+      }
     });
   });
 
-  // ========== 复制功能 ==========
+  // ============================
+  // 4. 复制功能（通用）
+  // ============================
   document.querySelectorAll(".copyBtn").forEach(btn => {
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", function () {
       const id = this.dataset.target;
       const element = document.getElementById(id);
       if (element) {
-        navigator.clipboard.writeText(element.textContent).then(() => alert("✅ 复制成功！"));
+        const text = element.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          alert("复制成功");
+        }).catch(() => {
+          alert("复制失败，请手动复制");
+        });
       }
     });
   });
 
-  // ========== 模块1：任务单 ==========
+  // ============================
+  // 5. 模块 1：生成任务单
+  // ============================
   if (generateBtn) {
-    generateBtn.addEventListener("click", function() {
+    generateBtn.addEventListener("click", function () {
       pipelineData.task = {
-        id: `TASK-${Date.now().toString().slice(-6)}`,
         title: titleInput?.value || "未填写",
         mood: moodInput?.value || "未填写",
-        bpm: bpmInput?.value || "120",
+        bpm: bpmInput?.value || "未填写",
+        scene: sceneInput?.value || "未填写",
+        tags: tagsInput?.value || "未填写",
+        notes: notesInput?.value || "未填写",
         time: new Date().toLocaleString()
       };
-      
-      outputBox.innerHTML = `
-        <div style="padding: 10px;">
-          <h3>任务单 ${pipelineData.task.id}</h3>
-          <p>主题: ${pipelineData.task.title}</p>
-          <p>情绪: ${pipelineData.task.mood}</p>
-          <p>BPM: ${pipelineData.task.bpm}</p>
-        </div>
-      `;
-      
-      if (statusBar) statusBar.innerHTML = "<p>✅ 任务单已生成</p>";
+
+      outputBox.textContent = JSON.stringify(pipelineData.task, null, 2);
+      savePipeline();
     });
   }
 
-  // ========== 模块2：Prompt ==========
+  // ============================
+  // 6. 模块 2：生成 Prompt
+  // ============================
   if (promptBtn) {
-    promptBtn.addEventListener("click", function() {
-      pipelineData.prompt = {
-        id: `PROMPT-${Date.now().toString().slice(-6)}`,
-        text: promptInput?.value || "默认提示词",
+    promptBtn.addEventListener("click", function () {
+      if (!pipelineData.task) {
+        alert("请先生成任务单！");
+        return;
+      }
+
+      const t = pipelineData.task;
+      const base = promptInput?.value || "";
+
+      pipelineData.prompt = base || `${t.title} / ${t.mood} / ${t.scene}`;
+
+             // 修改这里：使用任务单数据，可选添加用户输入
+    pipelineData.prompt = `${t.title} / ${t.mood} / ${t.scene}`;
+    if (base) {
+      pipelineData.prompt += ` / ${base}`;
+    }
+
+      const result =
+        `【生成的 Prompt】\n${pipelineData.prompt}\n\n质量：高\n长度：中等\n风格：通用`;
+
+      if (promptOutput) {
+        promptOutput.textContent = result;
+      }
+
+      savePipeline();
+    });
+  }
+
+  // ============================
+  // 7. 模块 3：生成音乐
+  // ============================
+  if (musicBtn) {
+    musicBtn.addEventListener("click", function () {
+      if (!pipelineData.prompt) {
+        alert("请先生成 Prompt！");
+        return;
+      }
+
+      const melody = melodyInput?.value || pipelineData.prompt || "默认旋律";
+      const style = styleSelect?.value || "pop";
+
+      pipelineData.music = {
+        melody,
+        style,
+        time: Date.now()
+      };
+
+      const result =
+        `🎵 音乐生成完成\n\n` +
+        `旋律：${melody}\n风格：${style}\n状态：已生成\n` +
+        `链接：https://music.example/track/${pipelineData.music.time}`;
+
+      if (musicOutput) {
+        musicOutput.textContent = result;
+      }
+
+      savePipeline();
+    });
+  }
+
+  // ============================
+  // 8. 模块 4：筛选
+  // ============================
+  if (filterBtn) {
+    filterBtn.addEventListener("click", function () {
+      if (!pipelineData.music) {
+        alert("请先生成音乐！");
+        return;
+      }
+
+      const id = filterInput?.value || pipelineData.music.time || "未指定ID";
+      const condition = filterSelect?.value || "quality";
+
+      pipelineData.filter = {
+        id,
+        condition,
+        score: Math.floor(Math.random() * 30 + 70) // 70~100
+      };
+
+      const result =
+        `🔍 筛选结果\n\n` +
+        `任务单：${id}\n条件：${condition}\n状态：通过 ✓\n` +
+        `评分：${pipelineData.filter.score}分`;
+
+      if (filterOutput) {
+        filterOutput.textContent = result;
+      }
+
+      savePipeline();
+    });
+  }
+
+  // ============================
+  // 9. 模块 5：后期处理
+  // ============================
+  if (postBtn) {
+    postBtn.addEventListener("click", function () {
+      if (!pipelineData.music) {
+        alert("请先生成音乐！");
+        return;
+      }
+
+      const fileName = postFile?.files?.[0]?.name || "demo.wav";
+      const process = postSelect?.value || "mix";
+
+      pipelineData.post = {
+        file: fileName,
+        process,
+        output: `processed_${fileName}`
+      };
+
+      const result =
+        `🎛 后期处理完成\n\n` +
+        `文件：${fileName}\n处理方式：${process}\n输出：${pipelineData.post.output}`;
+
+      if (postOutput) {
+        postOutput.textContent = result;
+      }
+
+      savePipeline();
+    });
+  }
+
+  // ============================
+  // 10. 模块 6：发布
+  // ============================
+  if (publishBtn) {
+    publishBtn.addEventListener("click", function () {
+      if (!pipelineData.post) {
+        alert("请先完成后期处理！");
+        return;
+      }
+
+      const title = publishTitle?.value || pipelineData.task?.title || "未命名作品";
+      const platform = publishSelect?.value || "netease";
+
+      const platforms = {
+        netease: "网易云音乐",
+        qqmusic: "QQ音乐",
+        spotify: "Spotify"
+      };
+
+      pipelineData.publish = {
+        title,
+        platform,
         time: new Date().toLocaleString()
       };
-      
-      promptOutput.innerHTML = `
-        <div style="padding: 10px; background: #f0f7ff;">
-          <p>${pipelineData.prompt.text}</p>
-        </div>
-      `;
-      
-      if (statusBar) statusBar.innerHTML = "<p>✅ Prompt已生成</p>";
+
+      const result =
+        `📢 发布成功！\n\n` +
+        `作品：${title}\n平台：${platforms[platform]}\n时间：${pipelineData.publish.time}\n` +
+        `链接：https://music.example/${platform}/${Date.now()}`;
+
+      if (publishOutput) {
+        publishOutput.textContent = result;
+      }
+
+      savePipeline();
     });
   }
 
-  // ========== 模块3：音乐生成（修复版）==========
-  if (musicBtn) {
-    musicBtn.addEventListener("click", async function() {
-      // 获取选中的引擎
-      const engine = apiSelect ? apiSelect.value : 'library';
-      const style = styleSelect?.value || 'pop';
-      const styleNames = { pop: '流行', rock: '摇滚', jazz: '爵士', classical: '古典' };
-      
-      console.log('使用引擎:', engine);
-      
-      if (statusBar) statusBar.innerHTML = `<p>⏳ 使用${engine}引擎生成音乐...</p>`;
-      
-      musicOutput.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ 生成中...</div>';
-      
-      let result;
-      
-      switch(engine) {
-        case 'webaudio':
-          result = WebAudioEngine.generate({ bpm: pipelineData.task?.bpm });
-          break;
-        case 'library':
-          await new Promise(r => setTimeout(r, 1000));
-          const track = MusicLibrary.findMatch(style);
-          result = { success: true, audioUrl: track.url, title: track.name };
-          break;
-        default:
-          await new Promise(r => setTimeout(r, 1500));
-          result = { 
-            success: true, 
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-            title: `${engine}音乐`
-          };
+  // ============================
+  // 11. 模块 7：归档
+  // ============================
+  if (archiveBtn) {
+    archiveBtn.addEventListener("click", function () {
+      if (!pipelineData.publish) {
+        alert("请先完成发布！");
+        return;
       }
-      
-      if (result.success) {
-        pipelineData.music = {
-          id: `MUSIC-${Date.now().toString().slice(-6)}`,
-          melody: melodyInput?.value || '默认旋律',
-          style: style,
-          styleName: styleNames[style],
-          url: result.audioUrl,
-          engine: engine,
-          time: Date.now()
-        };
-        
-        if (result.audioUrl) {
-          musicOutput.innerHTML = `
-            <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px; border-radius: 12px; color: white;">
-              <h3>🎵 ${result.title || '生成的音乐'}</h3>
-              <p>引擎: ${engine} | 风格: ${styleNames[style]}</p>
-              <audio controls style="width: 100%; margin-top: 15px;">
-                <source src="${result.audioUrl}" type="audio/mpeg">
-              </audio>
-            </div>
-          `;
-        } else {
-          musicOutput.innerHTML = `
-            <div style="background: #1a1a2e; padding: 20px; border-radius: 12px; color: white;">
-              <h3>🎵 Web Audio 合成音乐</h3>
-              <p>正在播放中...</p>
-              <button onclick="location.reload()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 20px;">停止</button>
-            </div>
-          `;
-        }
-        
-        if (statusBar) statusBar.innerHTML = "<p>✅ 音乐生成完成！</p>";
+
+      const id = archiveInput?.value || pipelineData.publish.title || "未指定ID";
+
+      pipelineData.archive = {
+        id,
+        path: `/archive/${new Date().getFullYear()}/${id}`,
+        time: new Date().toLocaleString()
+      };
+
+      const result =
+        `📦 归档完成\n\n` +
+        `作品ID：${pipelineData.archive.id}\n` +
+        `位置：${pipelineData.archive.path}\n` +
+        `时间：${pipelineData.archive.time}`;
+
+      if (archiveOutput) {
+        archiveOutput.textContent = result;
       }
+
+      savePipeline();
     });
   }
 
-  // ========== 一键运行流水线 ==========
+  // ============================
+  // 12. 一键运行流水线
+  // ============================
   if (runPipelineBtn) {
-    runPipelineBtn.addEventListener("click", function() {
-      // 自动填充任务单
-      if (titleInput) titleInput.value = "夏日协奏曲";
-      if (moodInput) moodInput.value = "欢快";
-      if (bpmInput) bpmInput.value = "120";
-      
-      // 点击任务单
-      setTimeout(() => generateBtn?.click(), 500);
-      
-      // 切换到Prompt模块
-      setTimeout(() => {
-        modules.forEach(m => m.style.display = m.id === 'module2' ? 'block' : 'none');
-        tabButtons.forEach(b => {
-          if (b.dataset.target === 'module2') b.classList.add('active');
-          else b.classList.remove('active');
-        });
-        if (promptInput) promptInput.value = "轻快的钢琴旋律";
-        setTimeout(() => promptBtn?.click(), 500);
-      }, 1000);
-      
-      // 切换到音乐模块
-      setTimeout(() => {
-        modules.forEach(m => m.style.display = m.id === 'module3' ? 'block' : 'none');
-        tabButtons.forEach(b => {
-          if (b.dataset.target === 'module3') b.classList.add('active');
-          else b.classList.remove('active');
-        });
-        // 设置引擎为预置库
-        if (apiSelect) apiSelect.value = 'library';
-        setTimeout(() => musicBtn?.click(), 500);
-      }, 2000);
-      
-      if (statusBar) statusBar.innerHTML = "<p>🚀 流水线执行中...</p>";
+    runPipelineBtn.addEventListener("click", function () {
+      console.log("开始运行流水线…");
+
+      // 任务单
+      if (!pipelineData.task) {
+        generateBtn?.click();
+      }
+
+      // Prompt
+      if (!pipelineData.prompt) {
+        promptBtn?.click();
+      }
+
+      // 音乐
+      if (!pipelineData.music) {
+        musicBtn?.click();
+      }
+
+      // 筛选
+      if (!pipelineData.filter) {
+        filterBtn?.click();
+      }
+
+      // 后期
+      if (!pipelineData.post) {
+        postBtn?.click();
+      }
+
+      // 发布
+      if (!pipelineData.publish) {
+        publishBtn?.click();
+      }
+
+      // 归档
+      if (!pipelineData.archive) {
+        archiveBtn?.click();
+      }
+
+      // 状态栏提示
+      if (statusBar) {
+        statusBar.textContent = "流水线已完成 ✓";
+      }
+
+      savePipeline();
     });
   }
 
-  if (statusBar) statusBar.innerHTML = "<p>✨ 音乐工厂就绪 - API选择器在音乐生成模块</p>";
+  // ============================
+  // 13. 状态栏更新函数
+  // ============================
+  function updateStatus(message, type = "info") {
+    if (!statusBar) return;
+
+    statusBar.textContent = message;
+    statusBar.className = "status " + type;
+
+    // 自动清除提示
+    setTimeout(() => {
+      statusBar.textContent = "状态栏：任务数 | 自动化进度 | 最近生成";
+      statusBar.className = "status";
+    }, 4000);
+  }
+
+  // ============================
+  // 14. 全局提示工具
+  // ============================
+  function showAlert(message, type = "success") {
+    const box = document.createElement("div");
+    box.className = "alert " + type;
+    box.textContent = message;
+    box.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: ${type === 'success' ? '#4caf50' : '#f44336'};
+      color: white;
+      border-radius: 4px;
+      z-index: 1000;
+    `;
+
+    document.body.appendChild(box);
+
+    setTimeout(() => {
+      box.remove();
+    }, 3000);
+  }
+
+  // ============================
+  // 15. 本地存储与恢复
+  // ============================
+  function savePipeline() {
+    try {
+      localStorage.setItem("pipelineData", JSON.stringify(pipelineData));
+      console.log("流水线数据已保存");
+    } catch (e) {
+      console.error("保存失败：", e);
+    }
+  }
+
+  function loadPipeline() {
+    try {
+      const data = localStorage.getItem("pipelineData");
+      if (data) {
+        pipelineData = JSON.parse(data);
+        console.log("流水线数据已恢复", pipelineData);
+
+        // 恢复输出框内容
+        if (pipelineData.task && outputBox) {
+          outputBox.textContent = JSON.stringify(pipelineData.task, null, 2);
+        }
+        if (pipelineData.prompt && promptOutput) {
+          const result = `【生成的 Prompt】\n${pipelineData.prompt}\n\n质量：高\n长度：中等\n风格：通用`;
+          promptOutput.textContent = result;
+        }
+        if (pipelineData.music && musicOutput) {
+          const result = `🎵 音乐生成完成\n\n旋律：${pipelineData.music.melody}\n风格：${pipelineData.music.style}\n状态：已生成\n链接：https://music.example/track/${pipelineData.music.time}`;
+          musicOutput.textContent = result;
+        }
+        if (pipelineData.filter && filterOutput) {
+          const result = `🔍 筛选结果\n\n任务单：${pipelineData.filter.id}\n条件：${pipelineData.filter.condition}\n状态：通过 ✓\n评分：${pipelineData.filter.score}分`;
+          filterOutput.textContent = result;
+        }
+        if (pipelineData.post && postOutput) {
+          const result = `🎛 后期处理完成\n\n文件：${pipelineData.post.file}\n处理方式：${pipelineData.post.process}\n输出：${pipelineData.post.output}`;
+          postOutput.textContent = result;
+        }
+        if (pipelineData.publish && publishOutput) {
+          const platforms = {
+            netease: "网易云音乐",
+            qqmusic: "QQ音乐",
+            spotify: "Spotify"
+          };
+          const result = `📢 发布成功！\n\n作品：${pipelineData.publish.title}\n平台：${platforms[pipelineData.publish.platform]}\n时间：${pipelineData.publish.time}\n链接：https://music.example/${pipelineData.publish.platform}/${Date.now()}`;
+          publishOutput.textContent = result;
+        }
+        if (pipelineData.archive && archiveOutput) {
+          const result = `📦 归档完成\n\n作品ID：${pipelineData.archive.id}\n位置：${pipelineData.archive.path}\n时间：${pipelineData.archive.time}`;
+          archiveOutput.textContent = result;
+        }
+      }
+    } catch (e) {
+      console.error("恢复失败：", e);
+    }
+  }
+
+  // ============================
+  // 16. 快捷键支持
+  // ============================
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey && e.key === "1") {
+      e.preventDefault();
+      generateBtn?.click(); // Ctrl+1 生成任务单
+    }
+    if (e.ctrlKey && e.key === "2") {
+      e.preventDefault();
+      promptBtn?.click(); // Ctrl+2 生成 Prompt
+    }
+    if (e.ctrlKey && e.key === "3") {
+      e.preventDefault();
+      musicBtn?.click(); // Ctrl+3 生成音乐
+    }
+    if (e.ctrlKey && e.key === "4") {
+      e.preventDefault();
+      filterBtn?.click(); // Ctrl+4 筛选
+    }
+    if (e.ctrlKey && e.key === "5") {
+      e.preventDefault();
+      postBtn?.click(); // Ctrl+5 后期处理
+    }
+    if (e.ctrlKey && e.key === "6") {
+      e.preventDefault();
+      publishBtn?.click(); // Ctrl+6 发布
+    }
+    if (e.ctrlKey && e.key === "7") {
+      e.preventDefault();
+      archiveBtn?.click(); // Ctrl+7 归档
+    }
+    if (e.ctrlKey && e.key === "0") {
+      e.preventDefault();
+      runPipelineBtn?.click(); // Ctrl+0 一键运行流水线
+    }
+  });
+
+  // ============================
+  // 17. 模块依赖检查函数
+  // ============================
+  function checkDependency(moduleName) {
+    switch (moduleName) {
+      case "prompt":
+        if (!pipelineData.task) {
+          showAlert("依赖缺失：请先生成任务单", "error");
+          return false;
+        }
+        break;
+      case "music":
+        if (!pipelineData.prompt) {
+          showAlert("依赖缺失：请先生成 Prompt", "error");
+          return false;
+        }
+        break;
+      case "filter":
+        if (!pipelineData.music) {
+          showAlert("依赖缺失：请先生成音乐", "error");
+          return false;
+        }
+        break;
+      case "post":
+        if (!pipelineData.music) {
+          showAlert("依赖缺失：请先生成音乐", "error");
+          return false;
+        }
+        break;
+      case "publish":
+        if (!pipelineData.post) {
+          showAlert("依赖缺失：请先完成后期处理", "error");
+          return false;
+        }
+        break;
+      case "archive":
+        if (!pipelineData.publish) {
+          showAlert("依赖缺失：请先完成发布", "error");
+          return false;
+        }
+        break;
+    }
+    return true;
+  }
+
+  // ============================
+  // 18. UI 辅助函数
+  // ============================
+  function activateButton(btn) {
+    if (!btn) return;
+    tabButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    scrollToCenter(btn);
+  }
+
+  function scrollToCenter(element) {
+    if (!element) return;
+    element.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest"
+    });
+  }
+
+  // ============================
+  // 19. 初始化入口
+  // ============================
+  function initApp() {
+    console.log("🎬 初始化音乐工厂系统…");
+
+    // 恢复数据
+    loadPipeline();
+
+    // 默认激活第一个按钮
+    if (tabButtons.length > 0) {
+      activateButton(tabButtons[0]);
+      modules.forEach((m, i) => {
+        m.style.display = (i === 0) ? "block" : "none";
+      });
+    }
+
+    // 状态栏提示
+    updateStatus("系统已启动，准备就绪 ✓", "success");
+  }
+
+  // 页面加载时执行初始化
+  initApp();
+
 });</script>
 </body>
 </html>
