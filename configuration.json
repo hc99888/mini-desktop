@@ -48,5 +48,10 @@
     "name": "福彩3D",
     "icon": "apps/福彩3D/logo.png",
     "url": "apps/福彩3D/"
+  },
+  {
+    "name": "3d福彩",
+    "icon": "apps/3d福彩/logo.png",
+    "url": "apps/3d福彩/"
   }
 ]
