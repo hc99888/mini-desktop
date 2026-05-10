@@ -48,10 +48,5 @@
     "name": "3D福彩",
     "icon": "apps/3D福彩/logo.png",
     "url": "apps/3D福彩/"
-  },
-  {
-    "name": "日历记账",
-    "icon": "apps/日历记账/logo.jpg",
-    "url": "apps/日历记账/"
   }
 ]
