@@ -90,7 +90,6 @@
       link.download = `记账数据备份_${monthStr}.json`;
       link.href = url;
       document.body.appendChild(link);
-      // 关键修复：延迟移除，确保下载触发
       link.click();
       setTimeout(() => {
         document.body.removeChild(link);
@@ -495,7 +494,6 @@
     document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
     document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
 
-    // 导出备份按钮
     document.getElementById('exportDataBtn').addEventListener('click', () => {
       const months = getAvailableMonths();
       const monthList = document.getElementById('monthList');
