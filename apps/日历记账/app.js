@@ -1,5 +1,4 @@
 
-  
 
 
     const STORAGE_KEY = 'ledger_records';
@@ -8,11 +7,10 @@
 
     let currentYear, currentMonth;
     let records = [];
-    let attendanceRecords = {}; // { 'YYYY-MM-DD': { type: 'full'|'half'|'overtime', value: number } }
+    let attendanceRecords = {};
     let selectedDate = null;
     let lastInput = { category: '', note: '' };
 
-    // ============ Toast ============
     function showToast(msg, duration = 2000) {
       const toast = document.getElementById('toast');
       toast.textContent = msg;
@@ -20,33 +18,29 @@
       setTimeout(() => toast.classList.remove('show'), duration);
     }
 
-    // ============ 数据管理 ============
     function loadRecords() {
       const raw = localStorage.getItem(STORAGE_KEY);
       records = raw ? JSON.parse(raw) : [];
     }
-
-    function saveRecords() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    }
+    function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
 
     function loadAttendance() {
       const raw = localStorage.getItem(ATTENDANCE_KEY);
       attendanceRecords = raw ? JSON.parse(raw) : {};
     }
+    function saveAttendance() { localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(attendanceRecords)); }
 
-    function saveAttendance() {
-      localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(attendanceRecords));
+    function loadLastInput() {
+      const raw = localStorage.getItem(LAST_INPUT_KEY);
+      lastInput = raw ? JSON.parse(raw) : { category: '', note: '' };
+    }
+    function saveLastInput(category, note) {
+      lastInput = { category, note };
+      localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
     function exportData() {
-      const data = {
-        version: 1,
-        exportTime: new Date().toISOString(),
-        totalRecords: records.length,
-        records: records,
-        attendance: attendanceRecords
-      };
+      const data = { version: 1, exportTime: new Date().toISOString(), records, attendance: attendanceRecords };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -64,28 +58,23 @@
       reader.onload = function(e) {
         try {
           const data = JSON.parse(e.target.result);
-          if (!data.records || !Array.isArray(data.records)) throw new Error('数据格式不正确');
-          const validRecords = data.records.filter(r => r.id && r.date && r.category && typeof r.amount === 'number');
-          if (validRecords.length === 0) throw new Error('没有有效的记录');
-          const mode = confirm('点击"确定"将替换现有数据\n点击"取消"将合并数据（追加）');
+          if (!data.records || !Array.isArray(data.records)) throw new Error('格式错误');
+          const valid = data.records.filter(r => r.id && r.date && r.category && typeof r.amount === 'number');
+          if (valid.length === 0) throw new Error('无有效记录');
+          const mode = confirm('确定：替换现有数据\n取消：合并（追加）');
           if (mode) {
-            records = validRecords;
+            records = valid;
             attendanceRecords = data.attendance || {};
           } else {
-            const existingIds = new Set(records.map(r => r.id));
-            const newRecords = validRecords.filter(r => !existingIds.has(r.id));
-            records = [...records, ...newRecords];
-            if (data.attendance) {
-              attendanceRecords = { ...attendanceRecords, ...data.attendance };
-            }
+            const ids = new Set(records.map(r => r.id));
+            records = [...records, ...valid.filter(r => !ids.has(r.id))];
+            if (data.attendance) attendanceRecords = { ...attendanceRecords, ...data.attendance };
           }
           saveRecords();
           saveAttendance();
           renderCalendar();
-          showToast(`✅ 成功导入 ${mode ? validRecords.length : records.length} 条记录`);
-        } catch (error) {
-          alert('导入失败：' + error.message);
-        }
+          showToast('✅ 导入成功');
+        } catch (err) { alert('导入失败：' + err.message); }
       };
       reader.readAsText(file);
     }
@@ -99,37 +88,6 @@
       showToast('🗑️ 数据已清空');
     }
 
-    // ============ 上次输入记忆 ============
-    function loadLastInput() {
-      const raw = localStorage.getItem(LAST_INPUT_KEY);
-      lastInput = raw ? JSON.parse(raw) : { category: '', note: '' };
-    }
-
-    function saveLastInput(category, note) {
-      lastInput = { category, note };
-      localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
-    }
-
-    function fillLastInput() {
-      const categoryInput = document.getElementById('category');
-      const noteInput = document.getElementById('note');
-      document.getElementById('categoryHint').textContent = lastInput.category ? '已填入上次记录' : '';
-      document.getElementById('noteHint').textContent = lastInput.note ? '已填入上次记录' : '';
-      categoryInput.value = lastInput.category || '';
-      noteInput.value = lastInput.note || '';
-      document.getElementById('amount').value = '';
-    }
-
-    function clearForm() {
-      document.getElementById('category').value = '';
-      document.getElementById('amount').value = '';
-      document.getElementById('note').value = '';
-      document.getElementById('categoryHint').textContent = '';
-      document.getElementById('noteHint').textContent = '';
-      document.getElementById('amount').focus();
-    }
-
-    // ============ 数据查询 ============
     function getRecordsByDate(dateStr) { return records.filter(r => r.date === dateStr); }
     function getRecordsByMonth(year, month) {
       const prefix = `${year}-${String(month).padStart(2,'0')}`;
@@ -138,17 +96,19 @@
     function getDayTotal(dateStr) { return getRecordsByDate(dateStr).reduce((sum, r) => sum + r.amount, 0); }
 
     function getAttendanceByDate(dateStr) { return attendanceRecords[dateStr] || null; }
-    function getAttendanceDaysInMonth(year, month) {
-      let full = 0, half = 0, overtime = 0;
+
+    function getAttendanceStats(year, month) {
+      let full = 0, half = 0, overtime = 0, rest = 0;
       const prefix = `${year}-${String(month).padStart(2,'0')}`;
-      for (const [date, att] of Object.entries(attendanceRecords)) {
+      Object.entries(attendanceRecords).forEach(([date, att]) => {
         if (date.startsWith(prefix)) {
-          if (att.type === 'full') full += 1;
+          if (att.type === 'full') full++;
           else if (att.type === 'half') half += 0.5;
           else if (att.type === 'overtime') overtime += (att.value || 0);
+          else if (att.type === 'rest') rest++;
         }
-      }
-      return { full, half, overtime, total: full + half + overtime };
+      });
+      return { full, half, overtime, rest, total: full + half + overtime };
     }
 
     function getDetailedSummary(year, month) {
@@ -157,196 +117,221 @@
       monthRecords.forEach(r => {
         if (!summary[r.category]) summary[r.category] = { total: 0, records: [] };
         summary[r.category].total += r.amount;
-        const day = parseInt(r.date.split('-')[2]);
-        summary[r.category].records.push({ day, amount: r.amount, note: r.note, date: r.date });
+        summary[r.category].records.push({
+          day: parseInt(r.date.split('-')[2]),
+          amount: r.amount,
+          note: r.note,
+          date: r.date
+        });
       });
-      for (const cat in summary) summary[cat].records.sort((a, b) => a.day - b.day);
+      Object.values(summary).forEach(cat => cat.records.sort((a, b) => a.day - b.day));
       return summary;
     }
 
     function renameCategory(oldName, newName) {
       newName = newName.trim();
-      if (!newName) { alert('分类名称不能为空'); return false; }
-      if (oldName === newName) return true;
-      const monthRecords = getRecordsByMonth(currentYear, currentMonth);
-      if (new Set(monthRecords.map(r => r.category)).has(newName)) {
-        alert(`分类"${newName}"已存在`); return false;
+      if (!newName) return alert('分类名不能为空');
+      if (oldName === newName) return;
+      if (getRecordsByMonth(currentYear, currentMonth).some(r => r.category === newName)) {
+        return alert(`"${newName}" 已存在`);
       }
       records.forEach(r => { if (r.category === oldName) r.category = newName; });
       saveRecords();
       renderCalendar();
-      return true;
     }
 
-    // ============ 渲染 ============
     function renderCalendar() {
       document.getElementById('monthTitle').textContent = `${currentYear}年 ${currentMonth}月`;
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
-      const startDayOfWeek = firstDay.getDay();
-      const prevMonthDays = startDayOfWeek;
+      const startDay = firstDay.getDay();
+      const prev = startDay;
       const totalCells = 42;
-      const calendarDiv = document.getElementById('calendar');
-      calendarDiv.innerHTML = '';
+      const cal = document.getElementById('calendar');
+      cal.innerHTML = '';
 
       ['日','一','二','三','四','五','六'].forEach(d => {
         const label = document.createElement('div');
         label.className = 'day-label';
         label.textContent = d;
-        calendarDiv.appendChild(label);
+        cal.appendChild(label);
       });
 
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
       for (let i = 0; i < totalCells; i++) {
-        const cell = document.createElement('div');
-        const dayOffset = i - prevMonthDays + 1;
-        const cellDate = new Date(currentYear, currentMonth - 1, dayOffset);
+        const offset = i - prev + 1;
+        const cellDate = new Date(currentYear, currentMonth - 1, offset);
         const cellMonth = cellDate.getMonth() + 1;
         const cellYear = cellDate.getFullYear();
-        const cellDateStr = `${cellYear}-${String(cellMonth).padStart(2,'0')}-${String(cellDate.getDate()).padStart(2,'0')}`;
+        const dateStr = `${cellYear}-${String(cellMonth).padStart(2,'0')}-${String(cellDate.getDate()).padStart(2,'0')}`;
 
+        const cell = document.createElement('div');
         if (cellMonth !== currentMonth) {
           cell.className = 'day-cell empty';
         } else {
           cell.className = 'day-cell';
-          const cellContent = document.createElement('div');
-          cellContent.className = 'cell-content';
+          const content = document.createElement('div');
+          content.className = 'cell-content';
           const dateSpan = document.createElement('span');
           dateSpan.textContent = cellDate.getDate();
-          cellContent.appendChild(dateSpan);
+          content.appendChild(dateSpan);
 
-          if (cellDateStr === todayStr) cell.classList.add('today');
+          if (dateStr === todayStr) cell.classList.add('today');
 
-          // 金额显示
-          const total = getDayTotal(cellDateStr);
+          const total = getDayTotal(dateStr);
           if (total !== 0) {
             cell.classList.add('has-record');
             const amtSpan = document.createElement('span');
             amtSpan.className = 'amount';
             if (total < 0) amtSpan.classList.add('negative');
             amtSpan.textContent = total < 0 ? `-¥${Math.abs(total).toFixed(1)}` : `¥${total.toFixed(1)}`;
-            cellContent.appendChild(amtSpan);
+            content.appendChild(amtSpan);
           }
 
-          // 出勤圆点
-          const att = getAttendanceByDate(cellDateStr);
+          const att = getAttendanceByDate(dateStr);
           if (att) {
             const dot = document.createElement('span');
             dot.className = 'attendance-dot';
-            if (att.type === 'full') dot.style.backgroundColor = '#007aff';
-            else if (att.type === 'half') dot.style.backgroundColor = '#fd7e14';
-            else if (att.type === 'overtime') dot.style.backgroundColor = '#dc3545';
-            cellContent.insertBefore(dot, cellContent.firstChild); // 放在日期前面
+            // 颜色对应：蓝、橙、红、绿
+            dot.style.backgroundColor = {
+              full: '#007aff', half: '#fd7e14', overtime: '#dc3545', rest: '#28a745'
+            }[att.type] || '#28a745';
+            content.insertBefore(dot, content.firstChild);
           }
 
-          cell.appendChild(cellContent);
-          cell.addEventListener('click', () => openModal(cellDateStr));
+          cell.appendChild(content);
+          cell.addEventListener('click', () => openModal(dateStr));
         }
-        calendarDiv.appendChild(cell);
+        cal.appendChild(cell);
       }
 
       renderSummary();
     }
 
     function renderSummary() {
-      const summaryDiv = document.getElementById('summaryContent');
+      const container = document.getElementById('summaryContent');
       const summary = getDetailedSummary(currentYear, currentMonth);
-      const categories = Object.keys(summary);
+      const cats = Object.keys(summary);
       let html = '';
 
-      if (categories.length === 0) {
+      if (cats.length === 0) {
         html += '<p style="color:#888;">这个月还没有消费记录</p>';
       } else {
-        categories.sort((a, b) => summary[b].total - summary[a].total);
+        cats.sort((a,b) => summary[b].total - summary[a].total);
         let grandTotal = 0;
-        categories.forEach((cat, index) => {
+        cats.forEach((cat, i) => {
           const data = summary[cat];
           grandTotal += data.total;
-          const daysList = [...new Set(data.records.map(r => r.day))].sort((a,b)=>a-b);
-          const daysHtml = daysList.map(d => `<span>${d}号</span>`).join('');
+          const days = [...new Set(data.records.map(r => r.day))].sort((a,b)=>a-b);
+          const daysHtml = days.map(d => `<span>${d}号</span>`).join('');
           const totalDisplay = data.total < 0 ? `-¥${Math.abs(data.total).toFixed(2)}` : `¥${data.total.toFixed(2)}`;
           html += `
             <div class="summary-category">
               <div class="summary-category-header">
                 <div class="summary-category-name-row">
-                  <span class="summary-category-name" id="catName_${index}">${cat}</span>
-                  <span class="edit-category-row" id="editRow_${index}" style="display:none;">
-                    <input type="text" id="editInput_${index}" value="${cat}">
-                    <button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${index})">✓</button>
-                    <button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${index})">✕</button>
+                  <span class="summary-category-name" id="catName_${i}">${cat}</span>
+                  <span class="edit-category-row" id="editRow_${i}" style="display:none;">
+                    <input type="text" id="editInput_${i}" value="${cat}">
+                    <button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button>
+                    <button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button>
                   </span>
                 </div>
                 <span class="summary-category-amount ${data.total<0?'negative':''}">${totalDisplay}</span>
               </div>
               <div class="summary-category-days">${daysHtml}</div>
               <div style="margin-top:6px;">
-                <button class="btn-sm btn-edit" onclick="startEdit(${index})">✏️ 改名</button>
+                <button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button>
                 <button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button>
               </div>
             </div>`;
         });
-        const grandDisplay = grandTotal < 0 ? `-¥${Math.abs(grandTotal).toFixed(2)}` : `¥${grandTotal.toFixed(2)}`;
-        html += `<div class="summary-total"><span>合计</span><span>${grandDisplay}</span></div>`;
+        html += `<div class="summary-total"><span>合计</span><span>${grandTotal<0?'-¥'+Math.abs(grandTotal).toFixed(2):'¥'+grandTotal.toFixed(2)}</span></div>`;
       }
 
-      // 出勤统计
-      const attStats = getAttendanceDaysInMonth(currentYear, currentMonth);
-      if (attStats.total > 0 || Object.keys(attendanceRecords).some(d => d.startsWith(`${currentYear}-${String(currentMonth).padStart(2,'0')}`))) {
+      const att = getAttendanceStats(currentYear, currentMonth);
+      if (att.total > 0 || att.rest > 0) {
         html += `
           <div class="attendance-stats">
-            <h4>📅 本月出勤统计</h4>
-            <div class="stat-row"><span>☀️ 全天</span><span>${attStats.full} 天</span></div>
-            <div class="stat-row"><span>🌤️ 半天</span><span>${attStats.half} 天</span></div>
-            <div class="stat-row"><span>🌙 加班</span><span>${attStats.overtime.toFixed(1)} 天</span></div>
-            <div class="stat-row" style="font-weight:bold;"><span>📌 合计出勤</span><span>${attStats.total.toFixed(1)} 天</span></div>
+            <h4><span>📅 本月出勤统计</span><button class="btn-sm btn-export" id="exportAttendanceBtn">📷 导出</button></h4>
+            <div class="stat-row"><span>🔵 全天</span><span>${att.full} 天</span></div>
+            <div class="stat-row"><span>🟠 半天</span><span>${att.half} 天</span></div>
+            <div class="stat-row"><span>🔴 加班</span><span>${att.overtime.toFixed(1)} 天</span></div>
+            <div class="stat-row"><span>🟢 休息</span><span>${att.rest} 天</span></div>
+            <div class="stat-row" style="font-weight:bold;"><span>📌 合计出勤</span><span>${att.total.toFixed(1)} 天</span></div>
           </div>`;
       }
 
-      summaryDiv.innerHTML = html;
+      container.innerHTML = html;
+
+      if (att.total > 0 || att.rest > 0) {
+        document.getElementById('exportAttendanceBtn').addEventListener('click', exportAttendanceToImage);
+      }
     }
 
-    window.startEdit = function(index) {
-      document.getElementById(`catName_${index}`).style.display = 'none';
-      document.getElementById(`editRow_${index}`).style.display = 'flex';
-      document.getElementById(`editInput_${index}`).focus();
-      document.getElementById(`editInput_${index}`).select();
-    };
-    window.cancelEdit = function(index) {
-      document.getElementById(`catName_${index}`).style.display = 'inline';
-      document.getElementById(`editRow_${index}`).style.display = 'none';
-    };
-    window.confirmRename = function(oldName, index) {
-      renameCategory(oldName, document.getElementById(`editInput_${index}`).value);
-    };
+    async function exportAttendanceToImage() {
+      const att = getAttendanceStats(currentYear, currentMonth);
+      const monthStr = `${currentYear}年${currentMonth}月`;
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:20px;background:white;font-family:system-ui;width:400px;';
+      div.innerHTML = `
+        <h3 style="text-align:center;margin-bottom:10px;">📅 ${monthStr} 出勤统计</h3>
+        <div style="background:#e8f5e9;padding:15px;border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;margin:5px 0;"><span>🔵 全天</span><span>${att.full} 天</span></div>
+          <div style="display:flex;justify-content:space-between;margin:5px 0;"><span>🟠 半天</span><span>${att.half} 天</span></div>
+          <div style="display:flex;justify-content:space-between;margin:5px 0;"><span>🔴 加班</span><span>${att.overtime.toFixed(1)} 天</span></div>
+          <div style="display:flex;justify-content:space-between;margin:5px 0;"><span>🟢 休息</span><span>${att.rest} 天</span></div>
+          <div style="border-top:2px solid #333;margin-top:8px;padding-top:5px;font-weight:bold;display:flex;justify-content:space-between;"><span>📌 合计出勤</span><span>${att.total.toFixed(1)} 天</span></div>
+        </div>
+        <div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div>
+      `;
+      document.body.appendChild(div);
+      try {
+        const canvas = await html2canvas(div, { backgroundColor: '#fff', scale: 2 });
+        const a = document.createElement('a');
+        a.download = `出勤统计_${monthStr}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      } catch (e) { alert('导出失败'); }
+      document.body.removeChild(div);
+    }
 
-    window.exportCategoryToImage = async function(categoryName) {
-      const summary = getDetailedSummary(currentYear, currentMonth);
-      const data = summary[categoryName];
-      if (!data || data.records.length === 0) { alert('该分类没有记录'); return; }
+    window.startEdit = i => {
+      document.getElementById(`catName_${i}`).style.display = 'none';
+      document.getElementById(`editRow_${i}`).style.display = 'flex';
+      document.getElementById(`editInput_${i}`).focus();
+    };
+    window.cancelEdit = i => {
+      document.getElementById(`catName_${i}`).style.display = 'inline';
+      document.getElementById(`editRow_${i}`).style.display = 'none';
+    };
+    window.confirmRename = (old, i) => renameCategory(old, document.getElementById(`editInput_${i}`).value);
+
+    window.exportCategoryToImage = async function(cat) {
+      const data = getDetailedSummary(currentYear, currentMonth)[cat];
+      if (!data) return alert('无记录');
       document.getElementById('loadingOverlay').classList.add('active');
       const monthStr = `${currentYear}年${currentMonth}月`;
-      let html = `<div class="export-area"><div class="export-title">📌 ${categoryName}</div><div class="export-subtitle">${monthStr} 消费明细</div><div class="export-category">`;
+      let inner = `<div class="export-area"><div class="export-title">📌 ${cat}</div><div class="export-subtitle">${monthStr} 消费明细</div><div class="export-category">`;
       data.records.forEach(r => {
-        const amtClass = r.amount < 0 ? 'negative' : 'positive';
-        const amtDisp = r.amount < 0 ? `-¥${Math.abs(r.amount).toFixed(2)}` : `¥${r.amount.toFixed(2)}`;
-        html += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${amtClass}">${amtDisp}</span></div>`;
+        const cls = r.amount < 0 ? 'negative' : 'positive';
+        const disp = r.amount < 0 ? `-¥${Math.abs(r.amount).toFixed(2)}` : `¥${r.amount.toFixed(2)}`;
+        inner += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${cls}">${disp}</span></div>`;
       });
-      const totalClass = data.total < 0 ? 'negative' : 'positive';
+      const totalCls = data.total < 0 ? 'negative' : 'positive';
       const totalDisp = data.total < 0 ? `-¥${Math.abs(data.total).toFixed(2)}` : `¥${data.total.toFixed(2)}`;
-      html += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${totalClass}">${totalDisp}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
-      document.getElementById('exportTemplate').innerHTML = html;
+      inner += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${totalCls}">${totalDisp}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
+      document.getElementById('exportTemplate').innerHTML = inner;
       try {
-        const canvas = await html2canvas(document.querySelector('.export-area'), { backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false });
-        const link = document.createElement('a');
-        link.download = `${categoryName}_${monthStr}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const canvas = await html2canvas(document.querySelector('.export-area'), { backgroundColor: '#fff', scale: 2 });
+        const a = document.createElement('a');
+        a.download = `${cat}_${monthStr}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
       } catch (e) { alert('导出失败'); }
       document.getElementById('loadingOverlay').classList.remove('active');
     };
 
-    // ============ 弹窗控制 ============
     function openModal(dateStr) {
       selectedDate = dateStr;
       document.getElementById('modalDate').textContent = `📅 ${dateStr}`;
@@ -363,126 +348,94 @@
       selectedDate = null;
     }
 
+    function fillLastInput() {
+      document.getElementById('category').value = lastInput.category || '';
+      document.getElementById('note').value = lastInput.note || '';
+      document.getElementById('categoryHint').textContent = lastInput.category ? '已填入上次记录' : '';
+      document.getElementById('noteHint').textContent = lastInput.note ? '已填入上次记录' : '';
+      document.getElementById('amount').value = '';
+    }
+
+    function clearForm() {
+      document.getElementById('category').value = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('note').value = '';
+      document.getElementById('categoryHint').textContent = '';
+      document.getElementById('noteHint').textContent = '';
+      document.getElementById('amount').focus();
+    }
+
     function renderModalRecords() {
       const container = document.getElementById('modalRecords');
-      const dayRecords = getRecordsByDate(selectedDate);
-      if (dayRecords.length === 0) {
-        container.innerHTML = '<p style="color:#888;text-align:center;padding:10px;">当天暂无记录</p>';
-        return;
-      }
-      let html = '';
-      dayRecords.forEach(r => {
-        const amtClass = r.amount < 0 ? 'negative' : 'positive';
-        const amtDisp = r.amount < 0 ? `-¥${Math.abs(r.amount).toFixed(2)}` : `¥${r.amount.toFixed(2)}`;
-        html += `<div class="record-item"><div class="info"><strong>${r.category}</strong>${r.note?`<small>${r.note}</small>`:''}</div><span class="amount-text ${amtClass}">${amtDisp}</span><button class="delete-btn" data-id="${r.id}">×</button></div>`;
-      });
-      container.innerHTML = html;
-      container.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const id = e.target.getAttribute('data-id');
-          records = records.filter(r => r.id != id);
-          saveRecords();
-          renderModalRecords();
-          renderCalendar();
-        });
+      const dayRecs = getRecordsByDate(selectedDate);
+      if (!dayRecs.length) return container.innerHTML = '<p style="color:#888;text-align:center;padding:10px;">当天暂无记录</p>';
+      container.innerHTML = dayRecs.map(r => {
+        const cls = r.amount < 0 ? 'negative' : 'positive';
+        const disp = r.amount < 0 ? `-¥${Math.abs(r.amount).toFixed(2)}` : `¥${r.amount.toFixed(2)}`;
+        return `<div class="record-item"><div class="info"><strong>${r.category}</strong>${r.note?`<small>${r.note}</small>`:''}</div><span class="amount-text ${cls}">${disp}</span><button class="delete-btn" data-id="${r.id}">×</button></div>`;
+      }).join('');
+      container.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', e => {
+        records = records.filter(r => r.id != e.target.dataset.id);
+        saveRecords();
+        renderModalRecords();
+        renderCalendar();
+      }));
+    }
+
+    const attendanceModal = document.getElementById('attendanceModal');
+    let selectedAttType = null;
+
+    function updateAttUI() {
+      document.querySelectorAll('#attendanceOptions .attendance-option').forEach(o => {
+        o.classList.toggle('selected', o.dataset.type === selectedAttType);
+        const input = o.querySelector('input');
+        if (input) input.style.display = (selectedAttType === 'overtime') ? 'inline-block' : 'none';
       });
     }
 
-    // ============ 出勤弹窗 ============
-    const attendanceModal = document.getElementById('attendanceModal');
-    let selectedAttendanceType = null;
-
     document.getElementById('openAttendanceBtn').addEventListener('click', () => {
-      // 根据当前日期加载已有出勤
-      const currentAtt = getAttendanceByDate(selectedDate);
-      if (currentAtt) {
-        selectedAttendanceType = currentAtt.type;
-        if (currentAtt.type === 'overtime') {
-          document.getElementById('overtimeHours').value = currentAtt.value;
-        }
-      } else {
-        selectedAttendanceType = null;
-        document.getElementById('overtimeHours').value = '';
-      }
+      const cur = getAttendanceByDate(selectedDate);
+      selectedAttType = cur ? cur.type : null;
+      if (cur?.type === 'overtime') document.getElementById('overtimeHours').value = cur.value;
+      else document.getElementById('overtimeHours').value = '';
       document.getElementById('attendanceDateTitle').textContent = `出勤设置 - ${selectedDate}`;
-      updateAttendanceOptionUI();
+      updateAttUI();
       attendanceModal.classList.add('active');
     });
 
-    function updateAttendanceOptionUI() {
-      document.querySelectorAll('#attendanceOptions .attendance-option').forEach(opt => {
-        opt.classList.remove('selected');
-        if (opt.dataset.type === selectedAttendanceType) opt.classList.add('selected');
-        if (opt.dataset.type === 'overtime') {
-          const input = opt.querySelector('input');
-          if (selectedAttendanceType === 'overtime') {
-            input.style.display = 'inline-block';
-          } else {
-            input.style.display = 'none';
-          }
-        }
-      });
-    }
-
-    document.getElementById('attendanceOptions').addEventListener('click', (e) => {
-      const option = e.target.closest('.attendance-option');
-      if (!option) return;
-      const type = option.dataset.type;
-      if (type === 'overtime') {
-        // 点击加班选项，显示输入框并选中
-        selectedAttendanceType = 'overtime';
-        document.getElementById('overtimeHours').style.display = 'inline-block';
-        document.getElementById('overtimeHours').focus();
-      } else {
-        selectedAttendanceType = type;
-      }
-      updateAttendanceOptionUI();
+    document.getElementById('attendanceOptions').addEventListener('click', e => {
+      const opt = e.target.closest('.attendance-option');
+      if (!opt) return;
+      selectedAttType = opt.dataset.type;
+      updateAttUI();
     });
 
-    document.getElementById('overtimeHours').addEventListener('input', (e) => {
-      if (selectedAttendanceType !== 'overtime') {
-        selectedAttendanceType = 'overtime';
-        updateAttendanceOptionUI();
-      }
-    });
-
-    document.getElementById('closeAttendanceModal').addEventListener('click', () => {
-      attendanceModal.classList.remove('active');
-    });
-
+    document.getElementById('closeAttendanceModal').addEventListener('click', () => attendanceModal.classList.remove('active'));
     document.getElementById('saveAttendanceBtn').addEventListener('click', () => {
       if (!selectedDate) return;
-      if (selectedAttendanceType === 'none' || !selectedAttendanceType) {
+      if (!selectedAttType || selectedAttType === 'none') {
         delete attendanceRecords[selectedDate];
-      } else if (selectedAttendanceType === 'overtime') {
+      } else if (selectedAttType === 'overtime') {
         const val = parseFloat(document.getElementById('overtimeHours').value);
-        if (isNaN(val) || val <= 0) {
-          alert('请输入有效的加班天数');
-          return;
-        }
+        if (isNaN(val) || val <= 0) return alert('请输入有效加班天数');
         attendanceRecords[selectedDate] = { type: 'overtime', value: val };
       } else {
-        attendanceRecords[selectedDate] = { type: selectedAttendanceType };
+        attendanceRecords[selectedDate] = { type: selectedAttType };
       }
       saveAttendance();
       attendanceModal.classList.remove('active');
       renderCalendar();
       showToast('✅ 出勤已更新');
     });
+    attendanceModal.addEventListener('click', e => { if (e.target === attendanceModal) attendanceModal.classList.remove('active'); });
 
-    // 点击遮罩关闭出勤弹窗
-    attendanceModal.addEventListener('click', (e) => {
-      if (e.target === attendanceModal) attendanceModal.classList.remove('active');
-    });
-
-    // ============ 记账添加 ============
     document.getElementById('addRecord').addEventListener('click', () => {
       if (!selectedDate) return;
       const category = document.getElementById('category').value.trim();
       const amount = parseFloat(document.getElementById('amount').value);
       const note = document.getElementById('note').value.trim();
-      if (!category) { alert('请输入分类名称'); return; }
-      if (isNaN(amount) || amount === 0) { alert('请输入有效金额'); return; }
+      if (!category) return alert('请输入分类名称');
+      if (isNaN(amount) || amount === 0) return alert('请输入有效金额');
       saveLastInput(category, note);
       records.push({ id: Date.now(), date: selectedDate, category, amount, note });
       saveRecords();
@@ -494,50 +447,44 @@
 
     document.getElementById('clearForm').addEventListener('click', clearForm);
     document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('modal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('modal')) closeModal();
-    });
-    document.getElementById('modalContent').addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
+    document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+    document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
 
-    // 工具栏
     document.getElementById('exportDataBtn').addEventListener('click', exportData);
     document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
-    document.getElementById('importFileInput').addEventListener('change', (e) => {
+    document.getElementById('importFileInput').addEventListener('change', e => {
       if (e.target.files[0]) { importData(e.target.files[0]); e.target.value = ''; }
     });
-    let confirmCallback = null;
+
+    let confirmCb = null;
     document.getElementById('clearAllBtn').addEventListener('click', () => {
-      document.getElementById('confirmMessage').textContent = '确定清空所有数据吗？建议先导出备份。';
-      confirmCallback = clearAllData;
+      document.getElementById('confirmMessage').textContent = '确定清空所有数据？建议先导出备份。';
+      confirmCb = clearAllData;
       document.getElementById('confirmDialog').classList.add('active');
     });
     document.getElementById('confirmCancel').addEventListener('click', () => {
       document.getElementById('confirmDialog').classList.remove('active');
-      confirmCallback = null;
     });
     document.getElementById('confirmOk').addEventListener('click', () => {
       document.getElementById('confirmDialog').classList.remove('active');
-      if (confirmCallback) confirmCallback();
+      if (confirmCb) confirmCb();
     });
 
-    // 月份切换
     document.getElementById('prevMonth').addEventListener('click', () => {
       if (currentMonth === 1) { currentMonth = 12; currentYear--; }
-      else { currentMonth--; }
+      else currentMonth--;
       renderCalendar();
     });
     document.getElementById('nextMonth').addEventListener('click', () => {
       if (currentMonth === 12) { currentMonth = 1; currentYear++; }
-      else { currentMonth++; }
+      else currentMonth++;
       renderCalendar();
     });
 
-    // 输入框滚动
-    document.querySelectorAll('#modalContent input').forEach(input => {
-      input.addEventListener('focus', () => setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300));
+    document.querySelectorAll('#modalContent input').forEach(i => {
+      i.addEventListener('focus', () => setTimeout(() => i.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300));
     });
 
-    // 启动
     const now = new Date();
     currentYear = now.getFullYear();
     currentMonth = now.getMonth() + 1;
