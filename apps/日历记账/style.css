@@ -40,7 +40,8 @@
     .btn-edit:active { background: #e0a800; }
     .btn-edit-confirm { background: #007aff; color: white; margin-left: 4px; }
     .btn-edit-cancel { background: #6c757d; color: white; margin-left: 4px; }
-    .btn-danger { background: #dc3545; color: white; }
+    /* 修正清空数据按钮样式 */
+    .btn-danger { background: #dc3545 !important; color: white !important; font-weight: bold !important; border: 1px solid #dc3545 !important; }
 
     .edit-category-row { display: flex; align-items: center; gap: 4px; }
     .edit-category-row input { padding: 4px 8px; border: 1px solid #007aff; border-radius: 6px; font-size: 0.85rem; width: 100px; }
