@@ -39,18 +39,64 @@
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
-    function exportData() {
-      const data = { version: 1, exportTime: new Date().toISOString(), records, attendance: attendanceRecords };
+    // 获取所有有数据的月份（包括记录和出勤），若无数据则返回当年所有月份
+    function getAvailableMonths() {
+      const months = new Set();
+      // 从消费记录收集
+      records.forEach(r => {
+        const parts = r.date.split('-');
+        if (parts.length >= 2) months.add(`${parts[0]}-${parts[1]}`);
+      });
+      // 从出勤记录收集
+      Object.keys(attendanceRecords).forEach(date => {
+        const parts = date.split('-');
+        if (parts.length >= 2) months.add(`${parts[0]}-${parts[1]}`);
+      });
+      if (months.size === 0) {
+        // 没有数据时，生成当前年份1~12月
+        const y = new Date().getFullYear();
+        for (let m = 1; m <= 12; m++) {
+          months.add(`${y}-${String(m).padStart(2,'0')}`);
+        }
+      }
+      return Array.from(months).sort();
+    }
+
+    function exportSelectedMonths(selectedMonths) {
+      if (selectedMonths.length === 0) {
+        alert('请至少选择一个月份');
+        return;
+      }
+      const filteredRecords = records.filter(r => {
+        const parts = r.date.split('-');
+        const key = `${parts[0]}-${parts[1]}`;
+        return selectedMonths.includes(key);
+      });
+      const filteredAttendance = {};
+      Object.entries(attendanceRecords).forEach(([date, att]) => {
+        const parts = date.split('-');
+        const key = `${parts[0]}-${parts[1]}`;
+        if (selectedMonths.includes(key)) {
+          filteredAttendance[date] = att;
+        }
+      });
+      const data = {
+        version: 1,
+        exportTime: new Date().toISOString(),
+        totalRecords: filteredRecords.length,
+        records: filteredRecords,
+        attendance: filteredAttendance
+      };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `记账数据备份_${new Date().toISOString().slice(0,10)}.json`;
+      const monthStr = selectedMonths.map(m => m.replace('-', '年') + '月').join('_');
+      link.download = `记账数据备份_${monthStr}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      showToast(`✅ 已导出 ${records.length} 条记录`);
+      showToast(`✅ 已导出 ${filteredRecords.length} 条记录`);
     }
 
     function importData(file) {
@@ -193,7 +239,6 @@
           if (att) {
             const dot = document.createElement('span');
             dot.className = 'attendance-dot';
-            // 颜色对应：蓝、橙、红、绿
             dot.style.backgroundColor = {
               full: '#007aff', half: '#fd7e14', overtime: '#dc3545', rest: '#28a745'
             }[att.type] || '#28a745';
@@ -450,7 +495,34 @@
     document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
     document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
 
-    document.getElementById('exportDataBtn').addEventListener('click', exportData);
+    // ========== 导出备份 - 打开月份选择（关键修复） ==========
+    document.getElementById('exportDataBtn').addEventListener('click', () => {
+      const months = getAvailableMonths();
+      const monthList = document.getElementById('monthList');
+      monthList.innerHTML = months.map(m => {
+        const [y, mo] = m.split('-');
+        return `<div class="month-item"><input type="checkbox" id="chk_${m}" value="${m}" checked><label for="chk_${m}">${y}年${mo}月</label></div>`;
+      }).join('');
+      document.getElementById('monthSelectModal').classList.add('active');
+    });
+
+    document.getElementById('closeMonthSelect').addEventListener('click', () => {
+      document.getElementById('monthSelectModal').classList.remove('active');
+    });
+
+    document.getElementById('selectAllMonths').addEventListener('click', () => {
+      document.querySelectorAll('#monthList input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('deselectAllMonths').addEventListener('click', () => {
+      document.querySelectorAll('#monthList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+
+    document.getElementById('confirmExportBtn').addEventListener('click', () => {
+      const checked = Array.from(document.querySelectorAll('#monthList input[type="checkbox"]:checked')).map(cb => cb.value);
+      document.getElementById('monthSelectModal').classList.remove('active');
+      exportSelectedMonths(checked);
+    });
+
     document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
     document.getElementById('importFileInput').addEventListener('change', e => {
       if (e.target.files[0]) { importData(e.target.files[0]); e.target.value = ''; }
