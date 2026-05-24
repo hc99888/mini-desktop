@@ -39,21 +39,17 @@
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
-    // 获取所有有数据的月份（包括记录和出勤），若无数据则返回当年所有月份
     function getAvailableMonths() {
       const months = new Set();
-      // 从消费记录收集
       records.forEach(r => {
         const parts = r.date.split('-');
         if (parts.length >= 2) months.add(`${parts[0]}-${parts[1]}`);
       });
-      // 从出勤记录收集
       Object.keys(attendanceRecords).forEach(date => {
         const parts = date.split('-');
         if (parts.length >= 2) months.add(`${parts[0]}-${parts[1]}`);
       });
       if (months.size === 0) {
-        // 没有数据时，生成当前年份1~12月
         const y = new Date().getFullYear();
         for (let m = 1; m <= 12; m++) {
           months.add(`${y}-${String(m).padStart(2,'0')}`);
@@ -92,10 +88,14 @@
       const link = document.createElement('a');
       const monthStr = selectedMonths.map(m => m.replace('-', '年') + '月').join('_');
       link.download = `记账数据备份_${monthStr}.json`;
+      link.href = url;
       document.body.appendChild(link);
+      // 关键修复：延迟移除，确保下载触发
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 200);
       showToast(`✅ 已导出 ${filteredRecords.length} 条记录`);
     }
 
@@ -495,7 +495,7 @@
     document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
     document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
 
-    // ========== 导出备份 - 打开月份选择（关键修复） ==========
+    // 导出备份按钮
     document.getElementById('exportDataBtn').addEventListener('click', () => {
       const months = getAvailableMonths();
       const monthList = document.getElementById('monthList');
