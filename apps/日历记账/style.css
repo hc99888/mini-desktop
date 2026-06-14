@@ -133,7 +133,6 @@
     .attendance-option input { width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 5px; text-align: center; display: none; }
     .attendance-option.selected input { display: inline-block; }
 
-    /* 人员操作弹窗 */
     .person-menu-modal {
       position: fixed;
       top: 0;
@@ -146,9 +145,7 @@
       justify-content: center;
       align-items: center;
     }
-    .person-menu-modal.active {
-      display: flex;
-    }
+    .person-menu-modal.active { display: flex; }
     .person-menu-box {
       background: white;
       border-radius: 16px;
@@ -156,11 +153,7 @@
       width: 280px;
       text-align: center;
     }
-    .person-menu-box h4 {
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      color: #333;
-    }
+    .person-menu-box h4 { margin-bottom: 15px; font-size: 1.1rem; color: #333; }
     .person-menu-box button {
       display: block;
       width: 100%;
@@ -214,8 +207,25 @@
     .crew-table td.clickable.selected { background: #007aff; color: white; }
     .crew-table td.overtime-cell { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 4px; }
     .crew-table td.overtime-cell.selected { background: #007aff; color: white; }
-    .batch-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; font-size: 0.8rem; justify-content: flex-end; }
-    .batch-bar button { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.75rem; }
+    
+    /* 按钮左对齐 */
+    .batch-bar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      justify-content: flex-start;
+    }
+    .batch-bar button {
+      padding: 4px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
     .batch-bar button:active { background: #eee; }
     .crew-locked { opacity: 0.5; pointer-events: none; }
     .crew-locked td, .crew-locked button { pointer-events: none; }
