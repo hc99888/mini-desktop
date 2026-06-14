@@ -86,6 +86,21 @@
       return remaining === 0;
     }
 
+    // 删除消费记录时，恢复预付款余额（按到账日期倒序加回，即从最近的记录开始恢复）
+    function addBackToPerson(name, amount) {
+      const personAdvances = advances.filter(adv => adv.name === name)
+        .sort((a, b) => new Date(b.date) - new Date(a.date)); // 倒序，从最近的开始恢复
+      let remaining = amount;
+      for (let adv of personAdvances) {
+        if (remaining <= 0) break;
+        const addBack = Math.min(adv.amount - adv.balance, remaining);
+        adv.balance += addBack;
+        remaining -= addBack;
+      }
+      saveAdvances();
+      return remaining === 0;
+    }
+
     function deleteCrewMember(name) {
       if (confirm(`确定要删除人员 "${name}" 吗？该人员的所有出勤记录也会被删除。`)) {
         crewList = crewList.filter(n => n !== name);
@@ -280,7 +295,7 @@
           const totalDisplay = data.total < 0 ? `-¥${Math.abs(data.total).toFixed(2)}` : `¥${data.total.toFixed(2)}`;
           html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><span class="summary-category-amount ${data.total<0?'negative':''}">${totalDisplay}</span></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
         });
-        html += `<div class="summary-total"><span>合计</span><span>${grandTotal<0?'-¥'+Math.abs(grandTotal).toFixed(2):'¥'+grandTotal.toFixed(2)}</span></div>`;
+        html += `<div class="summary-total"><span>本月合计</span><span>${grandTotal<0?'-¥'+Math.abs(grandTotal).toFixed(2):'¥'+grandTotal.toFixed(2)}</span></div>`;
       }
 
       if (advances.length > 0) {
@@ -376,13 +391,29 @@
           return `<div class="record-item"><div class="info"><strong>💸 ${r.category}</strong>${r.note ? `<small>${r.note}</small>` : ''}</div><span class="amount-text ${cls}">${disp}</span><button class="delete-btn" data-id="${r.id}" data-type="expense">×</button></div>`;
         }
       }).join('');
+      
       container.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const id = parseInt(btn.dataset.id);
           const type = btn.dataset.type;
-          if (type === 'expense') { records = records.filter(r => r.id !== id); saveRecords(); }
-          else if (type === 'advance') { advances = advances.filter(a => a.id !== id); saveAdvances(); updateAdvanceSelect(); }
-          renderAllRecords(); renderCalendar(); showToast('✅ 已删除');
+          if (type === 'expense') {
+            // 找到要删除的记录
+            const record = records.find(r => r.id === id);
+            // 如果这条消费使用了预付款，需要将金额加回预付款余额
+            if (record && record.advancePerson && record.advancePerson !== '') {
+              addBackToPerson(record.advancePerson, Math.abs(record.amount));
+            }
+            records = records.filter(r => r.id !== id);
+            saveRecords();
+            updateAdvanceSelect();
+          } else if (type === 'advance') {
+            advances = advances.filter(a => a.id !== id);
+            saveAdvances();
+            updateAdvanceSelect();
+          }
+          renderAllRecords();
+          renderCalendar();
+          showToast('✅ 已删除');
         });
       });
     }
@@ -479,6 +510,10 @@
     function renderCrewTable() {
       const tbody = document.getElementById('crewTableBody');
       const dayData = crewAttendance[selectedDate] || {};
+      if (crewList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888;">暂无人员，点击下方按钮添加</td></tr>';
+        return;
+      }
       tbody.innerHTML = crewList.map(name => {
         const currentVal = dayData[name];
         let type = null, overtimeDays = null;
@@ -498,10 +533,9 @@
           <td class="clickable ${halfSelected ? 'selected' : ''}" data-type="half" data-name="${name}">${halfSelected ? '●' : ''}</td>
           <td class="overtime-cell ${overtimeSelected ? 'selected' : ''}" data-type="overtime" data-name="${name}">${overtimeDisplay}</td>
           <td class="clickable ${restSelected ? 'selected' : ''}" data-type="rest" data-name="${name}">${restSelected ? '●' : ''}</td>
-        </td>`;
+         </tr>`;
       }).join('');
       
-      // 绑定姓名列点击事件 - 弹出操作菜单
       tbody.querySelectorAll('.name-col').forEach(cell => {
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -511,7 +545,6 @@
         });
       });
       
-      // 绑定考勤点击事件（全天、半天、加班、休息）
       tbody.querySelectorAll('.clickable').forEach(cell => {
         const type = cell.dataset.type;
         if (!type) return;
@@ -525,7 +558,6 @@
         });
       });
       
-      // 绑定加班列点击事件
       tbody.querySelectorAll('.overtime-cell').forEach(cell => {
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -652,7 +684,6 @@
       unlockCrew();
     });
 
-    // 人员菜单事件
     document.getElementById('personMenuEdit').addEventListener('click', () => {
       if (currentSelectedPerson) editCrewMember(currentSelectedPerson);
       closePersonMenu();
