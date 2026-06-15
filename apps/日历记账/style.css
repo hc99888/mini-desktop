@@ -12,9 +12,15 @@
     .day-cell.has-record { background: #fff3cd; font-weight: bold; }
     .day-cell .amount { font-size: 0.65rem; color: #d9534f; margin-top: 2px; }
     .day-cell .amount.negative { color: #28a745; }
-    .day-cell .attendance-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin: 1px 2px 0 0; vertical-align: middle; }
+    .day-cell .attendance-dots { display: flex; gap: 3px; justify-content: center; margin-bottom: 2px; }
+    .attendance-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .attendance-dot.full { background-color: #007aff; }
+    .attendance-dot.half { background-color: #FF9500; }
+    .attendance-dot.overtime { background-color: #FF3B30; }
+    .attendance-dot.rest { background-color: #34C759; }
+    .attendance-dot.crew { background-color: #000000; }
     .day-cell.empty { background: transparent; border: none; cursor: default; }
-    .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; }
+    .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; width: 100%; }
 
     .toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .toolbar button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 4px; }
@@ -208,7 +214,6 @@
     .crew-table td.overtime-cell { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 4px; }
     .crew-table td.overtime-cell.selected { background: #007aff; color: white; }
     
-    /* 按钮左对齐 */
     .batch-bar {
       display: flex;
       gap: 6px;
