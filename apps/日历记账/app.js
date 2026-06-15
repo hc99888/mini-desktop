@@ -72,24 +72,25 @@
       return total;
     }
 
-    function deductFromPerson(name, amount) {
+    function deductFromPersonPartial(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name && adv.balance > 0)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       let remaining = amount;
+      let deducted = 0;
       for (let adv of personAdvances) {
         if (remaining <= 0) break;
         const deduct = Math.min(adv.balance, remaining);
         adv.balance -= deduct;
+        deducted += deduct;
         remaining -= deduct;
       }
       saveAdvances();
-      return remaining === 0;
+      return deducted;
     }
 
-    // 删除消费记录时，恢复预付款余额（按到账日期倒序加回，即从最近的记录开始恢复）
     function addBackToPerson(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name)
-        .sort((a, b) => new Date(b.date) - new Date(a.date)); // 倒序，从最近的开始恢复
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
       let remaining = amount;
       for (let adv of personAdvances) {
         if (remaining <= 0) break;
@@ -98,7 +99,23 @@
         remaining -= addBack;
       }
       saveAdvances();
-      return remaining === 0;
+    }
+
+    function getSingleAttendanceInfo(dateStr) {
+      const att = attendanceRecords[dateStr];
+      if (!att) return null;
+      let type = att.type;
+      return { type };
+    }
+
+    function hasCrewAttendance(dateStr) {
+      const dayData = crewAttendance[dateStr];
+      if (!dayData) return false;
+      return Object.keys(dayData).some(name => {
+        const val = dayData[name];
+        const type = val.type || val;
+        return type !== 'rest' && type !== 'none';
+      });
     }
 
     function deleteCrewMember(name) {
@@ -112,9 +129,9 @@
           }
         });
         saveCrewAttendance();
-        renderCrewTable();
+        if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable();
         resetCrewLock();
-        renderSummary();
+        renderCalendar();
         showToast(`✅ 已删除 ${name}`);
       }
     }
@@ -140,9 +157,9 @@
         });
         crewAttendance = newCrewAttendance;
         saveCrewAttendance();
-        renderCrewTable();
+        if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable();
         resetCrewLock();
-        renderSummary();
+        renderCalendar();
         showToast(`✅ 已重命名为 ${newNameTrimmed}`);
       }
     }
@@ -255,22 +272,49 @@
         else {
           cell.className = 'day-cell';
           const content = document.createElement('div'); content.className = 'cell-content';
-          const dateSpan = document.createElement('span'); dateSpan.textContent = cellDate.getDate(); content.appendChild(dateSpan);
+          
+          const singleInfo = getSingleAttendanceInfo(dateStr);
+          const hasCrew = hasCrewAttendance(dateStr);
+          if (singleInfo || hasCrew) {
+            const dotsDiv = document.createElement('div');
+            dotsDiv.className = 'attendance-dots';
+            if (singleInfo) {
+              const dot = document.createElement('span');
+              dot.className = `attendance-dot ${singleInfo.type}`;
+              dotsDiv.appendChild(dot);
+            }
+            if (hasCrew) {
+              const crewDot = document.createElement('span');
+              crewDot.className = 'attendance-dot crew';
+              dotsDiv.appendChild(crewDot);
+            }
+            content.appendChild(dotsDiv);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.style.height = '14px';
+            content.appendChild(placeholder);
+          }
+          
+          const dateSpan = document.createElement('span');
+          dateSpan.textContent = cellDate.getDate();
+          dateSpan.style.fontWeight = '500';
+          content.appendChild(dateSpan);
           if (dateStr === todayStr) cell.classList.add('today');
+          
           const total = getDayTotal(dateStr);
           if (total !== 0) {
             cell.classList.add('has-record');
-            const amtSpan = document.createElement('span'); amtSpan.className = 'amount';
+            const amtSpan = document.createElement('span');
+            amtSpan.className = 'amount';
             if (total < 0) amtSpan.classList.add('negative');
             amtSpan.textContent = total < 0 ? `-¥${Math.abs(total).toFixed(1)}` : `¥${total.toFixed(1)}`;
             content.appendChild(amtSpan);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.style.height = '16px';
+            content.appendChild(placeholder);
           }
-          const att = getAttendanceByDate(dateStr);
-          if (att) {
-            const dot = document.createElement('span'); dot.className = 'attendance-dot';
-            dot.style.backgroundColor = { full: '#007aff', half: '#fd7e14', overtime: '#dc3545', rest: '#28a745' }[att.type] || '#28a745';
-            content.insertBefore(dot, content.firstChild);
-          }
+          
           cell.appendChild(content);
           cell.addEventListener('click', () => openModal(dateStr));
         }
@@ -329,7 +373,7 @@
       const crewNames = Object.keys(crewStats);
       const hasCrewData = crewNames.some(n => crewStats[n].total > 0 || crewStats[n].rest > 0);
       if (hasCrewData || crewList.length > 0) {
-        html += `<div class="attendance-stats" style="background:#e3f2fd;"><h4>👥 多人出勤统计</h4>`;
+        html += `<div class="attendance-stats" style="background:#e3f2fd;"><h4>👥 多人出勤统计 <span class="attendance-dot crew" style="display:inline-block; width:10px; height:10px; vertical-align:middle;"></span></h4>`;
         let grandTotalCrew = 0;
         crewNames.forEach(name => {
           const s = crewStats[name];
@@ -388,7 +432,8 @@
           const r = item.data;
           const cls = r.amount < 0 ? 'negative' : 'positive';
           const disp = r.amount < 0 ? `-¥${Math.abs(r.amount).toFixed(2)}` : `¥${r.amount.toFixed(2)}`;
-          return `<div class="record-item"><div class="info"><strong>💸 ${r.category}</strong>${r.note ? `<small>${r.note}</small>` : ''}</div><span class="amount-text ${cls}">${disp}</span><button class="delete-btn" data-id="${r.id}" data-type="expense">×</button></div>`;
+          const extraInfo = r.splitAmount ? `<small>💡 其中 ¥${r.splitAmount.toFixed(2)} 使用预付款</small>` : '';
+          return `<div class="record-item"><div class="info"><strong>💸 ${r.category}</strong>${r.note ? `<small>${r.note}</small>` : ''}${extraInfo}</div><span class="amount-text ${cls}">${disp}</span><button class="delete-btn" data-id="${r.id}" data-type="expense">×</button></div>`;
         }
       }).join('');
       
@@ -397,9 +442,7 @@
           const id = parseInt(btn.dataset.id);
           const type = btn.dataset.type;
           if (type === 'expense') {
-            // 找到要删除的记录
             const record = records.find(r => r.id === id);
-            // 如果这条消费使用了预付款，需要将金额加回预付款余额
             if (record && record.advancePerson && record.advancePerson !== '') {
               addBackToPerson(record.advancePerson, Math.abs(record.amount));
             }
@@ -446,19 +489,53 @@
     function addExpense() {
       if (!selectedDate) return;
       const category = document.getElementById('category').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
+      let amount = parseFloat(document.getElementById('amount').value);
       const note = document.getElementById('note').value.trim();
       const advancePerson = document.getElementById('advanceSelect').value;
+      
       if (!category) return alert('请输入分类名称');
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
+      
+      const recordsToAdd = [];
+      
       if (advancePerson && advancePerson !== '') {
         const totalBalance = getPersonTotalBalance(advancePerson);
-        if (amount > totalBalance) return alert(`余额不足！${advancePerson} 当前总余额 ¥${totalBalance.toFixed(2)}`);
-        deductFromPerson(advancePerson, amount);
+        if (totalBalance > 0) {
+          const deducted = deductFromPersonPartial(advancePerson, amount);
+          if (deducted > 0) {
+            recordsToAdd.push({
+              id: Date.now(),
+              date: selectedDate,
+              category,
+              amount: -deducted,
+              note: note + (deducted < amount ? ` (使用预付款¥${deducted.toFixed(2)})` : ''),
+              advancePerson: advancePerson,
+              splitAmount: deducted
+            });
+            amount -= deducted;
+            if (amount > 0) {
+              showToast(`预付款不足，剩余 ¥${amount.toFixed(2)} 使用现金支付`, 3000);
+            }
+          }
+        }
       }
-      saveLastInput(category, note);
-      records.push({ id: Date.now(), date: selectedDate, category, amount: -Math.abs(amount), note, advancePerson: advancePerson || null });
+      
+      if (amount > 0) {
+        recordsToAdd.push({
+          id: Date.now() + 1,
+          date: selectedDate,
+          category,
+          amount: -amount,
+          note: note + (advancePerson ? ` (现金支付¥${amount.toFixed(2)})` : ''),
+          advancePerson: null,
+          splitAmount: null
+        });
+      }
+      
+      records.push(...recordsToAdd);
       saveRecords();
+      
+      saveLastInput(category, note);
       document.getElementById('amount').value = '';
       updateAdvanceSelect();
       renderAllRecords();
@@ -533,7 +610,7 @@
           <td class="clickable ${halfSelected ? 'selected' : ''}" data-type="half" data-name="${name}">${halfSelected ? '●' : ''}</td>
           <td class="overtime-cell ${overtimeSelected ? 'selected' : ''}" data-type="overtime" data-name="${name}">${overtimeDisplay}</td>
           <td class="clickable ${restSelected ? 'selected' : ''}" data-type="rest" data-name="${name}">${restSelected ? '●' : ''}</td>
-         </tr>`;
+        </table>`;
       }).join('');
       
       tbody.querySelectorAll('.name-col').forEach(cell => {
@@ -555,6 +632,7 @@
           setCrewAttendanceSimple(name, type);
           renderCrewTable();
           resetCrewLock();
+          renderCalendar();
         });
       });
       
@@ -573,6 +651,7 @@
             setCrewAttendanceOvertime(name, days);
             renderCrewTable();
             resetCrewLock();
+            renderCalendar();
           }
         });
       });
@@ -607,6 +686,7 @@
       saveCrewAttendance();
       renderCrewTable();
       resetCrewLock();
+      renderCalendar();
     }
 
     function resetCrewLock() {
@@ -654,7 +734,7 @@
         crewList.push(name.trim()); 
         saveCrewList(); 
         if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable(); 
-        renderSummary();
+        renderCalendar();
         showToast('✅ 已添加 ' + name); 
       }
     });
