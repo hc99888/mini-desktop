@@ -796,7 +796,7 @@
           const s = crewStats[name];
           if (s.total > 0 || s.rest > 0) {
             grandTotalCrew += s.total;
-            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${s.half}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
+            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${s.half/2}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
           }
         });
         html += `<div class="stat-row" style="font-weight:bold; border-top:1px solid #ccc; padding-top:4px;"><span>👥 总计</span><span>${grandTotalCrew.toFixed(1)} 天</span></div>`;
