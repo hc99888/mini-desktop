@@ -379,7 +379,7 @@
           const s = crewStats[name];
           if (s.total > 0 || s.rest > 0) {
             grandTotalCrew += s.total;
-            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${s.half}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
+            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${s.half/2}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
           }
         });
         html += `<div class="stat-row" style="font-weight:bold; border-top:1px solid #ccc; padding-top:4px;"><span>👥 总计</span><span>${grandTotalCrew.toFixed(1)} 天</span></div>`;
@@ -406,6 +406,11 @@
       renderAllRecords();
       updateAdvanceSelect();
       document.getElementById('advanceDate').value = dateStr;
+
+      // 添加以下代码：恢复上次输入的分类和备注
+      document.getElementById('category').value = lastInput.category || '';
+      document.getElementById('note').value = lastInput.note || '';
+
       switchForm('expense');
       document.body.classList.add('modal-open');
       document.getElementById('modal').classList.add('active');
@@ -467,6 +472,9 @@
       document.getElementById('note').value = '';
       document.getElementById('advanceName').value = '';
       document.getElementById('advanceAmount').value = '';
+      // 清空保存的上次输入
+     lastInput = { category: '', note: '' };
+     localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
     function openAttendance() {
