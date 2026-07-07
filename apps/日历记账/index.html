@@ -823,6 +823,11 @@
       renderAllRecords();
       updateAdvanceSelect();
       document.getElementById('advanceDate').value = dateStr;
+
+      // 添加以下代码：恢复上次输入的分类和备注
+      document.getElementById('category').value = lastInput.category || '';
+      document.getElementById('note').value = lastInput.note || '';
+
       switchForm('expense');
       document.body.classList.add('modal-open');
       document.getElementById('modal').classList.add('active');
@@ -884,6 +889,9 @@
       document.getElementById('note').value = '';
       document.getElementById('advanceName').value = '';
       document.getElementById('advanceAmount').value = '';
+      // 清空保存的上次输入
+     lastInput = { category: '', note: '' };
+     localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
     function openAttendance() {
