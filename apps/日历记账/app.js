@@ -38,9 +38,18 @@
     function saveCrewAttendance() { localStorage.setItem(CREW_ATTENDANCE_KEY, JSON.stringify(crewAttendance)); }
     function loadAdvances() { const raw = localStorage.getItem(ADVANCE_KEY); advances = raw ? JSON.parse(raw) : []; }
     function saveAdvances() { localStorage.setItem(ADVANCE_KEY, JSON.stringify(advances)); }
-    function loadLastInput() { const raw = localStorage.getItem(LAST_INPUT_KEY); lastInput = raw ? JSON.parse(raw) : { category: '', note: '' }; }
-    function saveLastInput(category, note) { lastInput = { category, note }; localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput)); }
+    
+    function saveLastInput(category, note) {
+      lastInput = { category, note };
+      localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
+    }
+    
+    function loadLastInput() {
+      const raw = localStorage.getItem(LAST_INPUT_KEY);
+      lastInput = raw ? JSON.parse(raw) : { category: '', note: '' };
+    }
 
+    // 记账页面 - 关联预付款下拉菜单（只显示余额 > 0 的预付款，按余额从高到低排序）
     function updateAdvanceSelect() {
       const select = document.getElementById('advanceSelect');
       select.innerHTML = '';
@@ -64,6 +73,29 @@
       select.appendChild(defaultOpt);
     }
 
+    // 收款页面 - 退款到预付款下拉菜单（显示所有预付款，包括余额为0的，按名称排序）
+    function updateIncomeAdvanceSelect() {
+      const select = document.getElementById('incomeAdvanceSelect');
+      select.innerHTML = '';
+      const nameSet = new Set();
+      advances.forEach(adv => {
+        if (!nameSet.has(adv.name)) {
+          nameSet.add(adv.name);
+          const totalBalance = advances.filter(a => a.name === adv.name).reduce((sum, a) => sum + a.balance, 0);
+          const totalOriginal = advances.filter(a => a.name === adv.name).reduce((sum, a) => sum + a.amount, 0);
+          const opt = document.createElement('option');
+          opt.value = adv.name;
+          opt.textContent = `${adv.name} (余额 ¥${totalBalance.toFixed(2)})`;
+          select.appendChild(opt);
+        }
+      });
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = '请选择预付款';
+      select.prepend(defaultOpt);
+    }
+
+    // 获取某人总余额
     function getPersonTotalBalance(name) {
       let total = 0;
       advances.forEach(adv => {
@@ -72,6 +104,16 @@
       return total;
     }
 
+    // 获取某人总原始金额
+    function getPersonTotalOriginal(name) {
+      let total = 0;
+      advances.forEach(adv => {
+        if (adv.name === name) total += adv.amount;
+      });
+      return total;
+    }
+
+    // 从预付款扣款（按到账日期顺序）
     function deductFromPersonPartial(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name && adv.balance > 0)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -88,6 +130,7 @@
       return deducted;
     }
 
+    // 退款到预付款（按到账日期倒序，优先退到最新的预付款）
     function addBackToPerson(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -99,13 +142,13 @@
         remaining -= addBack;
       }
       saveAdvances();
+      return remaining === 0;
     }
 
     function getSingleAttendanceInfo(dateStr) {
       const att = attendanceRecords[dateStr];
       if (!att) return null;
-      let type = att.type;
-      return { type };
+      return { type: att.type };
     }
 
     function hasCrewAttendance(dateStr) {
@@ -306,8 +349,13 @@
             cell.classList.add('has-record');
             const amtSpan = document.createElement('span');
             amtSpan.className = 'amount';
-            if (total < 0) amtSpan.classList.add('negative');
-            amtSpan.textContent = total < 0 ? `-¥${Math.abs(total).toFixed(1)}` : `¥${total.toFixed(1)}`;
+            if (total < 0) {
+              amtSpan.classList.add('negative');
+              amtSpan.textContent = `-¥${Math.abs(total).toFixed(1)}`;
+            } else {
+              amtSpan.classList.add('positive');
+              amtSpan.textContent = `+¥${total.toFixed(1)}`;
+            }
             content.appendChild(amtSpan);
           } else {
             const placeholder = document.createElement('div');
@@ -336,10 +384,17 @@
           const data = summary[cat]; grandTotal += data.total;
           const days = [...new Set(data.records.map(r => r.day))].sort((a,b)=>a-b);
           const daysHtml = days.map(d => `<span>${d}号</span>`).join('');
-          const totalDisplay = data.total < 0 ? `-¥${Math.abs(data.total).toFixed(2)}` : `¥${data.total.toFixed(2)}`;
-          html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><span class="summary-category-amount ${data.total<0?'negative':''}">${totalDisplay}</span></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
+          let totalDisplay = '';
+          if (data.total < 0) {
+            totalDisplay = `-¥${Math.abs(data.total).toFixed(2)}`;
+          } else {
+            totalDisplay = `+¥${data.total.toFixed(2)}`;
+          }
+          const cls = data.total < 0 ? 'negative' : 'positive';
+          html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><span class="summary-category-amount ${cls}">${totalDisplay}</span></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
         });
-        html += `<div class="summary-total"><span>本月合计</span><span>${grandTotal<0?'-¥'+Math.abs(grandTotal).toFixed(2):'¥'+grandTotal.toFixed(2)}</span></div>`;
+        let grandDisplay = grandTotal < 0 ? `-¥${Math.abs(grandTotal).toFixed(2)}` : `+¥${grandTotal.toFixed(2)}`;
+        html += `<div class="summary-total"><span>本月合计</span><span>${grandDisplay}</span></div>`;
       }
 
       if (advances.length > 0) {
@@ -379,7 +434,7 @@
           const s = crewStats[name];
           if (s.total > 0 || s.rest > 0) {
             grandTotalCrew += s.total;
-            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${s.half/2}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
+            html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${(s.half/2).toFixed(1)}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
           }
         });
         html += `<div class="stat-row" style="font-weight:bold; border-top:1px solid #ccc; padding-top:4px;"><span>👥 总计</span><span>${grandTotalCrew.toFixed(1)} 天</span></div>`;
@@ -396,8 +451,10 @@
       currentForm = form;
       document.getElementById('expenseForm').style.display = form === 'expense' ? 'block' : 'none';
       document.getElementById('advanceForm').style.display = form === 'advance' ? 'block' : 'none';
+      document.getElementById('incomeForm').style.display = form === 'income' ? 'block' : 'none';
       document.getElementById('switchExpense').classList.toggle('active', form === 'expense');
       document.getElementById('switchAdvance').classList.toggle('active', form === 'advance');
+      document.getElementById('switchIncome').classList.toggle('active', form === 'income');
     }
 
     function openModal(dateStr) {
@@ -405,12 +462,13 @@
       document.getElementById('modalDate').textContent = `📅 ${dateStr}`;
       renderAllRecords();
       updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
       document.getElementById('advanceDate').value = dateStr;
-
-      // 添加以下代码：恢复上次输入的分类和备注
+      
+      // 恢复上次输入的分类和备注（记忆功能）
       document.getElementById('category').value = lastInput.category || '';
       document.getElementById('note').value = lastInput.note || '';
-
+      
       switchForm('expense');
       document.body.classList.add('modal-open');
       document.getElementById('modal').classList.add('active');
@@ -423,16 +481,26 @@
       const container = document.getElementById('modalRecords');
       const dayRecs = getRecordsByDate(selectedDate);
       const dayAdvances = getAdvancesByDate(selectedDate);
+      const dayIncomes = dayRecs.filter(r => r.amount > 0);
+      const dayExpenses = dayRecs.filter(r => r.amount < 0);
+      
       const allItems = [
         ...dayAdvances.map(adv => ({ type: 'advance', data: adv, timestamp: adv.id })),
-        ...dayRecs.map(rec => ({ type: 'expense', data: rec, timestamp: rec.id }))
+        ...dayIncomes.map(inc => ({ type: 'income', data: inc, timestamp: inc.id })),
+        ...dayExpenses.map(exp => ({ type: 'expense', data: exp, timestamp: exp.id }))
       ].sort((a, b) => b.timestamp - a.timestamp);
+      
       if (allItems.length === 0) { container.innerHTML = '<p style="color:#888;text-align:center;padding:10px;">当天暂无记录</p>'; return; }
+      
       container.innerHTML = allItems.map(item => {
         if (item.type === 'advance') {
           const adv = item.data;
           const used = adv.amount - adv.balance;
           return `<div class="record-item"><div class="info"><strong>💰 预支 - ${adv.name}</strong><small>总额 ¥${adv.amount.toFixed(2)} | 已用 ¥${used.toFixed(2)} | 余额 ¥${adv.balance.toFixed(2)}</small></div><span class="amount-text advance">+¥${adv.amount.toFixed(2)}</span><button class="delete-btn" data-id="${adv.id}" data-type="advance">×</button></div>`;
+        } else if (item.type === 'income') {
+          const r = item.data;
+          const advanceInfo = r.advancePerson ? ` (退款到 ${r.advancePerson})` : '';
+          return `<div class="record-item"><div class="info"><strong>💵 退款 - ${r.category || r.advancePerson}</strong>${r.note ? `<small>${r.note}${advanceInfo}</small>` : `<small>${advanceInfo}</small>`}</div><span class="amount-text income">+¥${r.amount.toFixed(2)}</span><button class="delete-btn" data-id="${r.id}" data-type="expense">×</button></div>`;
         } else {
           const r = item.data;
           const cls = r.amount < 0 ? 'negative' : 'positive';
@@ -443,27 +511,35 @@
       }).join('');
       
       container.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const id = parseInt(btn.dataset.id);
-          const type = btn.dataset.type;
-          if (type === 'expense') {
-            const record = records.find(r => r.id === id);
-            if (record && record.advancePerson && record.advancePerson !== '') {
-              addBackToPerson(record.advancePerson, Math.abs(record.amount));
-            }
-            records = records.filter(r => r.id !== id);
-            saveRecords();
-            updateAdvanceSelect();
-          } else if (type === 'advance') {
-            advances = advances.filter(a => a.id !== id);
-            saveAdvances();
-            updateAdvanceSelect();
-          }
-          renderAllRecords();
-          renderCalendar();
-          showToast('✅ 已删除');
-        });
-      });
+  btn.addEventListener('click', (e) => {
+    const id = parseInt(btn.dataset.id);
+    const type = btn.dataset.type;
+    if (type === 'expense') {
+      const record = records.find(r => r.id === id);
+      if (record && record.advancePerson && record.advancePerson !== '') {
+        if (record.amount > 0) {
+          // 这是退款记录，金额是正数，删除时要从预付款中扣除
+          deductFromPersonPartial(record.advancePerson, Math.abs(record.amount));
+        } else {
+          // 这是消费记录，金额是负数，删除时要恢复预付款
+          addBackToPerson(record.advancePerson, Math.abs(record.amount));
+        }
+      }
+      records = records.filter(r => r.id !== id);
+      saveRecords();
+      updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
+    } else if (type === 'advance') {
+      advances = advances.filter(a => a.id !== id);
+      saveAdvances();
+      updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
+    }
+    renderAllRecords();
+    renderCalendar();
+    showToast('✅ 已删除');
+  });
+});
     }
 
     function clearAllForms() {
@@ -472,9 +548,11 @@
       document.getElementById('note').value = '';
       document.getElementById('advanceName').value = '';
       document.getElementById('advanceAmount').value = '';
+      document.getElementById('incomeAmount').value = '';
+      document.getElementById('incomeNote').value = '';
       // 清空保存的上次输入
-     lastInput = { category: '', note: '' };
-     localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
+      lastInput = { category: '', note: '' };
+      localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
 
     function openAttendance() {
@@ -503,6 +581,8 @@
       
       if (!category) return alert('请输入分类名称');
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
+      
+      saveLastInput(category, note);
       
       const recordsToAdd = [];
       
@@ -543,9 +623,9 @@
       records.push(...recordsToAdd);
       saveRecords();
       
-      saveLastInput(category, note);
       document.getElementById('amount').value = '';
       updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
       renderAllRecords();
       renderCalendar();
       showToast('✅ 记账已保存');
@@ -563,19 +643,76 @@
       document.getElementById('advanceName').value = '';
       document.getElementById('advanceAmount').value = '';
       updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
       renderAllRecords();
       renderCalendar();
       showToast('✅ 预支已添加');
     }
 
+    function addIncome() {
+      if (!selectedDate) return;
+      const advancePerson = document.getElementById('incomeAdvanceSelect').value;
+      const amount = parseFloat(document.getElementById('incomeAmount').value);
+      const note = document.getElementById('incomeNote').value.trim();
+      
+      if (!advancePerson) return alert('请选择要退款的预付款');
+      if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
+      
+      // 检查该人员是否有预付款记录
+      const personAdvances = advances.filter(adv => adv.name === advancePerson);
+      if (personAdvances.length === 0) {
+        return alert(`没有找到 "${advancePerson}" 的预付款记录`);
+      }
+      
+      // 计算可退款上限（已消费金额）
+      const totalOriginal = personAdvances.reduce((sum, adv) => sum + adv.amount, 0);
+      const totalBalance = personAdvances.reduce((sum, adv) => sum + adv.balance, 0);
+      const usedAmount = totalOriginal - totalBalance;
+      
+      if (amount > usedAmount) {
+        return alert(`只能退回最多 ¥${usedAmount.toFixed(2)}（${advancePerson} 已消费 ${usedAmount.toFixed(2)}），超出部分无法退回`);
+      }
+      
+      // 执行退款 - 将金额退回到预付款（按到账日期倒序，优先退到最新的预付款）
+      const success = addBackToPerson(advancePerson, amount);
+      
+      if (!success) {
+        return alert('退款失败，请稍后重试');
+      }
+      
+      // 记录退款记录（用于展示在日历列表中）
+      records.push({
+        id: Date.now(),
+        date: selectedDate,
+        category: `退款-${advancePerson}`,
+        amount: Math.abs(amount),
+        note: note || `退款到 ${advancePerson}`,
+        advancePerson: advancePerson,
+        splitAmount: null
+      });
+      saveRecords();
+      
+      document.getElementById('incomeAmount').value = '';
+      document.getElementById('incomeNote').value = '';
+      updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
+      renderAllRecords();
+      renderCalendar();
+      showToast(`✅ 已退款 ¥${amount.toFixed(2)} 到 ${advancePerson}，当前余额 ¥${getPersonTotalBalance(advancePerson).toFixed(2)}`);
+    }
+
     document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
     document.getElementById('addAdvanceBtn').addEventListener('click', addAdvance);
+    document.getElementById('addIncomeBtn').addEventListener('click', addIncome);
     document.getElementById('clearFormBtn').addEventListener('click', clearAllForms);
     document.getElementById('clearFormBtn2').addEventListener('click', clearAllForms);
+    document.getElementById('clearIncomeBtn').addEventListener('click', clearAllForms);
     document.getElementById('openAttendanceBtn').addEventListener('click', openAttendance);
     document.getElementById('openAttendanceBtn2').addEventListener('click', openAttendance);
+    document.getElementById('openAttendanceBtn3').addEventListener('click', openAttendance);
     document.getElementById('switchExpense').addEventListener('click', () => switchForm('expense'));
     document.getElementById('switchAdvance').addEventListener('click', () => switchForm('advance'));
+    document.getElementById('switchIncome').addEventListener('click', () => switchForm('income'));
     document.getElementById('closeModal').addEventListener('click', closeModal);
     document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
     document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
@@ -618,7 +755,7 @@
           <td class="clickable ${halfSelected ? 'selected' : ''}" data-type="half" data-name="${name}">${halfSelected ? '●' : ''}</td>
           <td class="overtime-cell ${overtimeSelected ? 'selected' : ''}" data-type="overtime" data-name="${name}">${overtimeDisplay}</td>
           <td class="clickable ${restSelected ? 'selected' : ''}" data-type="rest" data-name="${name}">${restSelected ? '●' : ''}</td>
-        </table>`;
+        </tr>`;
       }).join('');
       
       tbody.querySelectorAll('.name-col').forEach(cell => {
@@ -808,7 +945,7 @@
       const a = document.createElement('a'); a.download = `记账备份_${selectedMonths.join('_')}.json`; a.href = URL.createObjectURL(blob);
       document.body.appendChild(a); a.click();
       setTimeout(() => { document.body.removeChild(a); }, 200);
-      showToast(`✅ 已导出 ${fRecords.length} 条消费，${fAdvances.length} 条预支`);
+      showToast(`✅ 已导出 ${fRecords.length} 条记录，${fAdvances.length} 条预支`);
     }
 
     function importData(file) {
@@ -831,7 +968,7 @@
             if (data.advances) { const aIds = new Set(advances.map(a => a.id)); advances = [...advances, ...data.advances.filter(a => !aIds.has(a.id))]; }
           }
           saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances();
-          renderCalendar(); updateAdvanceSelect();
+          renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
           showToast('✅ 导入成功');
         } catch (err) { alert('导入失败'); }
       };
@@ -844,8 +981,12 @@
       document.getElementById('loadingOverlay').classList.add('active');
       const ms = `${currentYear}年${currentMonth}月`;
       let inner = `<div class="export-area"><div class="export-title">📌 ${cat}</div><div class="export-subtitle">${ms} 消费明细</div><div class="export-category">`;
-      data.records.forEach(r => { inner += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${r.amount<0?'negative':'positive'}">${r.amount<0?'-¥'+Math.abs(r.amount).toFixed(2):'¥'+r.amount.toFixed(2)}</span></div>`; });
-      inner += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${data.total<0?'negative':'positive'}">${data.total<0?'-¥'+Math.abs(data.total).toFixed(2):'¥'+data.total.toFixed(2)}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
+      data.records.forEach(r => {
+        const sign = r.amount < 0 ? '-' : '+';
+        const absAmt = Math.abs(r.amount);
+        inner += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${r.amount<0?'negative':'positive'}">${sign}¥${absAmt.toFixed(2)}</span></div>`;
+      });
+      inner += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${data.total<0?'negative':'positive'}">${data.total<0?'-¥'+Math.abs(data.total).toFixed(2):'+¥'+data.total.toFixed(2)}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
       document.getElementById('exportTemplate').innerHTML = inner;
       try {
         const canvas = await html2canvas(document.querySelector('.export-area'), { backgroundColor: '#fff', scale: 2 });
@@ -901,6 +1042,7 @@
     window.confirmRename = (old, i) => renameCategory(old, document.getElementById(`editInput_${i}`).value);
     window.exportCategoryToImage = exportCategoryToImage;
 
+    // 初始化
     const now = new Date();
     currentYear = now.getFullYear();
     currentMonth = now.getMonth() + 1;
@@ -912,4 +1054,5 @@
     loadLastInput();
     renderCalendar();
     updateAdvanceSelect();
+    updateIncomeAdvanceSelect();
   
