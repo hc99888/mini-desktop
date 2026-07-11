@@ -12,6 +12,7 @@
     .day-cell.has-record { background: #fff3cd; font-weight: bold; }
     .day-cell .amount { font-size: 0.65rem; color: #d9534f; margin-top: 2px; }
     .day-cell .amount.negative { color: #28a745; }
+    .day-cell .amount.positive { color: #007aff; }
     .day-cell .attendance-dots { display: flex; gap: 3px; justify-content: center; margin-bottom: 2px; }
     .attendance-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
     .attendance-dot.full { background-color: #007aff; }
@@ -35,6 +36,7 @@
     .summary-category-name { font-weight: bold; font-size: 0.95rem; color: #333; }
     .summary-category-amount { font-weight: bold; font-size: 1rem; color: #d9534f; }
     .summary-category-amount.negative { color: #28a745; }
+    .summary-category-amount.positive { color: #007aff; }
     .summary-category-days { font-size: 0.8rem; color: #666; margin-top: 5px; }
     .summary-category-days span { display: inline-block; background: #e9ecef; padding: 2px 8px; border-radius: 4px; margin: 2px 4px 2px 0; font-size: 0.75rem; }
     .summary-total { margin-top: 12px; padding-top: 10px; border-top: 2px solid #eee; display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; }
@@ -92,6 +94,7 @@
     .record-item .amount-text.positive { color: #d9534f; }
     .record-item .amount-text.negative { color: #28a745; }
     .record-item .amount-text.advance { color: #17a2b8; }
+    .record-item .amount-text.income { color: #28a745; }
     .delete-btn { background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; flex-shrink: 0; margin-left: 8px; -webkit-tap-highlight-color: transparent; }
 
     .add-form { border-top: 1px solid #eee; padding-top: 12px; }
@@ -128,9 +131,11 @@
     .btn-advance-add { background: #17a2b8; }
     .btn-advance-add:active { background: #138496; }
     .btn-add-crew { background: #6c757d; color: white; }
+    .btn-income-add { background: #28a745; }
+    .btn-income-add:active { background: #1e7e34; }
 
     .form-switch { display: flex; gap: 4px; margin-bottom: 10px; }
-    .form-switch button { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.8rem; cursor: pointer; }
+    .form-switch button { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; }
     .form-switch button.active { background: #007aff; color: white; border-color: #007aff; }
 
     .attendance-options { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
