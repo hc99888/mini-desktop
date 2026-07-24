@@ -34,6 +34,15 @@
       }
     }
 
+    // ===== 根据文本长度调整字体大小 =====
+    function getAmountFontSize(text) {
+      const len = text.length;
+      if (len <= 4) return '0.65rem';
+      if (len <= 5) return '0.58rem';
+      if (len <= 6) return '0.52rem';
+      return '0.46rem';
+    }
+
     function showToast(msg, duration = 2000) {
       const toast = document.getElementById('toast');
       toast.textContent = msg;
@@ -173,26 +182,51 @@
       return stats;
     }
 
-    // ===== 单人考勤修改项目名称 =====
-    function renameSingleProject(oldName, newName) {
-      newName = newName.trim();
-      if (!newName) return alert('项目名称不能为空');
-      if (oldName === newName) return;
-      
-      const stats = getAttendanceStatsByProject(currentYear, currentMonth);
-      if (stats[newName]) {
-        return alert(`项目 "${newName}" 已存在，请使用其他名称`);
+    // ===== 单人考勤修改项目名称（所有月份统一修改，兼容缺失 project 字段） =====
+    window.renameSingleProject = function(oldName) {
+      const newName = prompt('请输入新的项目名称：', oldName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        showToast('项目名称不能为空');
+        return;
+      }
+      if (trimmed === oldName) {
+        showToast('新名称与旧名称相同，无需修改');
+        return;
       }
       
+      // 检查新名称是否已存在（检查所有月份，包括没有 project 的）
+      const allStats = {};
+      Object.entries(attendanceRecords).forEach(([date, att]) => {
+        const project = att.project || '未分类';
+        if (!allStats[project]) allStats[project] = 0;
+        allStats[project]++;
+      });
+      if (allStats[trimmed] && oldName !== '未分类') {
+        showToast(`项目 "${trimmed}" 已存在，请使用其他名称`);
+        return;
+      }
+      
+      // 更新所有考勤记录中的项目名称（所有月份）
+      let updated = 0;
       Object.keys(attendanceRecords).forEach(date => {
-        if (attendanceRecords[date].project === oldName) {
-          attendanceRecords[date].project = newName;
+        const currentProject = attendanceRecords[date].project || '未分类';
+        if (currentProject === oldName) {
+          attendanceRecords[date].project = trimmed;
+          updated++;
         }
       });
+      
+      if (updated === 0) {
+        showToast('没有找到需要修改的记录');
+        return;
+      }
+      
       saveAttendance();
       renderCalendar();
-      showToast(`✅ 项目已重命名为 "${newName}"`);
-    }
+      showToast(`✅ 已重命名为 "${trimmed}"（更新 ${updated} 条记录）`);
+    };
 
     // ===== 多人考勤按项目分组统计 =====
     function getCrewStatsByProject(year, month) {
@@ -219,28 +253,55 @@
       return stats;
     }
 
-    // ===== 多人考勤修改项目名称 =====
-    function renameCrewProject(oldName, newName) {
-      newName = newName.trim();
-      if (!newName) return alert('项目名称不能为空');
-      if (oldName === newName) return;
-      
-      const stats = getCrewStatsByProject(currentYear, currentMonth);
-      if (stats[newName]) {
-        return alert(`项目 "${newName}" 已存在，请使用其他名称`);
+    // ===== 多人考勤修改项目名称（所有月份统一修改，兼容缺失 project 字段） =====
+    window.renameCrewProject = function(oldName) {
+      const newName = prompt('请输入新的项目名称：', oldName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        showToast('项目名称不能为空');
+        return;
+      }
+      if (trimmed === oldName) {
+        showToast('新名称与旧名称相同，无需修改');
+        return;
       }
       
+      // 检查新名称是否已存在（检查所有月份，包括没有 project 的）
+      const allStats = {};
+      Object.entries(crewAttendance).forEach(([date, dayData]) => {
+        Object.entries(dayData).forEach(([name, val]) => {
+          const project = val.project || '未分类';
+          if (!allStats[project]) allStats[project] = 0;
+          allStats[project]++;
+        });
+      });
+      if (allStats[trimmed] && oldName !== '未分类') {
+        showToast(`项目 "${trimmed}" 已存在，请使用其他名称`);
+        return;
+      }
+      
+      // 更新所有考勤记录中的项目名称（所有月份）
+      let updated = 0;
       Object.keys(crewAttendance).forEach(date => {
         Object.keys(crewAttendance[date]).forEach(name => {
-          if (crewAttendance[date][name].project === oldName) {
-            crewAttendance[date][name].project = newName;
+          const currentProject = crewAttendance[date][name].project || '未分类';
+          if (currentProject === oldName) {
+            crewAttendance[date][name].project = trimmed;
+            updated++;
           }
         });
       });
+      
+      if (updated === 0) {
+        showToast('没有找到需要修改的记录');
+        return;
+      }
+      
       saveCrewAttendance();
       renderCalendar();
-      showToast(`✅ 项目已重命名为 "${newName}"`);
-    }
+      showToast(`✅ 已重命名为 "${trimmed}"（更新 ${updated} 条记录）`);
+    };
 
     // ===== 获取某天某项目的出勤人数（多人） =====
     function getCrewCountByProject(dateStr, project) {
@@ -427,7 +488,6 @@
             cell.classList.add('has-record');
             const amtSpan = document.createElement('span');
             amtSpan.className = 'amount';
-            // 使用缩略显示
             const formatted = formatAmount(total);
             if (total < 0) {
               amtSpan.classList.add('negative');
@@ -435,6 +495,8 @@
               amtSpan.classList.add('positive');
             }
             amtSpan.textContent = formatted;
+            // 根据文本长度动态调整字体大小
+            amtSpan.style.fontSize = getAmountFontSize(formatted);
             content.appendChild(amtSpan);
           } else {
             const placeholder = document.createElement('div');
@@ -516,7 +578,7 @@
             html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
               <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
                 <span>【${name}】</span>
-                <button class="btn-sm btn-edit" onclick="renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名称</button>
+                <button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名称</button>
               </div>
               <div class="stat-row"><span>🔵 全天</span><span>${s.full} 天</span></div>
               <div class="stat-row"><span>🟠 半天</span><span>${s.half} 天</span></div>
@@ -549,7 +611,7 @@
               html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
                 <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
                   <span>【${project}】</span>
-                  <button class="btn-sm btn-edit" onclick="renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名称</button>
+                  <button class="btn-sm btn-edit" onclick="window.renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名称</button>
                 </div>`;
               memberNames.forEach(name => {
                 const s = members[name];
@@ -569,21 +631,6 @@
       }
       container.innerHTML = html;
     }
-
-    // 暴露给 onclick 使用的全局函数
-    window.renameSingleProject = function(oldName) {
-      const newName = prompt('请输入新的项目名称：', oldName);
-      if (newName !== null) {
-        renameSingleProject(oldName, newName);
-      }
-    };
-
-    window.renameCrewProject = function(oldName) {
-      const newName = prompt('请输入新的项目名称：', oldName);
-      if (newName !== null) {
-        renameCrewProject(oldName, newName);
-      }
-    };
 
     function switchForm(form) {
       currentForm = form;
