@@ -7,21 +7,21 @@
     .header h2 { margin: 0; font-size: 1.1rem; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: white; padding: 8px; border-radius: 12px; }
     .day-label { text-align: center; font-weight: bold; padding: 5px 0; color: #666; font-size: 0.85rem; }
-    .day-cell { aspect-ratio: 1/1; border-radius: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; font-size: 0.9rem; border: 1px solid #eee; -webkit-tap-highlight-color: transparent; }
+    .day-cell { aspect-ratio: 1/1; border-radius: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; font-size: 0.9rem; border: 1px solid #eee; -webkit-tap-highlight-color: transparent; overflow: hidden; min-width: 0; min-height: 0; padding: 2px; }
     .day-cell.today { border: 2px solid #007aff; }
     .day-cell.has-record { background: #fff3cd; font-weight: bold; }
-    .day-cell .amount { font-size: 0.65rem; color: #d9534f; margin-top: 2px; }
+    .day-cell .amount { font-size: 0.65rem; color: #d9534f; margin-top: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .day-cell .amount.negative { color: #28a745; }
     .day-cell .amount.positive { color: #007aff; }
-    .day-cell .attendance-dots { display: flex; gap: 3px; justify-content: center; margin-bottom: 2px; }
-    .attendance-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .day-cell .attendance-dots { display: flex; gap: 3px; justify-content: center; margin-bottom: 2px; flex-shrink: 0; }
+    .attendance-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .attendance-dot.full { background-color: #007aff; }
     .attendance-dot.half { background-color: #FF9500; }
     .attendance-dot.overtime { background-color: #FF3B30; }
     .attendance-dot.rest { background-color: #34C759; }
     .attendance-dot.crew { background-color: #000000; }
     .day-cell.empty { background: transparent; border: none; cursor: default; }
-    .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; width: 100%; justify-content: center; }
 
     .toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .toolbar button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 4px; }
