@@ -53,5 +53,10 @@
     "name": "日历记账",
     "icon": "apps/日历记账/logo.jpg",
     "url": "apps/日历记账/"
+  },
+  {
+    "name": "年龄查询",
+    "icon": "apps/年龄查询/logo.jpg",
+    "url": "apps/年龄查询/"
   }
 ]
