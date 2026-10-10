@@ -9,6 +9,7 @@
     const LAST_INPUT_KEY = 'ledger_last_input';
     const SALARY_RATE_KEY = 'salary_rates';
     const SALARY_PAID_KEY = 'salary_paid';
+    const LOAN_KEY = 'loan_records';
 
     let currentYear, currentMonth;
     let records = [];
@@ -18,6 +19,7 @@
     let advances = [];
     let salaryRates = {};
     let salaryPaid = {};
+    let loanRecords = [];
     let selectedDate = null;
     let lastInput = { category: '', note: '' };
     let currentForm = 'expense';
@@ -65,6 +67,8 @@
     function saveSalaryRates() { localStorage.setItem(SALARY_RATE_KEY, JSON.stringify(salaryRates)); }
     function loadSalaryPaid() { const raw = localStorage.getItem(SALARY_PAID_KEY); salaryPaid = raw ? JSON.parse(raw) : {}; }
     function saveSalaryPaid() { localStorage.setItem(SALARY_PAID_KEY, JSON.stringify(salaryPaid)); }
+    function loadLoanRecords() { const raw = localStorage.getItem(LOAN_KEY); loanRecords = raw ? JSON.parse(raw) : []; }
+    function saveLoanRecords() { localStorage.setItem(LOAN_KEY, JSON.stringify(loanRecords)); }
 
     function saveLastInput(category, note) {
       lastInput = { category, note };
@@ -133,8 +137,89 @@
 
     function getPaymentList(project) {
       const list = salaryPaid[project] || [];
-      return [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
+      return [...list].sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return (b.timestamp || 0) - (a.timestamp || 0);
+      });
     }
+
+    function getLoanStatsByPerson() {
+      const personMap = new Map();
+      loanRecords.forEach(loan => {
+        if (!personMap.has(loan.person)) {
+          personMap.set(loan.person, { lend: 0, borrow: 0, records: [] });
+        }
+        const person = personMap.get(loan.person);
+        if (loan.direction === 'lend') person.lend += loan.amount;
+        else person.borrow += loan.amount;
+        person.records.push(loan);
+      });
+      return personMap;
+    }
+
+    function getTotalLend() {
+      return loanRecords.filter(l => l.direction === 'lend').reduce((sum, l) => sum + l.amount, 0);
+    }
+
+    function getTotalBorrow() {
+      return loanRecords.filter(l => l.direction === 'borrow').reduce((sum, l) => sum + l.amount, 0);
+    }
+
+    // ===== 清空分类（本月） =====
+    window.clearCategory = function(cat) {
+      const monthRecords = getRecordsByMonth(currentYear, currentMonth).filter(r => r.category === cat);
+      if (monthRecords.length === 0) { showToast('该分类本月没有记录'); return; }
+      if (!confirm(`确定清空本月【${cat}】的 ${monthRecords.length} 条记录？\n\n注意：只清空 ${currentYear}年${currentMonth}月 的记录，其他月份不受影响。`)) return;
+      
+      const ids = new Set(monthRecords.map(r => r.id));
+      // 恢复预付款（如果有）
+      monthRecords.forEach(r => {
+        if (r.advancePerson && r.advancePerson !== '') {
+          if (r.amount > 0) { deductFromPersonPartial(r.advancePerson, Math.abs(r.amount)); }
+          else { addBackToPerson(r.advancePerson, Math.abs(r.amount)); }
+        }
+      });
+      records = records.filter(r => !ids.has(r.id));
+      saveRecords();
+      updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
+      renderCalendar();
+      showToast(`✅ 已清空【${cat}】本月记录`);
+    };
+
+    // ===== 清空预付款（某人） =====
+    window.clearAdvance = function(name) {
+      const personAdvances = advances.filter(adv => adv.name === name);
+      if (personAdvances.length === 0) return;
+      if (!confirm(`确定清空【${name}】的所有预付款记录？\n\n包括：\n• 所有预付款到账记录\n• 余额信息\n\n此操作不可恢复！`)) return;
+      
+      advances = advances.filter(adv => adv.name !== name);
+      saveAdvances();
+      updateAdvanceSelect();
+      updateIncomeAdvanceSelect();
+      renderCalendar();
+      showToast(`✅ 已清空【${name}】预付款记录`);
+    };
+
+    // ===== 清空多人考勤（某项目） =====
+    window.clearCrewProject = function(project) {
+      let deletedCount = 0;
+      Object.keys(crewAttendance).forEach(date => {
+        Object.keys(crewAttendance[date]).forEach(name => {
+          if ((crewAttendance[date][name].project || '未分类') === project) {
+            delete crewAttendance[date][name];
+            deletedCount++;
+          }
+        });
+        if (Object.keys(crewAttendance[date]).length === 0) delete crewAttendance[date];
+      });
+      if (deletedCount === 0) { showToast('没有找到该项目的记录'); return; }
+      if (!confirm(`确定清空【${project}】的所有多人考勤记录？\n\n共 ${deletedCount} 条记录，此操作不可恢复！`)) return;
+      
+      saveCrewAttendance();
+      renderCalendar();
+      showToast(`✅ 已清空【${project}】多人考勤（${deletedCount}条）`);
+    };
 
     window.saveAttendanceHandler = function() {
       if (!selectedDate) { showToast('请先选择日期'); return; }
@@ -225,7 +310,6 @@
       showToast(`✅ ${project} 日薪已设置为 ¥${rate}/天`);
     };
 
-    // ===== 收到工资（简单输入金额，累加，记录时间） =====
     window.markSalaryPaid = function(project) {
       const totalSalary = getTotalSalary(project);
       const totalPaid = getTotalPaid(project);
@@ -236,32 +320,40 @@
         return;
       }
       
-      let msg = `【${project}】\n`;
-      msg += `累计应发：¥${totalSalary.totalAmount.toFixed(2)}\n`;
-      msg += `已发工资：¥${totalPaid.toFixed(2)}\n`;
-      msg += `剩余未发：¥${remaining.toFixed(2)}\n\n`;
-      msg += `请输入本次收到的工资金额：`;
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
       
-      const amountStr = prompt(msg, remaining > 0 ? remaining.toFixed(2) : '');
+      const amountStr = prompt(
+        `【${project}】\n累计应发：¥${totalSalary.totalAmount.toFixed(2)}\n已发工资：¥${totalPaid.toFixed(2)}\n剩余未发：¥${remaining.toFixed(2)}\n\n请输入本次收到的工资金额：`,
+        remaining > 0 ? remaining.toFixed(2) : ''
+      );
       if (amountStr === null) return;
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return; }
       
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const dateStr = prompt(
+        `请输入收款日期（格式：YYYY-MM-DD）：\n默认今天：${todayStr}\n\n可以修改为其他日期（如补录上个月发的工资）`,
+        todayStr
+      );
+      if (dateStr === null) return;
+      
+      let finalDate = dateStr.trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(finalDate)) {
+        showToast('日期格式不正确，使用今天日期');
+        finalDate = todayStr;
+      }
       
       if (!salaryPaid[project]) salaryPaid[project] = [];
       salaryPaid[project].push({
         amount: amount,
-        date: dateStr,
+        date: finalDate,
         timestamp: Date.now()
       });
       saveSalaryPaid();
       renderCalendar();
-      showToast(`✅ 已记录收到 ¥${amount.toFixed(2)}`);
+      showToast(`✅ 已记录 ${finalDate} 收到 ¥${amount.toFixed(2)}`);
     };
 
-    // ===== 删除收款记录 =====
     window.deletePayment = function(project, timestamp) {
       if (!salaryPaid[project]) return;
       salaryPaid[project] = salaryPaid[project].filter(item => item.timestamp !== timestamp);
@@ -269,6 +361,48 @@
       saveSalaryPaid();
       renderCalendar();
       showToast('✅ 已删除收款记录');
+    };
+
+    window.clearProject = function(project) {
+      const confirmMsg = `确定清空【${project}】的全部数据？\n\n包括：\n• 所有考勤记录\n• 日薪设置\n• 收款记录\n\n此操作不可恢复！`;
+      if (!confirm(confirmMsg)) return;
+      
+      let deletedCount = 0;
+      Object.keys(attendanceRecords).forEach(date => {
+        if ((attendanceRecords[date].project || '未分类') === project) {
+          delete attendanceRecords[date];
+          deletedCount++;
+        }
+      });
+      
+      if (salaryRates[project]) {
+        delete salaryRates[project];
+        saveSalaryRates();
+      }
+      if (salaryPaid[project]) {
+        delete salaryPaid[project];
+        saveSalaryPaid();
+      }
+      
+      saveAttendance();
+      renderCalendar();
+      showToast(`✅ 已清空【${project}】全部数据（${deletedCount}条考勤）`);
+    };
+
+    window.deleteLoan = function(id) {
+      if (!confirm('确定删除这条借贷记录？')) return;
+      loanRecords = loanRecords.filter(l => l.id !== id);
+      saveLoanRecords();
+      renderCalendar();
+      showToast('✅ 已删除借贷记录');
+    };
+
+    window.clearPersonLoan = function(person) {
+      if (!confirm(`确定清空【${person}】的所有借贷记录？`)) return;
+      loanRecords = loanRecords.filter(l => l.person !== person);
+      saveLoanRecords();
+      renderCalendar();
+      showToast(`✅ 已清空【${person}】借贷记录`);
     };
 
     window.renameCrewProject = function(oldName) {
@@ -620,12 +754,14 @@
           let totalDisplay = '';
           if (data.total < 0) { totalDisplay = `-¥${Math.abs(data.total).toFixed(2)}`; } else { totalDisplay = `+¥${data.total.toFixed(2)}`; }
           const cls = data.total < 0 ? 'negative' : 'positive';
-          html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><span class="summary-category-amount ${cls}">${totalDisplay}</span></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
+          // 分类卡片右侧增加清空按钮
+          html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><div style="display:flex;align-items:center;gap:6px;"><span class="summary-category-amount ${cls}">${totalDisplay}</span><button class="btn-card-clear" onclick="window.clearCategory('${cat}')" title="清空本月该分类">🗑️</button></div></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
         });
         let grandDisplay = grandTotal < 0 ? `-¥${Math.abs(grandTotal).toFixed(2)}` : `+¥${grandTotal.toFixed(2)}`;
         html += `<div class="summary-total"><span>本月合计</span><span>${grandDisplay}</span></div>`;
       }
 
+      // 预付款卡片（每个人增加清空按钮）
       if (advances.length > 0) {
         const personMap = new Map();
         let totalOriginalAll = 0;
@@ -639,11 +775,54 @@
         });
         html += `<div class="advance-card"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>💰 预付款余额</h4><span style="font-weight:bold; color:#e65100;">¥${totalOriginalAll.toFixed(2)}</span></div>`;
         for (const [name, person] of personMap) {
-          html += `<div style="margin-top:12px;"><div style="font-weight:bold; margin-bottom:5px;">${name}</div>`;
+          html += `<div style="margin-top:12px;"><div style="font-weight:bold; display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><span>${name}</span><button class="btn-card-clear" onclick="window.clearAdvance('${name}')" title="清空该人预付款">🗑️</button></div>`;
           person.records.forEach(rec => {
             html += `<div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#666; margin-left:8px;"><span>到账：${rec.date || '未知日期'}</span><span>总额 ¥${rec.amount.toFixed(2)}</span></div>`;
           });
           html += `<div style="display:flex; justify-content:space-between; margin-top:5px; padding-top:3px; border-top:1px dashed #ffe0b2; font-weight:bold;"><span>剩余余额</span><span style="color:#e65100;">¥${person.totalBalance.toFixed(2)}</span></div></div>`;
+        }
+        html += `</div>`;
+      }
+
+      // 借贷卡片
+      if (loanRecords.length > 0) {
+        const personMap = getLoanStatsByPerson();
+        const totalLend = getTotalLend();
+        const totalBorrow = getTotalBorrow();
+        const netTotal = totalLend - totalBorrow;
+        
+        html += `<div class="loan-card"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>💳 借贷统计</h4><span style="font-weight:bold; color:#e67e22;">净借出 ¥${netTotal.toFixed(2)}</span></div>`;
+        
+        for (const [person, data] of personMap) {
+          const net = data.lend - data.borrow;
+          let statusText = '';
+          let statusColor = '';
+          if (net > 0) { statusText = `⚠️ 欠我 ¥${net.toFixed(2)}`; statusColor = '#e67e22'; }
+          else if (net < 0) { statusText = `📥 我欠 ¥${Math.abs(net).toFixed(2)}`; statusColor = '#3498db'; }
+          else { statusText = `✅ 已结清`; statusColor = '#28a745'; }
+          
+          html += `<div style="margin-top:10px;padding:8px;background:#fff5e6;border-radius:6px;">
+            <div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+              <span>【${person}】<span style="color:${statusColor};font-size:0.85rem;margin-left:6px;">${statusText}</span></span>
+              <button class="btn-card-clear" onclick="window.clearPersonLoan('${person}')" title="清空该人借贷">🗑️</button>
+            </div>`;
+          
+          const sortedRecords = [...data.records].sort((a, b) => b.date.localeCompare(a.date));
+          sortedRecords.forEach(loan => {
+            const isLend = loan.direction === 'lend';
+            const typeText = isLend ? '💸 借出' : '📥 借入';
+            const amountClass = isLend ? 'out' : 'in';
+            html += `<div class="loan-row">
+              <div class="loan-info">
+                <span class="loan-type">${typeText}</span>
+                <span class="loan-date">${loan.date}${loan.note ? ' · ' + loan.note : ''}</span>
+              </div>
+              <span class="loan-amount ${amountClass}">¥${loan.amount.toFixed(2)}</span>
+              <button class="loan-delete" onclick="window.deleteLoan(${loan.id})">×</button>
+            </div>`;
+          });
+          
+          html += `</div>`;
         }
         html += `</div>`;
       }
@@ -687,7 +866,6 @@
                 <div class="stat-row remaining"><span>⚠️ 剩余未发</span><span>¥${remaining.toFixed(2)}</span></div>
               </div>`;
             
-            // 收款记录列表
             if (paymentList.length > 0) {
               html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;">
                 <div style="font-size:0.75rem;color:#666;margin-bottom:3px;">📋 收款记录（${paymentList.length}条）</div>`;
@@ -703,6 +881,7 @@
             
             html += `<div style="margin-top:6px;text-align:right;">
                 <button class="btn-sm btn-salary-paid" onclick="window.markSalaryPaid('${name}')" style="font-size:0.7rem;">💰 收到工资</button>
+                <button class="btn-sm btn-salary-clear" onclick="window.clearProject('${name}')" style="font-size:0.7rem;">🗑️ 清空</button>
               </div>
             </div>`;
           }
@@ -727,7 +906,10 @@
               html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
                 <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
                   <span>【${project}】</span>
-                  <button class="btn-sm btn-edit" onclick="window.renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名称</button>
+                  <div>
+                    <button class="btn-sm btn-edit" onclick="window.renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名</button>
+                    <button class="btn-card-clear" onclick="window.clearCrewProject('${project}')" title="清空该项目多人考勤">🗑️</button>
+                  </div>
                 </div>`;
               memberNames.forEach(name => {
                 const s = members[name];
@@ -752,9 +934,11 @@
       document.getElementById('expenseForm').style.display = form === 'expense' ? 'block' : 'none';
       document.getElementById('advanceForm').style.display = form === 'advance' ? 'block' : 'none';
       document.getElementById('incomeForm').style.display = form === 'income' ? 'block' : 'none';
+      document.getElementById('loanForm').style.display = form === 'loan' ? 'block' : 'none';
       document.getElementById('switchExpense').classList.toggle('active', form === 'expense');
       document.getElementById('switchAdvance').classList.toggle('active', form === 'advance');
       document.getElementById('switchIncome').classList.toggle('active', form === 'income');
+      document.getElementById('switchLoan').classList.toggle('active', form === 'loan');
     }
 
     function openModal(dateStr) {
@@ -782,11 +966,13 @@
       const container = document.getElementById('modalRecords');
       const dayRecs = getRecordsByDate(selectedDate);
       const dayAdvances = getAdvancesByDate(selectedDate);
+      const dayLoans = loanRecords.filter(l => l.date === selectedDate);
       const dayIncomes = dayRecs.filter(r => r.amount > 0);
       const dayExpenses = dayRecs.filter(r => r.amount < 0);
       
       const allItems = [
         ...dayAdvances.map(adv => ({ type: 'advance', data: adv, timestamp: adv.id })),
+        ...dayLoans.map(loan => ({ type: 'loan', data: loan, timestamp: loan.id })),
         ...dayIncomes.map(inc => ({ type: 'income', data: inc, timestamp: inc.id })),
         ...dayExpenses.map(exp => ({ type: 'expense', data: exp, timestamp: exp.id }))
       ].sort((a, b) => b.timestamp - a.timestamp);
@@ -798,6 +984,12 @@
           const adv = item.data;
           const used = adv.amount - adv.balance;
           return `<div class="record-item"><div class="info"><strong>💰 预支 - ${adv.name}</strong><small>总额 ¥${adv.amount.toFixed(2)} | 已用 ¥${used.toFixed(2)} | 余额 ¥${adv.balance.toFixed(2)}</small></div><span class="amount-text advance">+¥${adv.amount.toFixed(2)}</span><button class="delete-btn" data-id="${adv.id}" data-type="advance">×</button></div>`;
+        } else if (item.type === 'loan') {
+          const loan = item.data;
+          const isLend = loan.direction === 'lend';
+          const typeText = isLend ? '💸 借出给' : '📥 借入自';
+          const sign = isLend ? '-' : '+';
+          return `<div class="record-item"><div class="info"><strong>💳 ${typeText} ${loan.person}</strong>${loan.note ? `<small>${loan.note}</small>` : ''}</div><span class="amount-text loan">${sign}¥${loan.amount.toFixed(2)}</span><button class="delete-btn" data-id="${loan.id}" data-type="loan">×</button></div>`;
         } else if (item.type === 'income') {
           const r = item.data;
           const advanceInfo = r.advancePerson ? ` (退款到 ${r.advancePerson})` : '';
@@ -830,6 +1022,9 @@
             saveAdvances();
             updateAdvanceSelect();
             updateIncomeAdvanceSelect();
+          } else if (type === 'loan') {
+            loanRecords = loanRecords.filter(l => l.id !== id);
+            saveLoanRecords();
           }
           renderAllRecords();
           renderCalendar();
@@ -849,6 +1044,9 @@
       document.getElementById('attendanceProject').value = '';
       document.getElementById('attendanceDailyRate').value = '';
       document.getElementById('crewProject').value = '';
+      document.getElementById('loanPerson').value = '';
+      document.getElementById('loanAmount').value = '';
+      document.getElementById('loanNote').value = '';
       lastInput = { category: '', note: '' };
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
@@ -968,6 +1166,34 @@
       renderAllRecords();
       renderCalendar();
       showToast(`✅ 已退款 ¥${amount.toFixed(2)}`);
+    }
+
+    function addLoan() {
+      if (!selectedDate) return;
+      const direction = document.getElementById('loanDirection').value;
+      const person = document.getElementById('loanPerson').value.trim();
+      const amount = parseFloat(document.getElementById('loanAmount').value);
+      const note = document.getElementById('loanNote').value.trim();
+      
+      if (!person) return alert('请输入对方姓名');
+      if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
+      
+      loanRecords.push({
+        id: Date.now(),
+        person: person,
+        direction: direction,
+        amount: amount,
+        date: selectedDate,
+        note: note
+      });
+      saveLoanRecords();
+      
+      document.getElementById('loanPerson').value = '';
+      document.getElementById('loanAmount').value = '';
+      document.getElementById('loanNote').value = '';
+      renderAllRecords();
+      renderCalendar();
+      showToast(direction === 'lend' ? `✅ 已记录借出给 ${person} ¥${amount.toFixed(2)}` : `✅ 已记录向 ${person} 借入 ¥${amount.toFixed(2)}`);
     }
 
     function updateAttUI() {
@@ -1107,6 +1333,7 @@
       Object.keys(attendanceRecords).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
       Object.keys(crewAttendance).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
       advances.forEach(adv => { if (adv.date) { const p = adv.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); } });
+      loanRecords.forEach(loan => { if (loan.date) { const p = loan.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); } });
       if (months.size === 0) { const y = new Date().getFullYear(); for (let m = 1; m <= 12; m++) months.add(`${y}-${String(m).padStart(2,'0')}`); }
       return Array.from(months).sort();
     }
@@ -1119,12 +1346,13 @@
       const fCrewAttendance = {};
       Object.entries(crewAttendance).forEach(([date, dayData]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fCrewAttendance[date] = dayData; });
       const fAdvances = advances.filter(adv => adv.date && selectedMonths.includes(`${adv.date.split('-')[0]}-${adv.date.split('-')[1]}`));
-      const data = { version: 4, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances, salaryRates, salaryPaid };
+      const fLoans = loanRecords.filter(loan => loan.date && selectedMonths.includes(`${loan.date.split('-')[0]}-${loan.date.split('-')[1]}`));
+      const data = { version: 5, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances, salaryRates, salaryPaid, loanRecords: fLoans };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.download = `记账备份_${selectedMonths.join('_')}.json`; a.href = URL.createObjectURL(blob);
       document.body.appendChild(a); a.click();
       setTimeout(() => { document.body.removeChild(a); }, 200);
-      showToast(`✅ 已导出 ${fRecords.length} 条记录，${fAdvances.length} 条预支`);
+      showToast(`✅ 已导出 ${fRecords.length} 条记录`);
     }
 
     function importData(file) {
@@ -1140,6 +1368,7 @@
             advances = data.advances || [];
             salaryRates = data.salaryRates || {};
             salaryPaid = data.salaryPaid || {};
+            loanRecords = data.loanRecords || [];
           } else {
             const ids = new Set(records.map(r => r.id));
             records = [...records, ...(data.records||[]).filter(r => !ids.has(r.id))];
@@ -1149,8 +1378,9 @@
             if (data.advances) { const aIds = new Set(advances.map(a => a.id)); advances = [...advances, ...data.advances.filter(a => !aIds.has(a.id))]; }
             if (data.salaryRates) Object.assign(salaryRates, data.salaryRates);
             if (data.salaryPaid) Object.assign(salaryPaid, data.salaryPaid);
+            if (data.loanRecords) { const lIds = new Set(loanRecords.map(l => l.id)); loanRecords = [...loanRecords, ...data.loanRecords.filter(l => !lIds.has(l.id))]; }
           }
-          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances(); saveSalaryRates(); saveSalaryPaid();
+          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances(); saveSalaryRates(); saveSalaryPaid(); saveLoanRecords();
           renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
           showToast('✅ 导入成功');
         } catch (err) { alert('导入失败'); }
@@ -1181,15 +1411,19 @@
     document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
     document.getElementById('addAdvanceBtn').addEventListener('click', addAdvance);
     document.getElementById('addIncomeBtn').addEventListener('click', addIncome);
+    document.getElementById('addLoanBtn').addEventListener('click', addLoan);
     document.getElementById('clearFormBtn').addEventListener('click', clearAllForms);
     document.getElementById('clearFormBtn2').addEventListener('click', clearAllForms);
     document.getElementById('clearIncomeBtn').addEventListener('click', clearAllForms);
+    document.getElementById('clearLoanBtn').addEventListener('click', clearAllForms);
     document.getElementById('openAttendanceBtn').addEventListener('click', openAttendance);
     document.getElementById('openAttendanceBtn2').addEventListener('click', openAttendance);
     document.getElementById('openAttendanceBtn3').addEventListener('click', openAttendance);
+    document.getElementById('openAttendanceBtn4').addEventListener('click', openAttendance);
     document.getElementById('switchExpense').addEventListener('click', () => switchForm('expense'));
     document.getElementById('switchAdvance').addEventListener('click', () => switchForm('advance'));
     document.getElementById('switchIncome').addEventListener('click', () => switchForm('income'));
+    document.getElementById('switchLoan').addEventListener('click', () => switchForm('loan'));
     document.getElementById('closeModal').addEventListener('click', closeModal);
     document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
     document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
@@ -1270,7 +1504,7 @@
     let confirmCb = null;
     document.getElementById('clearAllBtn').addEventListener('click', () => {
       document.getElementById('confirmMessage').textContent = '确定清空所有数据？';
-      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryRates = {}; salaryPaid = {}; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryRates(); saveSalaryPaid(); renderCalendar(); showToast('🗑️ 已清空'); };
+      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryRates = {}; salaryPaid = {}; loanRecords = []; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryRates(); saveSalaryPaid(); saveLoanRecords(); renderCalendar(); showToast('🗑️ 已清空'); };
       document.getElementById('confirmDialog').classList.add('active');
     });
     document.getElementById('confirmCancel').addEventListener('click', () => document.getElementById('confirmDialog').classList.remove('active'));
@@ -1294,6 +1528,7 @@
     loadAdvances();
     loadSalaryRates();
     loadSalaryPaid();
+    loadLoanRecords();
     loadLastInput();
     renderCalendar();
     updateAdvanceSelect();
