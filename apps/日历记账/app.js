@@ -7,6 +7,8 @@
     const CREW_LIST_KEY = 'crew_list';
     const ADVANCE_KEY = 'advance_records';
     const LAST_INPUT_KEY = 'ledger_last_input';
+    const SALARY_RATE_KEY = 'salary_rates';
+    const SALARY_PAID_KEY = 'salary_paid';
 
     let currentYear, currentMonth;
     let records = [];
@@ -14,27 +16,26 @@
     let crewAttendance = {};
     let crewList = [];
     let advances = [];
+    let salaryRates = {};
+    let salaryPaid = {};
     let selectedDate = null;
     let lastInput = { category: '', note: '' };
     let currentForm = 'expense';
     let crewMode = 'single';
     let crewLockTimer = null;
     let currentSelectedPerson = null;
+    let selectedAttType = null;
+    let crewLocked = false;
+    let attendanceModal = null;
 
-    // ===== 金额缩略显示函数 =====
     function formatAmount(amount) {
       const absAmount = Math.abs(amount);
       const sign = amount < 0 ? '-' : '';
-      if (absAmount >= 10000) {
-        return sign + '¥' + (absAmount / 10000).toFixed(1) + 'w';
-      } else if (absAmount >= 1000) {
-        return sign + '¥' + (absAmount / 1000).toFixed(1) + 'k';
-      } else {
-        return sign + '¥' + absAmount.toFixed(1);
-      }
+      if (absAmount >= 10000) return sign + '¥' + (absAmount / 10000).toFixed(1) + 'w';
+      if (absAmount >= 1000) return sign + '¥' + (absAmount / 1000).toFixed(1) + 'k';
+      return sign + '¥' + absAmount.toFixed(1);
     }
 
-    // ===== 根据文本长度调整字体大小 =====
     function getAmountFontSize(text) {
       const len = text.length;
       if (len <= 4) return '0.65rem';
@@ -60,16 +61,238 @@
     function saveCrewAttendance() { localStorage.setItem(CREW_ATTENDANCE_KEY, JSON.stringify(crewAttendance)); }
     function loadAdvances() { const raw = localStorage.getItem(ADVANCE_KEY); advances = raw ? JSON.parse(raw) : []; }
     function saveAdvances() { localStorage.setItem(ADVANCE_KEY, JSON.stringify(advances)); }
-    
+    function loadSalaryRates() { const raw = localStorage.getItem(SALARY_RATE_KEY); salaryRates = raw ? JSON.parse(raw) : {}; }
+    function saveSalaryRates() { localStorage.setItem(SALARY_RATE_KEY, JSON.stringify(salaryRates)); }
+    function loadSalaryPaid() { const raw = localStorage.getItem(SALARY_PAID_KEY); salaryPaid = raw ? JSON.parse(raw) : {}; }
+    function saveSalaryPaid() { localStorage.setItem(SALARY_PAID_KEY, JSON.stringify(salaryPaid)); }
+
     function saveLastInput(category, note) {
       lastInput = { category, note };
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
-    
     function loadLastInput() {
       const raw = localStorage.getItem(LAST_INPUT_KEY);
       lastInput = raw ? JSON.parse(raw) : { category: '', note: '' };
     }
+
+    function getDailyRate(project, year, month) {
+      if (!salaryRates[project]) return 0;
+      const key = `${year}-${String(month).padStart(2,'0')}`;
+      if (salaryRates[project][key] !== undefined) return salaryRates[project][key];
+      const keys = Object.keys(salaryRates[project]).sort();
+      let lastRate = 0;
+      for (const k of keys) {
+        if (k <= key) lastRate = salaryRates[project][k];
+      }
+      return lastRate;
+    }
+
+    function getAttendanceDaysByProject(year, month, project) {
+      const prefix = `${year}-${String(month).padStart(2,'0')}`;
+      let total = 0;
+      Object.entries(attendanceRecords).forEach(([date, att]) => {
+        if (date.startsWith(prefix) && (att.project || '未分类') === project) {
+          const type = att.type;
+          if (type === 'full') total += 1;
+          else if (type === 'half') total += 0.5;
+          else if (type === 'overtime') total += (att.value || 0);
+        }
+      });
+      return total;
+    }
+
+    function getMonthlySalary(year, month, project) {
+      const days = getAttendanceDaysByProject(year, month, project);
+      const rate = getDailyRate(project, year, month);
+      return { days, rate, amount: days * rate };
+    }
+
+    function getTotalSalary(project) {
+      let totalDays = 0;
+      let totalAmount = 0;
+      const monthSet = new Set();
+      Object.entries(attendanceRecords).forEach(([date, att]) => {
+        if ((att.project || '未分类') === project) {
+          const [y, m] = date.split('-');
+          monthSet.add(`${y}-${m}`);
+        }
+      });
+      monthSet.forEach(ym => {
+        const [y, m] = ym.split('-').map(Number);
+        const monthly = getMonthlySalary(y, m, project);
+        totalDays += monthly.days;
+        totalAmount += monthly.amount;
+      });
+      return { totalDays, totalAmount };
+    }
+
+    function getTotalPaid(project) {
+      const list = salaryPaid[project] || [];
+      return list.reduce((sum, item) => sum + item.amount, 0);
+    }
+
+    function getPaymentList(project) {
+      const list = salaryPaid[project] || [];
+      return [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    window.saveAttendanceHandler = function() {
+      if (!selectedDate) { showToast('请先选择日期'); return; }
+      const project = document.getElementById('attendanceProject').value.trim() || '未分类';
+      const dailyRateInput = document.getElementById('attendanceDailyRate').value.trim();
+      
+      let savedRate = false;
+      let savedAttendance = false;
+      
+      if (dailyRateInput !== '') {
+        const rate = parseFloat(dailyRateInput);
+        if (!isNaN(rate) && rate >= 0) {
+          if (!salaryRates[project]) salaryRates[project] = {};
+          const key = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+          salaryRates[project][key] = rate;
+          saveSalaryRates();
+          savedRate = true;
+        }
+      }
+      
+      if (!selectedAttType || selectedAttType === 'none') {
+        if (attendanceRecords[selectedDate]) {
+          delete attendanceRecords[selectedDate];
+          savedAttendance = true;
+        }
+      } else if (selectedAttType === 'overtime') {
+        const val = parseFloat(document.getElementById('overtimeHours').value);
+        if (isNaN(val) || val <= 0) { showToast('请输入有效加班天数'); return; }
+        attendanceRecords[selectedDate] = { type: 'overtime', value: val, project: project };
+        savedAttendance = true;
+      } else {
+        attendanceRecords[selectedDate] = { type: selectedAttType, project: project };
+        savedAttendance = true;
+      }
+      
+      saveAttendance();
+      if (attendanceModal) attendanceModal.classList.remove('active');
+      renderCalendar();
+      
+      if (savedRate && savedAttendance) showToast(`✅ 日薪 ¥${dailyRateInput} 和出勤已保存`);
+      else if (savedRate) showToast(`✅ 日薪 ¥${dailyRateInput} 已保存`);
+      else if (savedAttendance) showToast('✅ 出勤已保存');
+      else showToast('⚠️ 没有可保存的内容');
+    };
+
+    window.renameSingleProject = function(oldName) {
+      const newName = prompt('请输入新的项目名称：', oldName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed) { showToast('项目名称不能为空'); return; }
+      if (trimmed === oldName) { showToast('新名称与旧名称相同'); return; }
+      
+      let updated = 0;
+      Object.keys(attendanceRecords).forEach(date => {
+        if ((attendanceRecords[date].project || '未分类') === oldName) {
+          attendanceRecords[date].project = trimmed;
+          updated++;
+        }
+      });
+      if (updated === 0) { showToast('没有找到需要修改的记录'); return; }
+      
+      if (salaryRates[oldName]) {
+        salaryRates[trimmed] = salaryRates[oldName];
+        delete salaryRates[oldName];
+        saveSalaryRates();
+      }
+      if (salaryPaid[oldName]) {
+        salaryPaid[trimmed] = salaryPaid[oldName];
+        delete salaryPaid[oldName];
+        saveSalaryPaid();
+      }
+      saveAttendance();
+      renderCalendar();
+      showToast(`✅ 已重命名为 "${trimmed}"`);
+    };
+
+    window.setSalaryRate = function(project) {
+      const currentRate = getDailyRate(project, currentYear, currentMonth);
+      const input = prompt(`请输入 ${project} 的日薪（元/天）：`, currentRate || '');
+      if (input === null) return;
+      const rate = parseFloat(input);
+      if (isNaN(rate) || rate < 0) { showToast('请输入有效金额'); return; }
+      if (!salaryRates[project]) salaryRates[project] = {};
+      const key = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+      salaryRates[project][key] = rate;
+      saveSalaryRates();
+      renderCalendar();
+      showToast(`✅ ${project} 日薪已设置为 ¥${rate}/天`);
+    };
+
+    // ===== 收到工资（简单输入金额，累加，记录时间） =====
+    window.markSalaryPaid = function(project) {
+      const totalSalary = getTotalSalary(project);
+      const totalPaid = getTotalPaid(project);
+      const remaining = totalSalary.totalAmount - totalPaid;
+      
+      if (totalSalary.totalAmount === 0) {
+        showToast(`${project} 还没有应发工资`);
+        return;
+      }
+      
+      let msg = `【${project}】\n`;
+      msg += `累计应发：¥${totalSalary.totalAmount.toFixed(2)}\n`;
+      msg += `已发工资：¥${totalPaid.toFixed(2)}\n`;
+      msg += `剩余未发：¥${remaining.toFixed(2)}\n\n`;
+      msg += `请输入本次收到的工资金额：`;
+      
+      const amountStr = prompt(msg, remaining > 0 ? remaining.toFixed(2) : '');
+      if (amountStr === null) return;
+      const amount = parseFloat(amountStr);
+      if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return; }
+      
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      
+      if (!salaryPaid[project]) salaryPaid[project] = [];
+      salaryPaid[project].push({
+        amount: amount,
+        date: dateStr,
+        timestamp: Date.now()
+      });
+      saveSalaryPaid();
+      renderCalendar();
+      showToast(`✅ 已记录收到 ¥${amount.toFixed(2)}`);
+    };
+
+    // ===== 删除收款记录 =====
+    window.deletePayment = function(project, timestamp) {
+      if (!salaryPaid[project]) return;
+      salaryPaid[project] = salaryPaid[project].filter(item => item.timestamp !== timestamp);
+      if (salaryPaid[project].length === 0) delete salaryPaid[project];
+      saveSalaryPaid();
+      renderCalendar();
+      showToast('✅ 已删除收款记录');
+    };
+
+    window.renameCrewProject = function(oldName) {
+      const newName = prompt('请输入新的项目名称：', oldName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed) { showToast('项目名称不能为空'); return; }
+      if (trimmed === oldName) { showToast('新名称与旧名称相同'); return; }
+      
+      let updated = 0;
+      Object.keys(crewAttendance).forEach(date => {
+        Object.keys(crewAttendance[date]).forEach(name => {
+          if ((crewAttendance[date][name].project || '未分类') === oldName) {
+            crewAttendance[date][name].project = trimmed;
+            updated++;
+          }
+        });
+      });
+      if (updated === 0) { showToast('没有找到需要修改的记录'); return; }
+      
+      saveCrewAttendance();
+      renderCalendar();
+      showToast(`✅ 已重命名为 "${trimmed}"`);
+    };
 
     function updateAdvanceSelect() {
       const select = document.getElementById('advanceSelect');
@@ -122,14 +345,6 @@
       return total;
     }
 
-    function getPersonTotalOriginal(name) {
-      let total = 0;
-      advances.forEach(adv => {
-        if (adv.name === name) total += adv.amount;
-      });
-      return total;
-    }
-
     function deductFromPersonPartial(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name && adv.balance > 0)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -160,16 +375,13 @@
       return remaining === 0;
     }
 
-    // ===== 单人考勤按项目分组统计 =====
     function getAttendanceStatsByProject(year, month) {
       const prefix = `${year}-${String(month).padStart(2,'0')}`;
       const stats = {};
-      
       Object.entries(attendanceRecords).forEach(([date, att]) => {
         if (date.startsWith(prefix)) {
           const project = att.project || '未分类';
           if (!stats[project]) stats[project] = { full: 0, half: 0, overtime: 0, rest: 0, total: 0 };
-          
           if (att.type === 'full') { stats[project].full++; stats[project].total++; }
           else if (att.type === 'half') { stats[project].half += 0.5; stats[project].total += 0.5; }
           else if (att.type === 'overtime') { 
@@ -182,64 +394,15 @@
       return stats;
     }
 
-    // ===== 单人考勤修改项目名称（所有月份统一修改，兼容缺失 project 字段） =====
-    window.renameSingleProject = function(oldName) {
-      const newName = prompt('请输入新的项目名称：', oldName);
-      if (newName === null) return;
-      const trimmed = newName.trim();
-      if (!trimmed) {
-        showToast('项目名称不能为空');
-        return;
-      }
-      if (trimmed === oldName) {
-        showToast('新名称与旧名称相同，无需修改');
-        return;
-      }
-      
-      // 检查新名称是否已存在（检查所有月份，包括没有 project 的）
-      const allStats = {};
-      Object.entries(attendanceRecords).forEach(([date, att]) => {
-        const project = att.project || '未分类';
-        if (!allStats[project]) allStats[project] = 0;
-        allStats[project]++;
-      });
-      if (allStats[trimmed] && oldName !== '未分类') {
-        showToast(`项目 "${trimmed}" 已存在，请使用其他名称`);
-        return;
-      }
-      
-      // 更新所有考勤记录中的项目名称（所有月份）
-      let updated = 0;
-      Object.keys(attendanceRecords).forEach(date => {
-        const currentProject = attendanceRecords[date].project || '未分类';
-        if (currentProject === oldName) {
-          attendanceRecords[date].project = trimmed;
-          updated++;
-        }
-      });
-      
-      if (updated === 0) {
-        showToast('没有找到需要修改的记录');
-        return;
-      }
-      
-      saveAttendance();
-      renderCalendar();
-      showToast(`✅ 已重命名为 "${trimmed}"（更新 ${updated} 条记录）`);
-    };
-
-    // ===== 多人考勤按项目分组统计 =====
     function getCrewStatsByProject(year, month) {
       const prefix = `${year}-${String(month).padStart(2,'0')}`;
       const stats = {};
-      
       Object.entries(crewAttendance).forEach(([date, dayData]) => {
         if (date.startsWith(prefix)) {
           Object.entries(dayData).forEach(([name, val]) => {
             const project = val.project || '未分类';
             if (!stats[project]) stats[project] = {};
             if (!stats[project][name]) stats[project][name] = { full: 0, half: 0, overtime: 0, rest: 0, total: 0 };
-            
             const type = val.type || val;
             const days = val.days !== undefined ? val.days : 1;
             const memberStats = stats[project][name];
@@ -253,57 +416,6 @@
       return stats;
     }
 
-    // ===== 多人考勤修改项目名称（所有月份统一修改，兼容缺失 project 字段） =====
-    window.renameCrewProject = function(oldName) {
-      const newName = prompt('请输入新的项目名称：', oldName);
-      if (newName === null) return;
-      const trimmed = newName.trim();
-      if (!trimmed) {
-        showToast('项目名称不能为空');
-        return;
-      }
-      if (trimmed === oldName) {
-        showToast('新名称与旧名称相同，无需修改');
-        return;
-      }
-      
-      // 检查新名称是否已存在（检查所有月份，包括没有 project 的）
-      const allStats = {};
-      Object.entries(crewAttendance).forEach(([date, dayData]) => {
-        Object.entries(dayData).forEach(([name, val]) => {
-          const project = val.project || '未分类';
-          if (!allStats[project]) allStats[project] = 0;
-          allStats[project]++;
-        });
-      });
-      if (allStats[trimmed] && oldName !== '未分类') {
-        showToast(`项目 "${trimmed}" 已存在，请使用其他名称`);
-        return;
-      }
-      
-      // 更新所有考勤记录中的项目名称（所有月份）
-      let updated = 0;
-      Object.keys(crewAttendance).forEach(date => {
-        Object.keys(crewAttendance[date]).forEach(name => {
-          const currentProject = crewAttendance[date][name].project || '未分类';
-          if (currentProject === oldName) {
-            crewAttendance[date][name].project = trimmed;
-            updated++;
-          }
-        });
-      });
-      
-      if (updated === 0) {
-        showToast('没有找到需要修改的记录');
-        return;
-      }
-      
-      saveCrewAttendance();
-      renderCalendar();
-      showToast(`✅ 已重命名为 "${trimmed}"（更新 ${updated} 条记录）`);
-    };
-
-    // ===== 获取某天某项目的出勤人数（多人） =====
     function getCrewCountByProject(dateStr, project) {
       const dayData = crewAttendance[dateStr];
       if (!dayData) return 0;
@@ -312,9 +424,7 @@
         const val = dayData[name];
         const type = val.type || val;
         const valProject = val.project || '未分类';
-        if (valProject === project && type !== 'rest' && type !== 'none') {
-          count++;
-        }
+        if (valProject === project && type !== 'rest' && type !== 'none') count++;
       });
       return count;
     }
@@ -357,10 +467,7 @@
       const newName = prompt('请输入新的姓名：', oldName);
       if (newName && newName.trim() && newName.trim() !== oldName) {
         const newNameTrimmed = newName.trim();
-        if (crewList.includes(newNameTrimmed)) {
-          alert('该姓名已存在！');
-          return;
-        }
+        if (crewList.includes(newNameTrimmed)) { alert('该姓名已存在！'); return; }
         const index = crewList.indexOf(oldName);
         if (index !== -1) crewList[index] = newNameTrimmed;
         saveCrewList();
@@ -393,14 +500,6 @@
     }
 
     function getAdvancesByDate(dateStr) { return advances.filter(adv => adv.date === dateStr); }
-    function getCrewCountByDate(dateStr) {
-      const dayData = crewAttendance[dateStr];
-      if (!dayData) return 0;
-      return Object.keys(dayData).filter(name => {
-        const val = dayData[name];
-        return val && val.type !== 'rest' && val.type !== 'none';
-      }).length;
-    }
 
     function getRecordsByDate(dateStr) { return records.filter(r => r.date === dateStr); }
     function getRecordsByMonth(year, month) { const prefix = `${year}-${String(month).padStart(2,'0')}`; return records.filter(r => r.date.startsWith(prefix)); }
@@ -473,13 +572,14 @@
             content.appendChild(dotsDiv);
           } else {
             const placeholder = document.createElement('div');
-            placeholder.style.height = '14px';
+            placeholder.style.height = '12px';
             content.appendChild(placeholder);
           }
           
           const dateSpan = document.createElement('span');
           dateSpan.textContent = cellDate.getDate();
           dateSpan.style.fontWeight = '500';
+          dateSpan.style.lineHeight = '1.1';
           content.appendChild(dateSpan);
           if (dateStr === todayStr) cell.classList.add('today');
           
@@ -489,19 +589,11 @@
             const amtSpan = document.createElement('span');
             amtSpan.className = 'amount';
             const formatted = formatAmount(total);
-            if (total < 0) {
-              amtSpan.classList.add('negative');
-            } else {
-              amtSpan.classList.add('positive');
-            }
+            if (total < 0) { amtSpan.classList.add('negative'); } else { amtSpan.classList.add('positive'); }
             amtSpan.textContent = formatted;
-            // 根据文本长度动态调整字体大小
             amtSpan.style.fontSize = getAmountFontSize(formatted);
+            amtSpan.style.lineHeight = '1.1';
             content.appendChild(amtSpan);
-          } else {
-            const placeholder = document.createElement('div');
-            placeholder.style.height = '16px';
-            content.appendChild(placeholder);
           }
           
           cell.appendChild(content);
@@ -526,11 +618,7 @@
           const days = [...new Set(data.records.map(r => r.day))].sort((a,b)=>a-b);
           const daysHtml = days.map(d => `<span>${d}号</span>`).join('');
           let totalDisplay = '';
-          if (data.total < 0) {
-            totalDisplay = `-¥${Math.abs(data.total).toFixed(2)}`;
-          } else {
-            totalDisplay = `+¥${data.total.toFixed(2)}`;
-          }
+          if (data.total < 0) { totalDisplay = `-¥${Math.abs(data.total).toFixed(2)}`; } else { totalDisplay = `+¥${data.total.toFixed(2)}`; }
           const cls = data.total < 0 ? 'negative' : 'positive';
           html += `<div class="summary-category"><div class="summary-category-header"><div class="summary-category-name-row"><span class="summary-category-name" id="catName_${i}">${cat}</span><span class="edit-category-row" id="editRow_${i}" style="display:none;"><input type="text" id="editInput_${i}" value="${cat}"><button class="btn-sm btn-edit-confirm" onclick="confirmRename('${cat}',${i})">✓</button><button class="btn-sm btn-edit-cancel" onclick="cancelEdit(${i})">✕</button></span></div><span class="summary-category-amount ${cls}">${totalDisplay}</span></div><div class="summary-category-days">${daysHtml}</div><div style="margin-top:6px;"><button class="btn-sm btn-edit" onclick="startEdit(${i})">✏️ 改名</button><button class="btn-sm btn-export" onclick="event.stopPropagation(); exportCategoryToImage('${cat}')">📷 导出</button></div></div>`;
         });
@@ -560,7 +648,6 @@
         html += `</div>`;
       }
 
-      // ===== 单人出勤统计（按项目分组，带修改名称按钮） =====
       const projectStats = getAttendanceStatsByProject(currentYear, currentMonth);
       const projectNames = Object.keys(projectStats);
       let hasSingleData = projectNames.some(name => {
@@ -570,36 +657,65 @@
 
       if (hasSingleData) {
         html += `<div class="attendance-stats"><h4><span>📅 本月出勤统计（单人）</span></h4>`;
-        let grandTotal = 0;
         projectNames.forEach(name => {
           const s = projectStats[name];
           if (s.total > 0 || s.rest > 0) {
-            grandTotal += s.total;
+            const monthly = getMonthlySalary(currentYear, currentMonth, name);
+            const totalSalary = getTotalSalary(name);
+            const totalPaid = getTotalPaid(name);
+            const remaining = totalSalary.totalAmount - totalPaid;
+            const paymentList = getPaymentList(name);
+            
             html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
               <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
-                <span>【${name}】</span>
-                <button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名称</button>
+                <span>【${name}】日薪 ¥${monthly.rate}</span>
+                <div>
+                  <button class="btn-sm btn-salary-rate" onclick="window.setSalaryRate('${name}')" style="font-size:0.7rem;">💰 日薪</button>
+                  <button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名</button>
+                </div>
               </div>
               <div class="stat-row"><span>🔵 全天</span><span>${s.full} 天</span></div>
               <div class="stat-row"><span>🟠 半天</span><span>${s.half} 天</span></div>
               <div class="stat-row"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 天</span></div>
               <div class="stat-row"><span>🟢 休息</span><span>${s.rest} 天</span></div>
-              <div class="stat-row" style="font-weight:bold;"><span>📌 合计出勤</span><span>${s.total.toFixed(1)} 天</span></div>
+              <div class="stat-row" style="font-weight:bold;border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;"><span>📌 本月出勤</span><span>${s.total.toFixed(1)} 天</span></div>
+              <div class="stat-row" style="font-weight:bold;"><span>💰 本月应发</span><span>¥${monthly.amount.toFixed(2)}</span></div>
+              <div style="margin-top:6px;padding-top:6px;border-top:2px solid #007aff;">
+                <div class="stat-row" style="font-weight:bold;"><span>📌 累计出勤</span><span>${totalSalary.totalDays.toFixed(1)} 天</span></div>
+                <div class="stat-row" style="font-weight:bold;"><span>💰 累计应发</span><span>¥${totalSalary.totalAmount.toFixed(2)}</span></div>
+                <div class="stat-row received"><span>✅ 已发工资</span><span>¥${totalPaid.toFixed(2)}</span></div>
+                <div class="stat-row remaining"><span>⚠️ 剩余未发</span><span>¥${remaining.toFixed(2)}</span></div>
+              </div>`;
+            
+            // 收款记录列表
+            if (paymentList.length > 0) {
+              html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;">
+                <div style="font-size:0.75rem;color:#666;margin-bottom:3px;">📋 收款记录（${paymentList.length}条）</div>`;
+              paymentList.forEach(p => {
+                html += `<div class="payment-record">
+                  <span class="payment-date">${p.date}</span>
+                  <span class="payment-amount">+¥${p.amount.toFixed(2)}</span>
+                  <button class="payment-delete" onclick="window.deletePayment('${name}', ${p.timestamp})">×</button>
+                </div>`;
+              });
+              html += `</div>`;
+            }
+            
+            html += `<div style="margin-top:6px;text-align:right;">
+                <button class="btn-sm btn-salary-paid" onclick="window.markSalaryPaid('${name}')" style="font-size:0.7rem;">💰 收到工资</button>
+              </div>
             </div>`;
           }
         });
-        html += `<div class="stat-row" style="font-weight:bold;border-top:2px solid #007aff;padding-top:8px;margin-top:8px;"><span>📌 总计</span><span>${grandTotal.toFixed(1)} 天</span></div>`;
         html += `</div>`;
       }
 
-      // ===== 多人出勤统计（按项目分组，每个项目独立显示今天出勤人数） =====
       const crewStatsByProject = getCrewStatsByProject(currentYear, currentMonth);
       const crewProjectNames = Object.keys(crewStatsByProject);
       const hasCrewData = crewProjectNames.length > 0 && crewList.length > 0;
 
       if (hasCrewData || crewList.length > 0) {
         html += `<div class="attendance-stats" style="background:#e3f2fd;"><h4>👥 多人出勤统计 <span class="attendance-dot crew" style="display:inline-block; width:10px; height:10px; vertical-align:middle;"></span></h4>`;
-        let grandTotalCrew = 0;
         if (hasCrewData) {
           const todayStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
           crewProjectNames.forEach(project => {
@@ -621,7 +737,6 @@
               html += `<div class="stat-row" style="font-weight:bold;border-top:1px solid #ccc;padding-top:4px;"><span>📌 今天出勤</span><span>👥 ${todayCrewCount} 人</span></div>`;
               html += `<div class="stat-row" style="font-weight:bold;"><span>📌 总计</span><span>${projectTotal.toFixed(1)} 天</span></div>`;
               html += `</div>`;
-              grandTotalCrew += projectTotal;
             }
           });
         } else {
@@ -649,17 +764,19 @@
       updateAdvanceSelect();
       updateIncomeAdvanceSelect();
       document.getElementById('advanceDate').value = dateStr;
-      
       document.getElementById('category').value = lastInput.category || '';
       document.getElementById('note').value = lastInput.note || '';
-      
       switchForm('expense');
       document.body.classList.add('modal-open');
       document.getElementById('modal').classList.add('active');
       document.getElementById('modalContent').scrollTop = 0;
     }
 
-    function closeModal() { document.getElementById('modal').classList.remove('active'); document.body.classList.remove('modal-open'); selectedDate = null; }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+      selectedDate = null;
+    }
 
     function renderAllRecords() {
       const container = document.getElementById('modalRecords');
@@ -701,11 +818,8 @@
           if (type === 'expense') {
             const record = records.find(r => r.id === id);
             if (record && record.advancePerson && record.advancePerson !== '') {
-              if (record.amount > 0) {
-                deductFromPersonPartial(record.advancePerson, Math.abs(record.amount));
-              } else {
-                addBackToPerson(record.advancePerson, Math.abs(record.amount));
-              }
+              if (record.amount > 0) { deductFromPersonPartial(record.advancePerson, Math.abs(record.amount)); }
+              else { addBackToPerson(record.advancePerson, Math.abs(record.amount)); }
             }
             records = records.filter(r => r.id !== id);
             saveRecords();
@@ -733,6 +847,7 @@
       document.getElementById('incomeAmount').value = '';
       document.getElementById('incomeNote').value = '';
       document.getElementById('attendanceProject').value = '';
+      document.getElementById('attendanceDailyRate').value = '';
       document.getElementById('crewProject').value = '';
       lastInput = { category: '', note: '' };
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
@@ -743,16 +858,18 @@
       document.getElementById('attendanceDateTitle').textContent = `出勤设置 - ${selectedDate}`;
       const cur = getAttendanceByDate(selectedDate);
       selectedAttType = cur ? cur.type : null;
-      if (cur?.type === 'overtime') {
-        document.getElementById('overtimeHours').value = cur.value;
-      } else {
-        document.getElementById('overtimeHours').value = '';
-      }
+      if (cur?.type === 'overtime') { document.getElementById('overtimeHours').value = cur.value; }
+      else { document.getElementById('overtimeHours').value = ''; }
+      
       if (cur && cur.project) {
         document.getElementById('attendanceProject').value = cur.project;
+        const rate = getDailyRate(cur.project, currentYear, currentMonth);
+        document.getElementById('attendanceDailyRate').value = rate || '';
       } else {
         document.getElementById('attendanceProject').value = '';
+        document.getElementById('attendanceDailyRate').value = '';
       }
+      
       updateAttUI();
       crewMode = 'single';
       document.getElementById('singleMode').style.display = 'block';
@@ -760,7 +877,7 @@
       document.getElementById('switchSingle').classList.add('active');
       document.getElementById('switchCrew').classList.remove('active');
       unlockCrew();
-      attendanceModal.classList.add('active');
+      if (attendanceModal) attendanceModal.classList.add('active');
     }
 
     function addExpense() {
@@ -774,7 +891,6 @@
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
       
       saveLastInput(category, note);
-      
       const recordsToAdd = [];
       
       if (advancePerson && advancePerson !== '') {
@@ -782,38 +898,19 @@
         if (totalBalance > 0) {
           const deducted = deductFromPersonPartial(advancePerson, amount);
           if (deducted > 0) {
-            recordsToAdd.push({
-              id: Date.now(),
-              date: selectedDate,
-              category,
-              amount: -deducted,
-              note: note + (deducted < amount ? ` (使用预付款¥${deducted.toFixed(2)})` : ''),
-              advancePerson: advancePerson,
-              splitAmount: deducted
-            });
+            recordsToAdd.push({ id: Date.now(), date: selectedDate, category, amount: -deducted, note: note + (deducted < amount ? ` (使用预付款¥${deducted.toFixed(2)})` : ''), advancePerson: advancePerson, splitAmount: deducted });
             amount -= deducted;
-            if (amount > 0) {
-              showToast(`预付款不足，剩余 ¥${amount.toFixed(2)} 使用现金支付`, 3000);
-            }
+            if (amount > 0) { showToast(`预付款不足，剩余 ¥${amount.toFixed(2)} 使用现金支付`, 3000); }
           }
         }
       }
       
       if (amount > 0) {
-        recordsToAdd.push({
-          id: Date.now() + 1,
-          date: selectedDate,
-          category,
-          amount: -amount,
-          note: note + (advancePerson ? ` (现金支付¥${amount.toFixed(2)})` : ''),
-          advancePerson: null,
-          splitAmount: null
-        });
+        recordsToAdd.push({ id: Date.now() + 1, date: selectedDate, category, amount: -amount, note: note + (advancePerson ? ` (现金支付¥${amount.toFixed(2)})` : ''), advancePerson: null, splitAmount: null });
       }
       
       records.push(...recordsToAdd);
       saveRecords();
-      
       document.getElementById('amount').value = '';
       updateAdvanceSelect();
       updateIncomeAdvanceSelect();
@@ -850,33 +947,18 @@
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
       
       const personAdvances = advances.filter(adv => adv.name === advancePerson);
-      if (personAdvances.length === 0) {
-        return alert(`没有找到 "${advancePerson}" 的预付款记录`);
-      }
+      if (personAdvances.length === 0) { return alert(`没有找到 "${advancePerson}" 的预付款记录`); }
       
       const totalOriginal = personAdvances.reduce((sum, adv) => sum + adv.amount, 0);
       const totalBalance = personAdvances.reduce((sum, adv) => sum + adv.balance, 0);
       const usedAmount = totalOriginal - totalBalance;
       
-      if (amount > usedAmount) {
-        return alert(`只能退回最多 ¥${usedAmount.toFixed(2)}（${advancePerson} 已消费 ${usedAmount.toFixed(2)}），超出部分无法退回`);
-      }
+      if (amount > usedAmount) { return alert(`只能退回最多 ¥${usedAmount.toFixed(2)}`); }
       
       const success = addBackToPerson(advancePerson, amount);
+      if (!success) { return alert('退款失败，请稍后重试'); }
       
-      if (!success) {
-        return alert('退款失败，请稍后重试');
-      }
-      
-      records.push({
-        id: Date.now(),
-        date: selectedDate,
-        category: `退款-${advancePerson}`,
-        amount: Math.abs(amount),
-        note: note || `退款到 ${advancePerson}`,
-        advancePerson: advancePerson,
-        splitAmount: null
-      });
+      records.push({ id: Date.now(), date: selectedDate, category: `退款-${advancePerson}`, amount: Math.abs(amount), note: note || `退款到 ${advancePerson}`, advancePerson: advancePerson, splitAmount: null });
       saveRecords();
       
       document.getElementById('incomeAmount').value = '';
@@ -885,28 +967,8 @@
       updateIncomeAdvanceSelect();
       renderAllRecords();
       renderCalendar();
-      showToast(`✅ 已退款 ¥${amount.toFixed(2)} 到 ${advancePerson}，当前余额 ¥${getPersonTotalBalance(advancePerson).toFixed(2)}`);
+      showToast(`✅ 已退款 ¥${amount.toFixed(2)}`);
     }
-
-    document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
-    document.getElementById('addAdvanceBtn').addEventListener('click', addAdvance);
-    document.getElementById('addIncomeBtn').addEventListener('click', addIncome);
-    document.getElementById('clearFormBtn').addEventListener('click', clearAllForms);
-    document.getElementById('clearFormBtn2').addEventListener('click', clearAllForms);
-    document.getElementById('clearIncomeBtn').addEventListener('click', clearAllForms);
-    document.getElementById('openAttendanceBtn').addEventListener('click', openAttendance);
-    document.getElementById('openAttendanceBtn2').addEventListener('click', openAttendance);
-    document.getElementById('openAttendanceBtn3').addEventListener('click', openAttendance);
-    document.getElementById('switchExpense').addEventListener('click', () => switchForm('expense'));
-    document.getElementById('switchAdvance').addEventListener('click', () => switchForm('advance'));
-    document.getElementById('switchIncome').addEventListener('click', () => switchForm('income'));
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
-    document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
-
-    const attendanceModal = document.getElementById('attendanceModal');
-    let selectedAttType = null;
-    let crewLocked = false;
 
     function updateAttUI() {
       document.querySelectorAll('#attendanceOptions .attendance-option').forEach(o => {
@@ -947,10 +1009,7 @@
           if (typeof currentVal === 'object') { type = currentVal.type; overtimeDays = currentVal.days; }
           else { type = currentVal; }
         }
-        const fullSelected = type === 'full';
-        const halfSelected = type === 'half';
-        const overtimeSelected = type === 'overtime';
-        const restSelected = type === 'rest';
+        const fullSelected = type === 'full', halfSelected = type === 'half', overtimeSelected = type === 'overtime', restSelected = type === 'rest';
         const overtimeDisplay = overtimeSelected && overtimeDays ? overtimeDays.toFixed(1) : '';
         return `<tr>
           <td class="check-col"><input type="checkbox" class="crew-check" data-name="${name}"></td>
@@ -966,8 +1025,7 @@
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
           if (crewLocked) return;
-          const name = cell.dataset.name;
-          openPersonMenu(name);
+          openPersonMenu(cell.dataset.name);
         });
       });
       
@@ -1043,24 +1101,100 @@
       document.getElementById('lockStatus').textContent = '';
     }
 
-    document.getElementById('saveAttendanceBtn').addEventListener('click', () => {
-      if (!selectedDate) return;
-      const project = document.getElementById('attendanceProject').value.trim() || '未分类';
-      
-      if (!selectedAttType || selectedAttType === 'none') { 
-        delete attendanceRecords[selectedDate]; 
-      } else if (selectedAttType === 'overtime') {
-        const val = parseFloat(document.getElementById('overtimeHours').value);
-        if (isNaN(val) || val <= 0) return alert('请输入有效加班天数');
-        attendanceRecords[selectedDate] = { type: 'overtime', value: val, project: project };
-      } else { 
-        attendanceRecords[selectedDate] = { type: selectedAttType, project: project }; 
-      }
-      saveAttendance();
-      attendanceModal.classList.remove('active');
-      renderCalendar();
-      showToast('✅ 出勤已更新');
-    });
+    function getAvailableMonths() {
+      const months = new Set();
+      records.forEach(r => { const p = r.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
+      Object.keys(attendanceRecords).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
+      Object.keys(crewAttendance).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
+      advances.forEach(adv => { if (adv.date) { const p = adv.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); } });
+      if (months.size === 0) { const y = new Date().getFullYear(); for (let m = 1; m <= 12; m++) months.add(`${y}-${String(m).padStart(2,'0')}`); }
+      return Array.from(months).sort();
+    }
+
+    function exportSelectedMonths(selectedMonths) {
+      if (!selectedMonths.length) return alert('请选择月份');
+      const fRecords = records.filter(r => selectedMonths.includes(`${r.date.split('-')[0]}-${r.date.split('-')[1]}`));
+      const fAttendance = {};
+      Object.entries(attendanceRecords).forEach(([date, att]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fAttendance[date] = att; });
+      const fCrewAttendance = {};
+      Object.entries(crewAttendance).forEach(([date, dayData]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fCrewAttendance[date] = dayData; });
+      const fAdvances = advances.filter(adv => adv.date && selectedMonths.includes(`${adv.date.split('-')[0]}-${adv.date.split('-')[1]}`));
+      const data = { version: 4, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances, salaryRates, salaryPaid };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.download = `记账备份_${selectedMonths.join('_')}.json`; a.href = URL.createObjectURL(blob);
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); }, 200);
+      showToast(`✅ 已导出 ${fRecords.length} 条记录，${fAdvances.length} 条预支`);
+    }
+
+    function importData(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (confirm('确定替换现有数据？取消则合并')) {
+            records = data.records || [];
+            attendanceRecords = data.attendance || {};
+            crewAttendance = data.crewAttendance || {};
+            crewList = data.crewList || [];
+            advances = data.advances || [];
+            salaryRates = data.salaryRates || {};
+            salaryPaid = data.salaryPaid || {};
+          } else {
+            const ids = new Set(records.map(r => r.id));
+            records = [...records, ...(data.records||[]).filter(r => !ids.has(r.id))];
+            if (data.attendance) Object.assign(attendanceRecords, data.attendance);
+            if (data.crewAttendance) Object.assign(crewAttendance, data.crewAttendance);
+            if (data.crewList) { const cSet = new Set(crewList); crewList = [...crewList, ...data.crewList.filter(n => !cSet.has(n))]; }
+            if (data.advances) { const aIds = new Set(advances.map(a => a.id)); advances = [...advances, ...data.advances.filter(a => !aIds.has(a.id))]; }
+            if (data.salaryRates) Object.assign(salaryRates, data.salaryRates);
+            if (data.salaryPaid) Object.assign(salaryPaid, data.salaryPaid);
+          }
+          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances(); saveSalaryRates(); saveSalaryPaid();
+          renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
+          showToast('✅ 导入成功');
+        } catch (err) { alert('导入失败'); }
+      };
+      reader.readAsText(file);
+    }
+
+    async function exportCategoryToImage(cat) {
+      const data = getDetailedSummary(currentYear, currentMonth)[cat];
+      if (!data) return alert('无记录');
+      document.getElementById('loadingOverlay').classList.add('active');
+      const ms = `${currentYear}年${currentMonth}月`;
+      let inner = `<div class="export-area"><div class="export-title">📌 ${cat}</div><div class="export-subtitle">${ms} 消费明细</div><div class="export-category">`;
+      data.records.forEach(r => {
+        const sign = r.amount < 0 ? '-' : '+';
+        const absAmt = Math.abs(r.amount);
+        inner += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${r.amount<0?'negative':'positive'}">${sign}¥${absAmt.toFixed(2)}</span></div>`;
+      });
+      inner += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${data.total<0?'negative':'positive'}">${data.total<0?'-¥'+Math.abs(data.total).toFixed(2):'+¥'+data.total.toFixed(2)}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
+      document.getElementById('exportTemplate').innerHTML = inner;
+      try {
+        const canvas = await html2canvas(document.querySelector('.export-area'), { backgroundColor: '#fff', scale: 2 });
+        const a = document.createElement('a'); a.download = `${cat}_${ms}.png`; a.href = canvas.toDataURL('image/png'); a.click();
+      } catch (e) { alert('导出失败'); }
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
+    document.getElementById('addAdvanceBtn').addEventListener('click', addAdvance);
+    document.getElementById('addIncomeBtn').addEventListener('click', addIncome);
+    document.getElementById('clearFormBtn').addEventListener('click', clearAllForms);
+    document.getElementById('clearFormBtn2').addEventListener('click', clearAllForms);
+    document.getElementById('clearIncomeBtn').addEventListener('click', clearAllForms);
+    document.getElementById('openAttendanceBtn').addEventListener('click', openAttendance);
+    document.getElementById('openAttendanceBtn2').addEventListener('click', openAttendance);
+    document.getElementById('openAttendanceBtn3').addEventListener('click', openAttendance);
+    document.getElementById('switchExpense').addEventListener('click', () => switchForm('expense'));
+    document.getElementById('switchAdvance').addEventListener('click', () => switchForm('advance'));
+    document.getElementById('switchIncome').addEventListener('click', () => switchForm('income'));
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+    document.getElementById('modalContent').addEventListener('touchmove', e => e.stopPropagation(), { passive: false });
+
+    attendanceModal = document.getElementById('attendanceModal');
 
     document.getElementById('batchFull').addEventListener('click', () => batchSetCrew('full'));
     document.getElementById('batchHalf').addEventListener('click', () => batchSetCrew('half'));
@@ -1117,114 +1251,6 @@
       if (e.target === document.getElementById('personMenuModal')) closePersonMenu();
     });
 
-    function getAvailableMonths() {
-      const months = new Set();
-      records.forEach(r => { const p = r.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
-      Object.keys(attendanceRecords).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
-      Object.keys(crewAttendance).forEach(date => { const p = date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
-      advances.forEach(adv => { if (adv.date) { const p = adv.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); } });
-      if (months.size === 0) { const y = new Date().getFullYear(); for (let m = 1; m <= 12; m++) months.add(`${y}-${String(m).padStart(2,'0')}`); }
-      return Array.from(months).sort();
-    }
-
-    function exportSelectedMonths(selectedMonths) {
-      if (!selectedMonths.length) return alert('请选择月份');
-      const fRecords = records.filter(r => selectedMonths.includes(`${r.date.split('-')[0]}-${r.date.split('-')[1]}`));
-      const fAttendance = {};
-      Object.entries(attendanceRecords).forEach(([date, att]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fAttendance[date] = att; });
-      const fCrewAttendance = {};
-      Object.entries(crewAttendance).forEach(([date, dayData]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fCrewAttendance[date] = dayData; });
-      const fAdvances = advances.filter(adv => adv.date && selectedMonths.includes(`${adv.date.split('-')[0]}-${adv.date.split('-')[1]}`));
-      const data = { version: 3, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a'); a.download = `记账备份_${selectedMonths.join('_')}.json`; a.href = URL.createObjectURL(blob);
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); }, 200);
-      showToast(`✅ 已导出 ${fRecords.length} 条记录，${fAdvances.length} 条预支`);
-    }
-
-    function importData(file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (confirm('确定替换现有数据？取消则合并')) {
-            records = data.records || [];
-            attendanceRecords = data.attendance || {};
-            crewAttendance = data.crewAttendance || {};
-            crewList = data.crewList || [];
-            advances = data.advances || [];
-          } else {
-            const ids = new Set(records.map(r => r.id));
-            records = [...records, ...(data.records||[]).filter(r => !ids.has(r.id))];
-            if (data.attendance) Object.assign(attendanceRecords, data.attendance);
-            if (data.crewAttendance) Object.assign(crewAttendance, data.crewAttendance);
-            if (data.crewList) { const cSet = new Set(crewList); crewList = [...crewList, ...data.crewList.filter(n => !cSet.has(n))]; }
-            if (data.advances) { const aIds = new Set(advances.map(a => a.id)); advances = [...advances, ...data.advances.filter(a => !aIds.has(a.id))]; }
-          }
-          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances();
-          renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
-          showToast('✅ 导入成功');
-        } catch (err) { alert('导入失败'); }
-      };
-      reader.readAsText(file);
-    }
-
-    async function exportCategoryToImage(cat) {
-      const data = getDetailedSummary(currentYear, currentMonth)[cat];
-      if (!data) return alert('无记录');
-      document.getElementById('loadingOverlay').classList.add('active');
-      const ms = `${currentYear}年${currentMonth}月`;
-      let inner = `<div class="export-area"><div class="export-title">📌 ${cat}</div><div class="export-subtitle">${ms} 消费明细</div><div class="export-category">`;
-      data.records.forEach(r => {
-        const sign = r.amount < 0 ? '-' : '+';
-        const absAmt = Math.abs(r.amount);
-        inner += `<div class="export-detail-item"><span><span class="detail-date">${r.day}号</span>${r.note?`<span class="detail-note"> - ${r.note}</span>`:''}</span><span class="detail-amount ${r.amount<0?'negative':'positive'}">${sign}¥${absAmt.toFixed(2)}</span></div>`;
-      });
-      inner += `<div class="export-category-total"><span>小计</span><span class="detail-amount ${data.total<0?'negative':'positive'}">${data.total<0?'-¥'+Math.abs(data.total).toFixed(2):'+¥'+data.total.toFixed(2)}</span></div></div><div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div></div>`;
-      document.getElementById('exportTemplate').innerHTML = inner;
-      try {
-        const canvas = await html2canvas(document.querySelector('.export-area'), { backgroundColor: '#fff', scale: 2 });
-        const a = document.createElement('a'); a.download = `${cat}_${ms}.png`; a.href = canvas.toDataURL('image/png'); a.click();
-      } catch (e) { alert('导出失败'); }
-      document.getElementById('loadingOverlay').classList.remove('active');
-    }
-
-    async function exportAttendanceToImage() {
-      const projectStats = getAttendanceStatsByProject(currentYear, currentMonth);
-      const ms = `${currentYear}年${currentMonth}月`;
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:20px;background:white;font-family:system-ui;width:400px;';
-      
-      let inner = `<h3 style="text-align:center;margin-bottom:10px;">📅 ${ms} 出勤统计（单人）</h3>`;
-      let grandTotal = 0;
-      const projectNames = Object.keys(projectStats);
-      projectNames.forEach(name => {
-        const s = projectStats[name];
-        if (s.total > 0 || s.rest > 0) {
-          grandTotal += s.total;
-          inner += `<div style="background:#f0f4ff;padding:12px;border-radius:8px;margin-bottom:10px;">
-            <div style="font-weight:bold;color:#007aff;margin-bottom:5px;">【${name}】</div>
-            <div style="display:flex;justify-content:space-between;margin:3px 0;"><span>🔵 全天</span><span>${s.full} 天</span></div>
-            <div style="display:flex;justify-content:space-between;margin:3px 0;"><span>🟠 半天</span><span>${s.half} 天</span></div>
-            <div style="display:flex;justify-content:space-between;margin:3px 0;"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 天</span></div>
-            <div style="display:flex;justify-content:space-between;margin:3px 0;"><span>🟢 休息</span><span>${s.rest} 天</span></div>
-            <div style="display:flex;justify-content:space-between;margin:3px 0;font-weight:bold;border-top:1px solid #ccc;padding-top:3px;"><span>📌 合计出勤</span><span>${s.total.toFixed(1)} 天</span></div>
-          </div>`;
-        }
-      });
-      inner += `<div style="font-weight:bold;border-top:2px solid #007aff;padding-top:8px;margin-top:8px;display:flex;justify-content:space-between;"><span>📌 总计</span><span>${grandTotal.toFixed(1)} 天</span></div>`;
-      inner += `<div style="text-align:center;margin-top:15px;color:#999;font-size:0.75rem;">导出时间：${new Date().toLocaleString()}</div>`;
-      
-      div.innerHTML = inner;
-      document.body.appendChild(div);
-      try {
-        const canvas = await html2canvas(div, { backgroundColor: '#fff', scale: 2 });
-        const a = document.createElement('a'); a.download = `出勤统计_${ms}.png`; a.href = canvas.toDataURL('image/png'); a.click();
-      } catch (e) { alert('导出失败'); }
-      document.body.removeChild(div);
-    }
-
     document.getElementById('exportDataBtn').addEventListener('click', () => {
       document.getElementById('monthList').innerHTML = getAvailableMonths().map(m => { const [y, mo] = m.split('-'); return `<div class="month-item"><input type="checkbox" id="chk_${m}" value="${m}" checked><label for="chk_${m}">${y}年${mo}月</label></div>`; }).join('');
       document.getElementById('monthSelectModal').classList.add('active');
@@ -1244,7 +1270,7 @@
     let confirmCb = null;
     document.getElementById('clearAllBtn').addEventListener('click', () => {
       document.getElementById('confirmMessage').textContent = '确定清空所有数据？';
-      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); renderCalendar(); showToast('🗑️ 已清空'); };
+      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryRates = {}; salaryPaid = {}; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryRates(); saveSalaryPaid(); renderCalendar(); showToast('🗑️ 已清空'); };
       document.getElementById('confirmDialog').classList.add('active');
     });
     document.getElementById('confirmCancel').addEventListener('click', () => document.getElementById('confirmDialog').classList.remove('active'));
@@ -1258,7 +1284,6 @@
     window.confirmRename = (old, i) => renameCategory(old, document.getElementById(`editInput_${i}`).value);
     window.exportCategoryToImage = exportCategoryToImage;
 
-    // 初始化
     const now = new Date();
     currentYear = now.getFullYear();
     currentMonth = now.getMonth() + 1;
@@ -1267,6 +1292,8 @@
     loadCrewList();
     loadCrewAttendance();
     loadAdvances();
+    loadSalaryRates();
+    loadSalaryPaid();
     loadLastInput();
     renderCalendar();
     updateAdvanceSelect();
