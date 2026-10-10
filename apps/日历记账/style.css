@@ -53,6 +53,12 @@
     .btn-salary-paid:active { background: #1e7e34; }
     .btn-salary-rate { background: #17a2b8; color: white; }
     .btn-salary-rate:active { background: #138496; }
+    .btn-salary-clear { background: #dc3545; color: white; }
+    .btn-salary-clear:active { background: #a71d2a; }
+    .btn-loan-add { background: #e67e22; color: white; }
+    .btn-loan-add:active { background: #ca6f1e; }
+    .btn-card-clear { background: #dc3545; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; border: none; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+    .btn-card-clear:active { background: #a71d2a; }
 
     .edit-category-row { display: flex; align-items: center; gap: 4px; }
     .edit-category-row input { padding: 4px 8px; border: 1px solid #007aff; border-radius: 6px; font-size: 0.85rem; width: 100px; }
@@ -99,6 +105,7 @@
     .record-item .amount-text.negative { color: #28a745; }
     .record-item .amount-text.advance { color: #17a2b8; }
     .record-item .amount-text.income { color: #28a745; }
+    .record-item .amount-text.loan { color: #e67e22; }
     .delete-btn { background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; flex-shrink: 0; margin-left: 8px; -webkit-tap-highlight-color: transparent; }
 
     .add-form { border-top: 1px solid #eee; padding-top: 12px; }
@@ -139,7 +146,7 @@
     .btn-income-add:active { background: #1e7e34; }
 
     .form-switch { display: flex; gap: 4px; margin-bottom: 10px; }
-    .form-switch button { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; }
+    .form-switch button { flex: 1; padding: 8px 4px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.72rem; cursor: pointer; }
     .form-switch button.active { background: #007aff; color: white; border-color: #007aff; }
 
     .attendance-options { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
@@ -206,6 +213,7 @@
     .attendance-stats .stat-row { display: flex; justify-content: space-between; margin: 2px 0; }
 
     .advance-card { margin-top: 15px; background: #fff8e1; border-radius: 10px; padding: 10px; font-size: 0.85rem; border-left: 4px solid #ff9800; }
+    .loan-card { margin-top: 15px; background: #fef5e7; border-radius: 10px; padding: 10px; font-size: 0.85rem; border-left: 4px solid #e67e22; }
 
     .month-list { max-height: 200px; overflow-y: auto; margin: 10px 0; }
     .month-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
@@ -262,6 +270,36 @@
     .payment-record .payment-date { color: #888; }
     .payment-record .payment-amount { color: #28a745; font-weight: bold; }
     .payment-record .payment-delete {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-left: 6px;
+      flex-shrink: 0;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .loan-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 0.8rem;
+      border-bottom: 1px dashed #f0e0c0;
+    }
+    .loan-row:last-child { border-bottom: none; }
+    .loan-row .loan-info { flex: 1; }
+    .loan-row .loan-type { font-weight: bold; }
+    .loan-row .loan-date { color: #888; font-size: 0.7rem; }
+    .loan-row .loan-amount { font-weight: bold; margin-left: 8px; }
+    .loan-row .loan-amount.out { color: #e67e22; }
+    .loan-row .loan-amount.in { color: #3498db; }
+    .loan-row .loan-delete {
       background: #dc3545;
       color: white;
       border: none;
