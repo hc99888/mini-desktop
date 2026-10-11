@@ -2,11 +2,14 @@
 /* ================= 数据层 ================= */
 const STORE_KEY = 'my_notes_v4';
 const VIEW_KEY = 'my_notes_view';
+const SPLIT_KEY = 'my_notes_split';
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
 let currentData = [];
 let currentIndex = 0;
 let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
+let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
+if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
 function loadLocal(){
   try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
@@ -220,12 +223,9 @@ function cardHTML(n, kw){
   const linkImg = getLinkImg(n);
   const localImgs = getLocalImgs(n);
 
-  // 复制链接按钮：有链接就显示
   const copyLinkBtn = linkImg
     ? `<button class="card-copy-link" data-act="copyLink" data-id="${n.id}" title="复制图片链接">📋 复制链接</button>`
     : '';
-
-  // 图片角标：只算本地图
   const imgBadge = localImgs.length
     ? `<button class="card-imgs-badge" data-act="imgs" data-id="${n.id}" title="查看本地图片">🖼 ${localImgs.length}</button>`
     : '';
@@ -241,8 +241,7 @@ function cardHTML(n, kw){
   const fieldsHTML = fieldRows ? `<div class="card-fields">${fieldRows}</div>` : '';
 
   const contentHTML = n.content
-    ? `<div class="divider"><span>正文</span></div>
-       <div class="content">${md(hl(n.content, kw))}</div>`
+    ? `<div class="content">${md(hl(n.content, kw))}</div>`
     : '<div class="content" style="color:#bbb;font-size:12px;">（无正文）</div>';
 
   const related = getRelated(n);
@@ -277,11 +276,21 @@ function cardHTML(n, kw){
         </button>
       </div>
       ${metaHTML}
-      <div class="card-upper">
-        ${fieldsHTML}
-      </div>
-      <div class="card-lower">
-        ${contentHTML}
+      <div class="card-split">
+        <div class="card-upper">
+          ${fieldsHTML}
+        </div>
+        <div class="split-handle" data-split-handle title="上下拖动调整比例">
+          <span class="sh-label">
+            <span class="sh-grip"><i></i><i></i></span>
+            <span class="sh-text">正文</span>
+            <span class="sh-num">0 / 0</span>
+            <span class="sh-grip"><i></i><i></i></span>
+          </span>
+        </div>
+        <div class="card-lower">
+          ${contentHTML}
+        </div>
       </div>
     </div>
     ${relationsHTML}
@@ -454,7 +463,9 @@ function jumpToTitle(title){
 
 /* ================= 卡片 / 列表 事件 ================= */
 function handleCardClick(e){
-  // 复制链接
+  // 如果点在拖动条上，不处理（拖动条有自己的事件）
+  if(e.target.closest('.split-handle')) return;
+
   const copyLinkBtn = e.target.closest('.card-copy-link');
   if(copyLinkBtn){
     const note = notes.find(n=>n.id===copyLinkBtn.dataset.id);
@@ -465,7 +476,6 @@ function handleCardClick(e){
     return;
   }
 
-  // 图片角标（只查看本地图）
   const imgBadge = e.target.closest('.card-imgs-badge');
   if(imgBadge){
     const note = notes.find(n=>n.id===imgBadge.dataset.id);
@@ -538,6 +548,96 @@ document.getElementById('btnView').onclick = ()=>{
     });
   }
 };
+
+/* ================= 拖动条：手动调整字段 / 正文比例 ================= */
+let dragState = null;
+
+function updateSplitDisplay(percent){
+  document.documentElement.style.setProperty('--split', percent + '%');
+  // 更新当前激活卡片的数字
+  if(dragState){
+    const num = dragState.handle.querySelector('.sh-num');
+    if(num){
+      num.textContent = `${percent} / ${100 - percent}`;
+    }
+  }
+}
+
+function beginDrag(e, handle){
+  e.preventDefault();
+  e.stopPropagation();
+  const splitEl = handle.closest('.card-split');
+  if(!splitEl) return;
+
+  const rect = splitEl.getBoundingClientRect();
+  const startY = getEventY(e);
+  const startPercent = splitPercent;
+
+  dragState = {
+    handle,
+    splitEl,
+    rect,
+    startY,
+    startPercent,
+  };
+
+  handle.classList.add('active');
+  document.body.classList.add('dragging');
+
+  // 初始化数字显示
+  const num = handle.querySelector('.sh-num');
+  if(num) num.textContent = `${splitPercent} / ${100 - splitPercent}`;
+}
+
+function moveDrag(e){
+  if(!dragState) return;
+  e.preventDefault();
+  const { rect, startY, startPercent } = dragState;
+  const y = getEventY(e);
+  const deltaY = y - startY;
+  const deltaPercent = (deltaY / rect.height) * 100;
+  let newPercent = Math.round(startPercent + deltaPercent);
+  // 限制 20 ~ 80
+  if(newPercent < 20) newPercent = 20;
+  if(newPercent > 80) newPercent = 80;
+  splitPercent = newPercent;
+  updateSplitDisplay(splitPercent);
+}
+
+function endDrag(){
+  if(!dragState) return;
+  const handle = dragState.handle;
+  handle.classList.remove('active');
+  document.body.classList.remove('dragging');
+  dragState = null;
+  localStorage.setItem(SPLIT_KEY, String(splitPercent));
+}
+
+function getEventY(e){
+  if(e.touches && e.touches.length) return e.touches[0].clientY;
+  if(e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
+  return e.clientY;
+}
+
+// 事件委托：在 swiper 上监听拖动条的按下
+swiperEl.addEventListener('mousedown', e=>{
+  const handle = e.target.closest('.split-handle');
+  if(handle) beginDrag(e, handle);
+});
+swiperEl.addEventListener('touchstart', e=>{
+  const handle = e.target.closest('.split-handle');
+  if(handle) beginDrag(e, handle);
+}, {passive:false});
+
+document.addEventListener('mousemove', moveDrag);
+document.addEventListener('touchmove', moveDrag, {passive:false});
+
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
+document.addEventListener('touchcancel', endDrag);
+
+/* 初始化时应用一次 */
+updateSplitDisplay(splitPercent);
 
 /* ================= 复制 ================= */
 function copyNote(n){
@@ -693,7 +793,6 @@ document.getElementById('imgLinkWrap').addEventListener('click', e=>{
   }
 });
 
-/* 添加本地图片：直接打开文件选择器（手机可选拍照/相册） */
 function addLocalImage(){
   const localCount = editingImages.filter(s=>!isLink(s)).length;
   if(localCount >= 5){ toast('本地图最多 5 张'); return; }
@@ -720,7 +819,6 @@ function addLocalImage(){
   input.click();
 }
 
-/* 添加链接图片：直接 prompt 输入 URL */
 function addLinkImage(){
   if(editingImages.some(s=>isLink(s))){ toast('链接只能添加 1 条'); return; }
   const url = prompt('输入图片 URL：', 'https://');
@@ -921,6 +1019,12 @@ function renderCmd(q){
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
+    {name:'重置字段/正文比例', run:()=>{
+      splitPercent = 45;
+      localStorage.setItem(SPLIT_KEY, '45');
+      updateSplitDisplay(45);
+      toast('已重置 45 / 55');
+    }},
     {name:'清除筛选（显示全部）', run:()=>{
       filter = {category:'',tag:'',keyword:''};
       currentIndex = 0; renderAll();
