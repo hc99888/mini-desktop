@@ -14,7 +14,7 @@
   --radius:12px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --split: 45;  /* 字段占比 % */
+  --split: 45;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;margin:0;overflow:hidden;}
@@ -134,7 +134,6 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
   flex:1;font-size:16px;font-weight:600;color:var(--main);
   line-height:1.4;word-break:break-word;margin:0;
 }
-/* 复制链接 */
 .card-copy-link{
   display:inline-flex;align-items:center;gap:3px;
   font-size:11.5px;color:var(--main);
@@ -148,7 +147,6 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
   border:none;
 }
 .card-copy-link:hover{background:var(--main);color:#fff;}
-/* 图片角标 */
 .card-imgs-badge{
   display:inline-flex;align-items:center;gap:3px;
   font-size:11.5px;color:var(--main);
@@ -189,26 +187,18 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
   padding:2px 9px;border-radius:20px;font-size:11px;
 }
 
-/* ============ 字段 + 拖动条 + 正文 三合一容器 ============ */
 .card-split{
-  flex:1;
-  min-height:0;
-  display:flex;flex-direction:column;
-  overflow:hidden;
-  position:relative;
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
 }
 
-/* 字段区：占 --split% */
 .card-upper{
   flex:0 0 var(--split, 45%);
-  min-height:0;
-  display:flex;flex-direction:column;
-  overflow:hidden;
+  min-height:0;display:flex;flex-direction:column;overflow:hidden;
 }
 .card-fields{
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding-right:6px;font-size:13.5px;line-height:1.75;
-  min-height:0;
+  padding-right:6px;font-size:13.5px;line-height:1.75;min-height:0;
 }
 .card-fields::-webkit-scrollbar{width:6px;}
 .card-fields::-webkit-scrollbar-thumb{background:#d0d6d1;border-radius:3px;}
@@ -222,17 +212,11 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 }
 .card-fields .fv{color:#333;word-break:break-word;flex:1;min-width:0;}
 
-/* ============ 拖动条 ============ */
 .split-handle{
-  flex:0 0 auto;
-  height:22px;
-  margin:2px 0;
+  flex:0 0 auto;height:22px;margin:2px 0;
   display:flex;align-items:center;justify-content:center;
-  cursor:ns-resize;
-  user-select:none;
-  -webkit-user-select:none;
-  touch-action:none;       /* 关键：阻止手机上滚动 */
-  position:relative;
+  cursor:ns-resize;user-select:none;-webkit-user-select:none;
+  touch-action:none;position:relative;
 }
 .split-handle::before,
 .split-handle::after{
@@ -240,55 +224,35 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 }
 .split-handle .sh-label{
   display:flex;align-items:center;gap:4px;
-  padding:0 8px;
-  font-size:11px;color:var(--muted);
-  letter-spacing:1px;
-  transition:color .15s;
+  padding:0 8px;font-size:11px;color:var(--muted);
+  letter-spacing:1px;transition:color .15s;
 }
 .split-handle .sh-grip{
-  display:inline-flex;flex-direction:column;gap:2px;
-  opacity:.55;
+  display:inline-flex;flex-direction:column;gap:2px;opacity:.55;
 }
 .split-handle .sh-grip i{
-  display:block;width:14px;height:1.5px;
-  background:currentColor;border-radius:1px;
+  display:block;width:14px;height:1.5px;background:currentColor;border-radius:1px;
 }
 .split-handle:hover .sh-label,
-.split-handle.active .sh-label{
-  color:var(--main);
-}
+.split-handle.active .sh-label{color:var(--main);}
 .split-handle:hover .sh-grip,
-.split-handle.active .sh-grip{
-  opacity:1;
-}
-/* 拖动时显示数字 */
+.split-handle.active .sh-grip{opacity:1;}
 .split-handle .sh-num{
-  font-variant-numeric:tabular-nums;
-  font-weight:600;
-  color:var(--main);
-  display:none;
+  font-variant-numeric:tabular-nums;font-weight:600;
+  color:var(--main);display:none;
 }
-.split-handle.active .sh-num{
-  display:inline;
-}
-.split-handle.active .sh-text{
-  display:none;
-}
+.split-handle.active .sh-num{display:inline;}
+.split-handle.active .sh-text{display:none;}
 
-/* 正文区：占剩余空间 */
 .card-lower{
-  flex:1 1 auto;
-  min-height:0;
-  display:flex;flex-direction:column;
-  overflow:hidden;
-  padding-top:2px;
+  flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;overflow:hidden;padding-top:2px;
 }
 
 .content{
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   font-size:13.5px;color:#444;line-height:1.75;
-  word-break:break-word;padding-right:6px;
-  min-height:0;
+  word-break:break-word;padding-right:6px;min-height:0;
 }
 .content::-webkit-scrollbar{width:6px;}
 .content::-webkit-scrollbar-thumb{background:#d0d6d1;border-radius:3px;}
@@ -308,7 +272,6 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 .content a{color:var(--main);}
 .content hr{border:none;border-top:1px solid var(--line);margin:10px 0;}
 
-/* 双链 */
 .wikilink{
   color:var(--main);background:var(--main-soft);
   padding:0 4px;border-radius:3px;
@@ -316,16 +279,12 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 }
 .wikilink:hover{background:var(--main);color:#fff;}
 
-/* 关联推荐 */
 .card-relations{
   font-size:11.5px;color:var(--muted);
   padding:6px 18px 0;
-  flex-shrink:0;
-  display:flex;flex-direction:column;gap:3px;
-  background:#fff;
-  border-top:1px dashed var(--line);
-  max-height:80px;
-  overflow-y:auto;
+  flex-shrink:0;display:flex;flex-direction:column;gap:3px;
+  background:#fff;border-top:1px dashed var(--line);
+  max-height:80px;overflow-y:auto;
 }
 .card-relations .rel-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 0;}
 .card-relations .rel-label{color:#999;font-weight:600;}
@@ -335,17 +294,13 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 }
 .card-relations .rel-item:hover{background:var(--main);color:#fff;}
 
-/* 时间戳 */
 .card-time{
   font-size:11px;color:var(--muted);
   display:flex;gap:12px;flex-wrap:wrap;
-  padding:6px 18px;
-  background:#fff;
-  border-top:1px solid var(--line);
-  flex-shrink:0;
+  padding:6px 18px;background:#fff;
+  border-top:1px solid var(--line);flex-shrink:0;
 }
 
-/* 底部操作 */
 .ops{
   display:flex;gap:6px;flex-wrap:wrap;
   padding:10px 18px;
@@ -370,13 +325,10 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 
 mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 
-/* 列表视图 */
 #listview{
   position:absolute;inset:0;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  padding:10px 12px;
-  display:none;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 12px;display:none;
 }
 #listview.show{display:block;}
 #swiper.hide{display:none;}
@@ -410,7 +362,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   font-size:11px;color:#888;margin-left:6px;
 }
 
-/* 底部计数栏 */
 #counter{
   flex-shrink:0;
   height:calc(38px + var(--safe-bottom));
@@ -429,7 +380,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 #counter .num .sep{color:#bbb;margin:0 4px;}
 #counter .num .total{color:#666;}
 
-/* 编辑面板 */
+/* ============ 编辑面板 ============ */
 #editor{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:flex-start;justify-content:center;z-index:50;padding:24px 16px;
@@ -441,15 +392,40 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.15);
 }
 .panel h2{margin:0 0 14px;font-size:16px;color:var(--main);}
-.panel label{display:block;font-size:12px;margin:11px 0 5px;color:#666;font-weight:600;}
-.panel input,.panel textarea,.panel select{
+
+/* 标签：黑色加粗 */
+.panel label{
+  display:block;
+  font-size:12px;
+  margin:11px 0 5px;
+  color:#1f2420;
+  font-weight:700;
+  letter-spacing:.2px;
+}
+
+/* 输入框：正常黑色文字 */
+.panel input,
+.panel textarea,
+.panel select{
   width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
   font-size:16px;outline:none;transition:.15s;background:#fff;
+  color:#1f2420;
 }
-.panel input:focus,.panel textarea:focus,.panel select:focus{
+.panel input:focus,
+.panel textarea:focus,
+.panel select:focus{
   border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);
 }
 .panel textarea{resize:vertical;line-height:1.6;}
+
+/* Placeholder：很淡的灰（引导文字） */
+.panel input::placeholder,
+.panel textarea::placeholder{
+  color:#c8ccc8;
+  font-weight:400;
+  opacity:1;
+}
+
 .panel .row{display:flex;gap:12px;}
 .panel .row>div{flex:1;min-width:0;}
 .panel .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;
@@ -462,14 +438,17 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .btn-ghost{background:#eef0ed;color:#333;}
 .btn-ghost:hover{background:#e0e3df;}
 
-/* 图片编辑区 */
+/* ============ 图片编辑：水平排列 ============ */
 .img-edit{
-  display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;         /* 空间不够时自动换行 */
+  margin-top:6px;
   align-items:center;
 }
 .img-edit .thumb{
   position:relative;width:64px;height:64px;border-radius:8px;
-  border:1px solid var(--line);overflow:hidden;
+  border:1px solid var(--line);overflow:hidden;flex-shrink:0;
 }
 .img-edit .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .img-edit .thumb .open{
@@ -482,8 +461,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   background:rgba(0,0,0,.55);color:#fff;border:none;
   width:20px;height:20px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:12px;line-height:1;cursor:pointer;
-  z-index:2;
+  font-size:12px;line-height:1;cursor:pointer;z-index:2;
 }
 .img-add-btn{
   display:inline-flex;align-items:center;gap:5px;
@@ -492,24 +470,37 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   background:#fafbfa;color:var(--muted);
   font-size:13px;cursor:pointer;transition:.15s;
   min-height:40px;
+  height:64px;              /* 和缩略图同高，看起来整齐 */
+  padding:0 16px;
+  white-space:nowrap;
 }
 .img-add-btn:hover{border-color:var(--main);color:var(--main);background:var(--main-soft);}
+.img-add-btn:disabled,
+.img-add-btn.disabled{
+  opacity:.45;cursor:not-allowed;
+}
+.img-add-btn.disabled:hover{
+  border-color:var(--line);color:var(--muted);background:#fafbfa;
+}
 
-/* 链接图条目 */
+/* 链接图条目：和本地图同一行 */
 .img-link-row{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 12px;border-radius:8px;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:0 12px;border-radius:8px;
   background:var(--main-soft);
   border:1px solid #cfe0d6;
   font-size:12.5px;color:var(--main);
-  width:100%;
-  margin-top:2px;
+  height:64px;
+  max-width:100%;
+  flex-shrink:1;
+  min-width:0;
 }
 .img-link-row .lk-icon{font-size:14px;flex-shrink:0;}
 .img-link-row .lk-url{
   flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   color:#456b53;
+  max-width:180px;
 }
 .img-link-row .lk-btn{
   background:rgba(255,255,255,.7);
@@ -521,9 +512,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .img-link-row .lk-btn:hover{background:#fff;}
 .img-link-row .lk-btn.del:hover{background:#ffe1e1;border-color:#f5b5b5;color:#c33;}
 
-.img-hint{
-  font-size:11px;color:var(--muted);margin-top:6px;
-}
+.img-hint{font-size:11px;color:var(--muted);margin-top:6px;}
 
 /* 命令面板 */
 #cmd{
@@ -547,7 +536,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .cmd-item:hover,.cmd-item.sel{background:var(--main-soft);color:var(--main);}
 .cmd-item .k{font-size:11px;color:var(--muted);}
 
-/* 跳转面板 */
 #jump{
   position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;
   align-items:flex-start;justify-content:center;padding-top:14vh;z-index:70;
@@ -570,7 +558,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .jump-item.cur{background:var(--main-soft);}
 .jump-item.cur .idx{color:var(--main);font-weight:700;}
 
-/* 图片查看器 */
 #gallery{
   position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;
   align-items:center;justify-content:center;z-index:80;
@@ -599,9 +586,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 #gallery .g-stage{
   flex:1;width:100%;
   display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
-  padding:60px 20px;
-  box-sizing:border-box;
+  overflow:hidden;padding:60px 20px;box-sizing:border-box;
 }
 #gallery .g-stage img{
   max-width:100%;max-height:100%;
@@ -621,6 +606,73 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 #gallery .g-next{right:14px;}
 #gallery .g-nav.hide{display:none;}
 
+#catMgr{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
+  align-items:center;justify-content:center;z-index:75;
+  padding:20px 16px;
+}
+#catMgr.show{display:flex;}
+.catmgr-box{
+  background:#fff;border-radius:12px;
+  width:100%;max-width:420px;
+  max-height:80vh;
+  display:flex;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);
+  overflow:hidden;
+}
+.catmgr-head{
+  padding:14px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.catmgr-head h3{margin:0;font-size:15px;color:var(--main);}
+.catmgr-close{
+  background:rgba(0,0,0,.05);color:#555;
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;border:none;
+}
+.catmgr-close:hover{background:rgba(0,0,0,.1);}
+.catmgr-body{
+  flex:1;overflow-y:auto;padding:8px;
+  -webkit-overflow-scrolling:touch;
+}
+.catmgr-empty{
+  text-align:center;padding:30px 20px;
+  color:#aaa;font-size:13px;
+}
+.catmgr-item{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-radius:8px;font-size:14px;
+}
+.catmgr-item:hover{background:var(--main-soft);}
+.catmgr-item .cname{flex:1;color:#333;word-break:break-word;}
+.catmgr-item .cnum{
+  font-size:11px;color:var(--muted);
+  background:#f0f2ef;padding:1px 8px;border-radius:20px;
+  font-variant-numeric:tabular-nums;
+}
+.catmgr-item .cdel{
+  background:rgba(0,0,0,.05);color:#888;
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;cursor:pointer;border:none;flex-shrink:0;
+}
+.catmgr-item .cdel:hover{background:#ffe1e1;color:#c33;}
+.catmgr-foot{
+  padding:12px 14px;border-top:1px solid var(--line);
+  display:flex;justify-content:center;
+  background:#fafbfa;
+}
+.catmgr-foot button{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:9px 18px;border-radius:8px;
+  border:1.5px dashed var(--line);
+  background:#fff;color:var(--main);
+  font-size:13px;cursor:pointer;transition:.15s;
+  min-height:38px;
+}
+.catmgr-foot button:hover{border-color:var(--main);background:var(--main-soft);}
+
 #toast{
   position:fixed;left:50%;bottom:calc(60px + var(--safe-bottom));
   transform:translateX(-50%);
@@ -631,7 +683,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 #toast.show{opacity:1;}
 
-/* 拖动中：全局禁止选中 */
 body.dragging,
 body.dragging *{
   user-select:none !important;
@@ -651,7 +702,12 @@ body.dragging *{
   .ops{padding:9px 14px;padding-bottom:calc(9px + var(--safe-bottom));}
   .ops button{flex:1;justify-content:center;padding:9px 8px;min-width:60px;}
   .panel .row{flex-direction:column;gap:0;}
-  .split-handle{height:26px;}   /* 手机上更好拖 */
+  .split-handle{height:26px;}
+  /* 手机上图片按钮略矮 */
+  .img-add-btn{height:56px;padding:0 12px;font-size:12.5px;}
+  .img-edit .thumb{width:56px;height:56px;}
+  .img-link-row{height:56px;padding:0 10px;}
+  .img-link-row .lk-url{max-width:120px;}
 }
 @media (max-width: 380px){
   header button{padding:7px 10px;font-size:12px;}
@@ -705,6 +761,8 @@ body.dragging *{
           <option>疾病</option>
           <option>书籍</option>
           <option>其他</option>
+          <option value="__add__">＋ 添加分类…</option>
+          <option value="__manage__">－ 管理分类…</option>
         </select>
       </div>
       <div>
@@ -721,7 +779,6 @@ body.dragging *{
 
     <label>图片（本地图最多 5 张，链接只能 1 条）</label>
     <div class="img-edit" id="imgEdit"></div>
-    <div id="imgLinkWrap" style="margin-top:8px;"></div>
     <div class="img-hint" id="imgHint"></div>
 
     <label>正文（支持 Markdown、[[双链]]）</label>
@@ -731,6 +788,19 @@ body.dragging *{
     <div class="btns">
       <button class="btn-ghost" id="btnCancel">取消</button>
       <button class="btn-primary" id="btnSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="catMgr">
+  <div class="catmgr-box">
+    <div class="catmgr-head">
+      <h3>管理自定义分类</h3>
+      <button class="catmgr-close" id="catMgrClose" type="button">✕</button>
+    </div>
+    <div class="catmgr-body" id="catMgrBody"></div>
+    <div class="catmgr-foot">
+      <button type="button" id="catMgrAdd">＋ 添加新分类</button>
     </div>
   </div>
 </div>
@@ -767,6 +837,15 @@ body.dragging *{
 const STORE_KEY = 'my_notes_v4';
 const VIEW_KEY = 'my_notes_view';
 const SPLIT_KEY = 'my_notes_split';
+const CATS_KEY = 'my_notes_categories';
+
+const DEFAULT_CATS = ['中药材','养生','偏方','疾病','书籍','其他'];
+let customCategories = [];
+try{
+  customCategories = JSON.parse(localStorage.getItem(CATS_KEY) || '[]');
+  if(!Array.isArray(customCategories)) customCategories = [];
+}catch(e){ customCategories = []; }
+
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
 let currentData = [];
@@ -775,6 +854,7 @@ let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
 let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
+function saveCats(){ localStorage.setItem(CATS_KEY, JSON.stringify(customCategories)); }
 function loadLocal(){
   try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
   catch(e){ notes = []; }
@@ -866,6 +946,23 @@ function similarContent(a, b){
   a = String(a||'').slice(0,200); b = String(b||'').slice(0,200);
   if(!a || !b) return 0;
   return jaccard(tokenize(a), tokenize(b));
+}
+
+/* ================= 分类下拉重建 ================= */
+function rebuildCategorySelect(selected){
+  const sel = document.getElementById('fCategory');
+  if(!sel) return;
+  const cur = selected !== undefined ? selected : sel.value;
+  let html = `<option value="">— 无 —</option>`;
+  DEFAULT_CATS.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
+  customCategories.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
+  html += `<option value="__add__">＋ 添加分类…</option>`;
+  html += `<option value="__manage__">－ 管理分类…</option>`;
+  sel.innerHTML = html;
+  if(cur && cur !== '__add__' && cur !== '__manage__'){
+    sel.value = cur;
+    if(sel.value !== cur) sel.value = '';
+  }
 }
 
 /* ================= 侧边栏 ================= */
@@ -1187,6 +1284,7 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('editor').classList.contains('show')) return;
   if(document.getElementById('cmd').classList.contains('show')) return;
   if(document.getElementById('jump').classList.contains('show')) return;
+  if(document.getElementById('catMgr').classList.contains('show')) return;
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -1225,9 +1323,7 @@ function jumpToTitle(title){
   toast(`未找到「${title}」`);
 }
 
-/* ================= 卡片 / 列表 事件 ================= */
 function handleCardClick(e){
-  // 如果点在拖动条上，不处理（拖动条有自己的事件）
   if(e.target.closest('.split-handle')) return;
 
   const copyLinkBtn = e.target.closest('.card-copy-link');
@@ -1313,17 +1409,14 @@ document.getElementById('btnView').onclick = ()=>{
   }
 };
 
-/* ================= 拖动条：手动调整字段 / 正文比例 ================= */
+/* ================= 拖动条 ================= */
 let dragState = null;
 
 function updateSplitDisplay(percent){
   document.documentElement.style.setProperty('--split', percent + '%');
-  // 更新当前激活卡片的数字
   if(dragState){
     const num = dragState.handle.querySelector('.sh-num');
-    if(num){
-      num.textContent = `${percent} / ${100 - percent}`;
-    }
+    if(num) num.textContent = `${percent} / ${100 - percent}`;
   }
 }
 
@@ -1332,23 +1425,14 @@ function beginDrag(e, handle){
   e.stopPropagation();
   const splitEl = handle.closest('.card-split');
   if(!splitEl) return;
-
   const rect = splitEl.getBoundingClientRect();
   const startY = getEventY(e);
   const startPercent = splitPercent;
 
-  dragState = {
-    handle,
-    splitEl,
-    rect,
-    startY,
-    startPercent,
-  };
+  dragState = { handle, splitEl, rect, startY, startPercent };
 
   handle.classList.add('active');
   document.body.classList.add('dragging');
-
-  // 初始化数字显示
   const num = handle.querySelector('.sh-num');
   if(num) num.textContent = `${splitPercent} / ${100 - splitPercent}`;
 }
@@ -1361,7 +1445,6 @@ function moveDrag(e){
   const deltaY = y - startY;
   const deltaPercent = (deltaY / rect.height) * 100;
   let newPercent = Math.round(startPercent + deltaPercent);
-  // 限制 20 ~ 80
   if(newPercent < 20) newPercent = 20;
   if(newPercent > 80) newPercent = 80;
   splitPercent = newPercent;
@@ -1383,7 +1466,6 @@ function getEventY(e){
   return e.clientY;
 }
 
-// 事件委托：在 swiper 上监听拖动条的按下
 swiperEl.addEventListener('mousedown', e=>{
   const handle = e.target.closest('.split-handle');
   if(handle) beginDrag(e, handle);
@@ -1400,7 +1482,6 @@ document.addEventListener('mouseup', endDrag);
 document.addEventListener('touchend', endDrag);
 document.addEventListener('touchcancel', endDrag);
 
-/* 初始化时应用一次 */
 updateSplitDisplay(splitPercent);
 
 /* ================= 复制 ================= */
@@ -1470,11 +1551,11 @@ function openEditor(note){
   editingImages = note && note.images ? note.images.slice() : [];
   document.getElementById('editorTitle').textContent = note ? '编辑资料' : '新建资料';
   document.getElementById('fTitle').value = note?.title || '';
-  document.getElementById('fCategory').value = note?.category || '';
   document.getElementById('fTags').value = (note?.tags||[]).join(',');
   document.getElementById('fFields').value = Object.entries(note?.fields||{})
       .map(([k,v])=>`${k}=${v}`).join('\n');
   document.getElementById('fContent').value = note?.content || '';
+  rebuildCategorySelect(note?.category || '');
   renderImgEdit();
   editor.classList.add('show');
   document.body.style.overflow = 'hidden';
@@ -1487,16 +1568,156 @@ function closeEditor(){
   editingImages = [];
 }
 
+document.getElementById('fCategory').addEventListener('change', e=>{
+  const val = e.target.value;
+  if(val === '__add__'){
+    addNewCategoryFromEditor();
+    return;
+  }
+  if(val === '__manage__'){
+    document.getElementById('fCategory').value = '';
+    openCatMgr();
+    return;
+  }
+  applyFieldTemplate(val);
+});
+
+function addNewCategoryFromEditor(){
+  const name = prompt('输入新分类名：', '');
+  if(!name) { rebuildCategorySelect(''); return; }
+  const trimmed = name.trim();
+  if(!trimmed){ rebuildCategorySelect(''); return; }
+  if(DEFAULT_CATS.includes(trimmed)){
+    rebuildCategorySelect(trimmed);
+    toast('已选中已有分类');
+    return;
+  }
+  if(customCategories.includes(trimmed)){
+    rebuildCategorySelect(trimmed);
+    toast('分类已存在，已选中');
+    return;
+  }
+  customCategories.push(trimmed);
+  saveCats();
+  rebuildCategorySelect(trimmed);
+  renderSidebar();
+  toast(`已添加分类「${trimmed}」`);
+  applyFieldTemplate(trimmed);
+}
+
+function applyFieldTemplate(cat){
+  const tmpl = FIELD_TEMPLATES[cat] || [];
+  if(!tmpl.length) return;
+  const ta = document.getElementById('fFields');
+  const existing = new Set(
+    ta.value.split('\n').map(l=>l.split('=')[0].trim()).filter(Boolean)
+  );
+  const toAdd = tmpl.filter(f=>!existing.has(f));
+  if(toAdd.length){
+    const prefix = ta.value.trim() ? ta.value.trimEnd() + '\n' : '';
+    ta.value = prefix + toAdd.map(f=>`${f}=`).join('\n');
+  }
+}
+
+/* ================= 分类管理弹窗 ================= */
+const catMgr = document.getElementById('catMgr');
+const catMgrBody = document.getElementById('catMgrBody');
+
+function openCatMgr(){
+  renderCatMgr();
+  catMgr.classList.add('show');
+}
+function closeCatMgr(){
+  catMgr.classList.remove('show');
+}
+document.getElementById('catMgrClose').onclick = closeCatMgr;
+catMgr.addEventListener('click', e=>{
+  if(e.target === catMgr) closeCatMgr();
+});
+document.getElementById('catMgrAdd').onclick = ()=>{
+  const name = prompt('输入新分类名：', '');
+  if(!name) return;
+  const trimmed = name.trim();
+  if(!trimmed){ return; }
+  if(DEFAULT_CATS.includes(trimmed)){
+    toast('默认分类已存在');
+    return;
+  }
+  if(customCategories.includes(trimmed)){
+    toast('分类已存在');
+    return;
+  }
+  customCategories.push(trimmed);
+  saveCats();
+  renderCatMgr();
+  rebuildCategorySelect(trimmed);
+  renderSidebar();
+  toast(`已添加「${trimmed}」`);
+};
+
+function renderCatMgr(){
+  if(!customCategories.length){
+    catMgrBody.innerHTML = `<div class="catmgr-empty">还没有自定义分类<br>点下方按钮添加</div>`;
+    return;
+  }
+  const countMap = {};
+  notes.forEach(n=>{
+    const c = n.category || '';
+    countMap[c] = (countMap[c]||0) + 1;
+  });
+  catMgrBody.innerHTML = customCategories.map((c)=>{
+    const n = countMap[c] || 0;
+    return `<div class="catmgr-item" data-cat="${esc(c)}">
+      <span class="cname">${esc(c)}</span>
+      <span class="cnum">${n} 条</span>
+      <button class="cdel" data-del="${esc(c)}" title="删除分类" type="button">×</button>
+    </div>`;
+  }).join('');
+}
+
+catMgrBody.addEventListener('click', e=>{
+  const del = e.target.closest('[data-del]');
+  if(!del) return;
+  const cat = del.dataset.del;
+  const used = notes.filter(n=>(n.category||'') === cat).length;
+  let ok = true;
+  if(used > 0){
+    ok = confirm(`「${cat}」有 ${used} 条资料在使用。\n\n删除后这些资料将变为「未分类」，确定删除吗？`);
+  }else{
+    ok = confirm(`确定删除分类「${cat}」？`);
+  }
+  if(!ok) return;
+
+  const idx = customCategories.indexOf(cat);
+  if(idx >= 0){
+    customCategories.splice(idx, 1);
+    saveCats();
+  }
+  let changed = 0;
+  notes.forEach(n=>{
+    if((n.category||'') === cat){ n.category = ''; changed++; }
+  });
+  if(changed > 0) saveLocal();
+
+  renderCatMgr();
+  rebuildCategorySelect('');
+  renderAll();
+  toast(changed ? `已删除分类，${changed} 条资料改为未分类` : `已删除分类「${cat}」`);
+});
+
+/* ================= 图片编辑（水平排列） ================= */
 function renderImgEdit(){
   const wrap = document.getElementById('imgEdit');
-  const linkWrap = document.getElementById('imgLinkWrap');
   const hint = document.getElementById('imgHint');
   const MAX_LOCAL = 5;
 
   const localImgs = editingImages.filter(s=>!isLink(s));
   const linkImg = editingImages.find(s=>isLink(s));
 
+  // 全部水平排列：本地图缩略图 → 📷按钮 → 🔗按钮（如果有链接则显示链接条目）
   let html = '';
+
+  // 本地图缩略图
   localImgs.forEach((src)=>{
     const i = editingImages.indexOf(src);
     html += `<div class="thumb">
@@ -1505,22 +1726,25 @@ function renderImgEdit(){
       <button class="x" data-i="${i}" title="删除" type="button">×</button>
     </div>`;
   });
+
+  // 📷 添加本地图按钮（没满 5 张就显示）
   if(localImgs.length < MAX_LOCAL){
     html += `<button type="button" class="img-add-btn" id="btnAddLocal">📷 拍照/相册</button>`;
   }
-  wrap.innerHTML = html;
 
+  // 🔗 添加链接 或 已有链接条目
   if(linkImg){
-    linkWrap.innerHTML = `
-      <div class="img-link-row">
-        <span class="lk-icon">🔗</span>
-        <span class="lk-url" title="${esc(linkImg)}">${esc(linkImg)}</span>
-        <button type="button" class="lk-btn" data-copy-link title="复制链接">📋 复制</button>
-        <button type="button" class="lk-btn del" data-del-link title="删除">×</button>
-      </div>`;
+    html += `<div class="img-link-row">
+      <span class="lk-icon">🔗</span>
+      <span class="lk-url" title="${esc(linkImg)}">${esc(linkImg)}</span>
+      <button type="button" class="lk-btn" data-copy-link title="复制链接">📋</button>
+      <button type="button" class="lk-btn del" data-del-link title="删除">×</button>
+    </div>`;
   }else{
-    linkWrap.innerHTML = `<button type="button" class="img-add-btn" id="btnAddLink">🔗 添加链接</button>`;
+    html += `<button type="button" class="img-add-btn" id="btnAddLink">🔗 添加链接</button>`;
   }
+
+  wrap.innerHTML = html;
 
   let msg = `本地图 ${localImgs.length}/${MAX_LOCAL}`;
   if(linkImg) msg += ` · 已添加链接（限 1 条）`;
@@ -1542,10 +1766,7 @@ document.getElementById('imgEdit').addEventListener('click', e=>{
     return;
   }
   if(e.target.closest('#btnAddLocal')) addLocalImage();
-});
-
-document.getElementById('imgLinkWrap').addEventListener('click', e=>{
-  if(e.target.closest('#btnAddLink')){ addLinkImage(); return; }
+  if(e.target.closest('#btnAddLink')) addLinkImage();
   if(e.target.closest('[data-copy-link]')){
     const link = editingImages.find(s=>isLink(s));
     if(link) copyText(link, '已复制图片链接');
@@ -1624,21 +1845,6 @@ function compressImage(file, maxSize, cb){
 document.getElementById('btnNew').onclick = ()=>openEditor(null);
 document.getElementById('btnCancel').onclick = closeEditor;
 
-document.getElementById('fCategory').addEventListener('change', e=>{
-  const cat = e.target.value;
-  const tmpl = FIELD_TEMPLATES[cat] || [];
-  if(!tmpl.length) return;
-  const ta = document.getElementById('fFields');
-  const existing = new Set(
-    ta.value.split('\n').map(l=>l.split('=')[0].trim()).filter(Boolean)
-  );
-  const toAdd = tmpl.filter(f=>!existing.has(f));
-  if(toAdd.length){
-    const prefix = ta.value.trim() ? ta.value.trimEnd() + '\n' : '';
-    ta.value = prefix + toAdd.map(f=>`${f}=`).join('\n');
-  }
-});
-
 document.getElementById('btnSave').onclick = ()=>{
   const title = document.getElementById('fTitle').value.trim();
   if(!title){ alert('请填写标题'); return; }
@@ -1657,6 +1863,8 @@ document.getElementById('btnSave').onclick = ()=>{
       .split(/[,，]/).map(s=>s.trim()).filter(Boolean);
   const content = document.getElementById('fContent').value;
   const now = today();
+  let category = document.getElementById('fCategory').value;
+  if(category === '__add__' || category === '__manage__') category = '';
 
   const others = notes.filter(n=>n.id !== editingId);
   for(const o of others){
@@ -1687,8 +1895,7 @@ document.getElementById('btnSave').onclick = ()=>{
     });
     n.history = n.history.slice(0, 10);
     Object.assign(n, {
-      title,
-      category: document.getElementById('fCategory').value.trim(),
+      title, category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
       updatedAt: now
@@ -1696,7 +1903,7 @@ document.getElementById('btnSave').onclick = ()=>{
   }else{
     notes.unshift({
       id: uid(), title,
-      category: document.getElementById('fCategory').value.trim(),
+      category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
       createdAt: now, updatedAt: now, star: false, history: []
@@ -1780,6 +1987,7 @@ function renderCmd(q){
 
   const commands = [
     {name:'新建资料', run:()=>openEditor(null)},
+    {name:'管理自定义分类', run:()=>openCatMgr()},
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
@@ -1894,13 +2102,19 @@ jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 
 /* ================= 导入导出 ================= */
 function exportJSON(){
-  const blob = new Blob([JSON.stringify(notes,null,2)], {type:'application/json'});
+  const payload = {
+    _version: 4,
+    _exportedAt: new Date().toISOString(),
+    customCategories: customCategories.slice(),
+    notes: notes
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `notes_${today()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`已导出 ${notes.length} 条（含图片）`);
+  toast(`已导出 ${notes.length} 条（含图片和分类）`);
 }
 
 function importJSON(){
@@ -1911,15 +2125,31 @@ function importJSON(){
     const reader = new FileReader();
     reader.onload = ()=>{
       try{
-        const data = JSON.parse(reader.result);
-        if(!Array.isArray(data)) throw new Error('格式应为数组');
+        const raw = JSON.parse(reader.result);
+        let data, cats = null;
+        if(Array.isArray(raw)){
+          data = raw;
+        }else if(raw && Array.isArray(raw.notes)){
+          data = raw.notes;
+          if(Array.isArray(raw.customCategories)) cats = raw.customCategories;
+        }else{
+          throw new Error('格式应为数组或 {notes:[...]}');
+        }
+        if(cats){
+          cats.forEach(c=>{
+            if(typeof c === 'string' && !DEFAULT_CATS.includes(c) && !customCategories.includes(c)){
+              customCategories.push(c);
+            }
+          });
+          saveCats();
+        }
         const ids = new Set(notes.map(n=>n.id));
         let added = 0;
         data.forEach(n=>{
           if(!n.id) n.id = uid();
           if(!ids.has(n.id)){ notes.push(n); added++; }
         });
-        saveLocal(); renderAll();
+        saveLocal(); renderAll(); rebuildCategorySelect();
         toast(`导入成功，新增 ${added} 条`);
       }catch(err){ alert('导入失败：'+err.message); }
     };
@@ -1949,11 +2179,13 @@ document.addEventListener('keydown', e=>{
     if(cmd.classList.contains('show')) closeCmd();
     if(jump.classList.contains('show')) closeJump();
     if(gallery.classList.contains('show')) closeGallery();
+    if(catMgr.classList.contains('show')) closeCatMgr();
   }
 });
 
 /* ================= 启动 ================= */
 loadLocal();
+rebuildCategorySelect();
 renderAll();
 </script>
 </body>
