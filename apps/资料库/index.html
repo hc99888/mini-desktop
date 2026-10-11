@@ -14,6 +14,7 @@
   --radius:12px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --split: 45;  /* 字段占比 % */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;margin:0;overflow:hidden;}
@@ -133,7 +134,7 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
   flex:1;font-size:16px;font-weight:600;color:var(--main);
   line-height:1.4;word-break:break-word;margin:0;
 }
-/* 复制链接按钮 */
+/* 复制链接 */
 .card-copy-link{
   display:inline-flex;align-items:center;gap:3px;
   font-size:11.5px;color:var(--main);
@@ -188,9 +189,18 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
   padding:2px 9px;border-radius:20px;font-size:11px;
 }
 
-/* 上半区 45% */
+/* ============ 字段 + 拖动条 + 正文 三合一容器 ============ */
+.card-split{
+  flex:1;
+  min-height:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  position:relative;
+}
+
+/* 字段区：占 --split% */
 .card-upper{
-  flex:0 0 45%;
+  flex:0 0 var(--split, 45%);
   min-height:0;
   display:flex;flex-direction:column;
   overflow:hidden;
@@ -212,23 +222,67 @@ header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
 }
 .card-fields .fv{color:#333;word-break:break-word;flex:1;min-width:0;}
 
-/* 下半区 55% */
+/* ============ 拖动条 ============ */
+.split-handle{
+  flex:0 0 auto;
+  height:22px;
+  margin:2px 0;
+  display:flex;align-items:center;justify-content:center;
+  cursor:ns-resize;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;       /* 关键：阻止手机上滚动 */
+  position:relative;
+}
+.split-handle::before,
+.split-handle::after{
+  content:'';flex:1;height:1px;background:var(--line);
+}
+.split-handle .sh-label{
+  display:flex;align-items:center;gap:4px;
+  padding:0 8px;
+  font-size:11px;color:var(--muted);
+  letter-spacing:1px;
+  transition:color .15s;
+}
+.split-handle .sh-grip{
+  display:inline-flex;flex-direction:column;gap:2px;
+  opacity:.55;
+}
+.split-handle .sh-grip i{
+  display:block;width:14px;height:1.5px;
+  background:currentColor;border-radius:1px;
+}
+.split-handle:hover .sh-label,
+.split-handle.active .sh-label{
+  color:var(--main);
+}
+.split-handle:hover .sh-grip,
+.split-handle.active .sh-grip{
+  opacity:1;
+}
+/* 拖动时显示数字 */
+.split-handle .sh-num{
+  font-variant-numeric:tabular-nums;
+  font-weight:600;
+  color:var(--main);
+  display:none;
+}
+.split-handle.active .sh-num{
+  display:inline;
+}
+.split-handle.active .sh-text{
+  display:none;
+}
+
+/* 正文区：占剩余空间 */
 .card-lower{
-  flex:0 0 55%;
+  flex:1 1 auto;
   min-height:0;
   display:flex;flex-direction:column;
   overflow:hidden;
-  padding-top:4px;
+  padding-top:2px;
 }
-.divider{
-  display:flex;align-items:center;gap:8px;
-  margin:6px 0;color:var(--muted);font-size:11px;
-  flex-shrink:0;
-}
-.divider::before,.divider::after{
-  content:'';flex:1;height:1px;background:var(--line);
-}
-.divider span{padding:0 4px;letter-spacing:1px;}
 
 .content{
   flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -441,7 +495,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 .img-add-btn:hover{border-color:var(--main);color:var(--main);background:var(--main-soft);}
 
-/* 链接图条目（不显示缩略图） */
+/* 链接图条目 */
 .img-link-row{
   display:flex;align-items:center;gap:8px;
   padding:8px 12px;border-radius:8px;
@@ -577,6 +631,14 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 #toast.show{opacity:1;}
 
+/* 拖动中：全局禁止选中 */
+body.dragging,
+body.dragging *{
+  user-select:none !important;
+  -webkit-user-select:none !important;
+  cursor:ns-resize !important;
+}
+
 @media (max-width: 768px){
   .slide{padding:8px;}
   .card{border-radius:10px;}
@@ -589,6 +651,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   .ops{padding:9px 14px;padding-bottom:calc(9px + var(--safe-bottom));}
   .ops button{flex:1;justify-content:center;padding:9px 8px;min-width:60px;}
   .panel .row{flex-direction:column;gap:0;}
+  .split-handle{height:26px;}   /* 手机上更好拖 */
 }
 @media (max-width: 380px){
   header button{padding:7px 10px;font-size:12px;}
@@ -703,11 +766,14 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 /* ================= 数据层 ================= */
 const STORE_KEY = 'my_notes_v4';
 const VIEW_KEY = 'my_notes_view';
+const SPLIT_KEY = 'my_notes_split';
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
 let currentData = [];
 let currentIndex = 0;
 let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
+let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
+if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
 function loadLocal(){
   try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
@@ -921,12 +987,9 @@ function cardHTML(n, kw){
   const linkImg = getLinkImg(n);
   const localImgs = getLocalImgs(n);
 
-  // 复制链接按钮：有链接就显示
   const copyLinkBtn = linkImg
     ? `<button class="card-copy-link" data-act="copyLink" data-id="${n.id}" title="复制图片链接">📋 复制链接</button>`
     : '';
-
-  // 图片角标：只算本地图
   const imgBadge = localImgs.length
     ? `<button class="card-imgs-badge" data-act="imgs" data-id="${n.id}" title="查看本地图片">🖼 ${localImgs.length}</button>`
     : '';
@@ -942,8 +1005,7 @@ function cardHTML(n, kw){
   const fieldsHTML = fieldRows ? `<div class="card-fields">${fieldRows}</div>` : '';
 
   const contentHTML = n.content
-    ? `<div class="divider"><span>正文</span></div>
-       <div class="content">${md(hl(n.content, kw))}</div>`
+    ? `<div class="content">${md(hl(n.content, kw))}</div>`
     : '<div class="content" style="color:#bbb;font-size:12px;">（无正文）</div>';
 
   const related = getRelated(n);
@@ -978,11 +1040,21 @@ function cardHTML(n, kw){
         </button>
       </div>
       ${metaHTML}
-      <div class="card-upper">
-        ${fieldsHTML}
-      </div>
-      <div class="card-lower">
-        ${contentHTML}
+      <div class="card-split">
+        <div class="card-upper">
+          ${fieldsHTML}
+        </div>
+        <div class="split-handle" data-split-handle title="上下拖动调整比例">
+          <span class="sh-label">
+            <span class="sh-grip"><i></i><i></i></span>
+            <span class="sh-text">正文</span>
+            <span class="sh-num">0 / 0</span>
+            <span class="sh-grip"><i></i><i></i></span>
+          </span>
+        </div>
+        <div class="card-lower">
+          ${contentHTML}
+        </div>
       </div>
     </div>
     ${relationsHTML}
@@ -1155,7 +1227,9 @@ function jumpToTitle(title){
 
 /* ================= 卡片 / 列表 事件 ================= */
 function handleCardClick(e){
-  // 复制链接
+  // 如果点在拖动条上，不处理（拖动条有自己的事件）
+  if(e.target.closest('.split-handle')) return;
+
   const copyLinkBtn = e.target.closest('.card-copy-link');
   if(copyLinkBtn){
     const note = notes.find(n=>n.id===copyLinkBtn.dataset.id);
@@ -1166,7 +1240,6 @@ function handleCardClick(e){
     return;
   }
 
-  // 图片角标（只查看本地图）
   const imgBadge = e.target.closest('.card-imgs-badge');
   if(imgBadge){
     const note = notes.find(n=>n.id===imgBadge.dataset.id);
@@ -1239,6 +1312,96 @@ document.getElementById('btnView').onclick = ()=>{
     });
   }
 };
+
+/* ================= 拖动条：手动调整字段 / 正文比例 ================= */
+let dragState = null;
+
+function updateSplitDisplay(percent){
+  document.documentElement.style.setProperty('--split', percent + '%');
+  // 更新当前激活卡片的数字
+  if(dragState){
+    const num = dragState.handle.querySelector('.sh-num');
+    if(num){
+      num.textContent = `${percent} / ${100 - percent}`;
+    }
+  }
+}
+
+function beginDrag(e, handle){
+  e.preventDefault();
+  e.stopPropagation();
+  const splitEl = handle.closest('.card-split');
+  if(!splitEl) return;
+
+  const rect = splitEl.getBoundingClientRect();
+  const startY = getEventY(e);
+  const startPercent = splitPercent;
+
+  dragState = {
+    handle,
+    splitEl,
+    rect,
+    startY,
+    startPercent,
+  };
+
+  handle.classList.add('active');
+  document.body.classList.add('dragging');
+
+  // 初始化数字显示
+  const num = handle.querySelector('.sh-num');
+  if(num) num.textContent = `${splitPercent} / ${100 - splitPercent}`;
+}
+
+function moveDrag(e){
+  if(!dragState) return;
+  e.preventDefault();
+  const { rect, startY, startPercent } = dragState;
+  const y = getEventY(e);
+  const deltaY = y - startY;
+  const deltaPercent = (deltaY / rect.height) * 100;
+  let newPercent = Math.round(startPercent + deltaPercent);
+  // 限制 20 ~ 80
+  if(newPercent < 20) newPercent = 20;
+  if(newPercent > 80) newPercent = 80;
+  splitPercent = newPercent;
+  updateSplitDisplay(splitPercent);
+}
+
+function endDrag(){
+  if(!dragState) return;
+  const handle = dragState.handle;
+  handle.classList.remove('active');
+  document.body.classList.remove('dragging');
+  dragState = null;
+  localStorage.setItem(SPLIT_KEY, String(splitPercent));
+}
+
+function getEventY(e){
+  if(e.touches && e.touches.length) return e.touches[0].clientY;
+  if(e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
+  return e.clientY;
+}
+
+// 事件委托：在 swiper 上监听拖动条的按下
+swiperEl.addEventListener('mousedown', e=>{
+  const handle = e.target.closest('.split-handle');
+  if(handle) beginDrag(e, handle);
+});
+swiperEl.addEventListener('touchstart', e=>{
+  const handle = e.target.closest('.split-handle');
+  if(handle) beginDrag(e, handle);
+}, {passive:false});
+
+document.addEventListener('mousemove', moveDrag);
+document.addEventListener('touchmove', moveDrag, {passive:false});
+
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
+document.addEventListener('touchcancel', endDrag);
+
+/* 初始化时应用一次 */
+updateSplitDisplay(splitPercent);
 
 /* ================= 复制 ================= */
 function copyNote(n){
@@ -1394,7 +1557,6 @@ document.getElementById('imgLinkWrap').addEventListener('click', e=>{
   }
 });
 
-/* 添加本地图片：直接打开文件选择器（手机可选拍照/相册） */
 function addLocalImage(){
   const localCount = editingImages.filter(s=>!isLink(s)).length;
   if(localCount >= 5){ toast('本地图最多 5 张'); return; }
@@ -1421,7 +1583,6 @@ function addLocalImage(){
   input.click();
 }
 
-/* 添加链接图片：直接 prompt 输入 URL */
 function addLinkImage(){
   if(editingImages.some(s=>isLink(s))){ toast('链接只能添加 1 条'); return; }
   const url = prompt('输入图片 URL：', 'https://');
@@ -1622,6 +1783,12 @@ function renderCmd(q){
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
+    {name:'重置字段/正文比例', run:()=>{
+      splitPercent = 45;
+      localStorage.setItem(SPLIT_KEY, '45');
+      updateSplitDisplay(45);
+      toast('已重置 45 / 55');
+    }},
     {name:'清除筛选（显示全部）', run:()=>{
       filter = {category:'',tag:'',keyword:''};
       currentIndex = 0; renderAll();
