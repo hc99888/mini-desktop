@@ -3,6 +3,15 @@
 const STORE_KEY = 'my_notes_v4';
 const VIEW_KEY = 'my_notes_view';
 const SPLIT_KEY = 'my_notes_split';
+const CATS_KEY = 'my_notes_categories';
+
+const DEFAULT_CATS = ['中药材','养生','偏方','疾病','书籍','其他'];
+let customCategories = [];
+try{
+  customCategories = JSON.parse(localStorage.getItem(CATS_KEY) || '[]');
+  if(!Array.isArray(customCategories)) customCategories = [];
+}catch(e){ customCategories = []; }
+
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
 let currentData = [];
@@ -11,6 +20,7 @@ let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
 let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
+function saveCats(){ localStorage.setItem(CATS_KEY, JSON.stringify(customCategories)); }
 function loadLocal(){
   try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
   catch(e){ notes = []; }
@@ -102,6 +112,23 @@ function similarContent(a, b){
   a = String(a||'').slice(0,200); b = String(b||'').slice(0,200);
   if(!a || !b) return 0;
   return jaccard(tokenize(a), tokenize(b));
+}
+
+/* ================= 分类下拉重建 ================= */
+function rebuildCategorySelect(selected){
+  const sel = document.getElementById('fCategory');
+  if(!sel) return;
+  const cur = selected !== undefined ? selected : sel.value;
+  let html = `<option value="">— 无 —</option>`;
+  DEFAULT_CATS.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
+  customCategories.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
+  html += `<option value="__add__">＋ 添加分类…</option>`;
+  html += `<option value="__manage__">－ 管理分类…</option>`;
+  sel.innerHTML = html;
+  if(cur && cur !== '__add__' && cur !== '__manage__'){
+    sel.value = cur;
+    if(sel.value !== cur) sel.value = '';
+  }
 }
 
 /* ================= 侧边栏 ================= */
@@ -423,6 +450,7 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('editor').classList.contains('show')) return;
   if(document.getElementById('cmd').classList.contains('show')) return;
   if(document.getElementById('jump').classList.contains('show')) return;
+  if(document.getElementById('catMgr').classList.contains('show')) return;
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -461,9 +489,7 @@ function jumpToTitle(title){
   toast(`未找到「${title}」`);
 }
 
-/* ================= 卡片 / 列表 事件 ================= */
 function handleCardClick(e){
-  // 如果点在拖动条上，不处理（拖动条有自己的事件）
   if(e.target.closest('.split-handle')) return;
 
   const copyLinkBtn = e.target.closest('.card-copy-link');
@@ -549,17 +575,14 @@ document.getElementById('btnView').onclick = ()=>{
   }
 };
 
-/* ================= 拖动条：手动调整字段 / 正文比例 ================= */
+/* ================= 拖动条 ================= */
 let dragState = null;
 
 function updateSplitDisplay(percent){
   document.documentElement.style.setProperty('--split', percent + '%');
-  // 更新当前激活卡片的数字
   if(dragState){
     const num = dragState.handle.querySelector('.sh-num');
-    if(num){
-      num.textContent = `${percent} / ${100 - percent}`;
-    }
+    if(num) num.textContent = `${percent} / ${100 - percent}`;
   }
 }
 
@@ -568,23 +591,14 @@ function beginDrag(e, handle){
   e.stopPropagation();
   const splitEl = handle.closest('.card-split');
   if(!splitEl) return;
-
   const rect = splitEl.getBoundingClientRect();
   const startY = getEventY(e);
   const startPercent = splitPercent;
 
-  dragState = {
-    handle,
-    splitEl,
-    rect,
-    startY,
-    startPercent,
-  };
+  dragState = { handle, splitEl, rect, startY, startPercent };
 
   handle.classList.add('active');
   document.body.classList.add('dragging');
-
-  // 初始化数字显示
   const num = handle.querySelector('.sh-num');
   if(num) num.textContent = `${splitPercent} / ${100 - splitPercent}`;
 }
@@ -597,7 +611,6 @@ function moveDrag(e){
   const deltaY = y - startY;
   const deltaPercent = (deltaY / rect.height) * 100;
   let newPercent = Math.round(startPercent + deltaPercent);
-  // 限制 20 ~ 80
   if(newPercent < 20) newPercent = 20;
   if(newPercent > 80) newPercent = 80;
   splitPercent = newPercent;
@@ -619,7 +632,6 @@ function getEventY(e){
   return e.clientY;
 }
 
-// 事件委托：在 swiper 上监听拖动条的按下
 swiperEl.addEventListener('mousedown', e=>{
   const handle = e.target.closest('.split-handle');
   if(handle) beginDrag(e, handle);
@@ -636,7 +648,6 @@ document.addEventListener('mouseup', endDrag);
 document.addEventListener('touchend', endDrag);
 document.addEventListener('touchcancel', endDrag);
 
-/* 初始化时应用一次 */
 updateSplitDisplay(splitPercent);
 
 /* ================= 复制 ================= */
@@ -706,11 +717,11 @@ function openEditor(note){
   editingImages = note && note.images ? note.images.slice() : [];
   document.getElementById('editorTitle').textContent = note ? '编辑资料' : '新建资料';
   document.getElementById('fTitle').value = note?.title || '';
-  document.getElementById('fCategory').value = note?.category || '';
   document.getElementById('fTags').value = (note?.tags||[]).join(',');
   document.getElementById('fFields').value = Object.entries(note?.fields||{})
       .map(([k,v])=>`${k}=${v}`).join('\n');
   document.getElementById('fContent').value = note?.content || '';
+  rebuildCategorySelect(note?.category || '');
   renderImgEdit();
   editor.classList.add('show');
   document.body.style.overflow = 'hidden';
@@ -723,16 +734,156 @@ function closeEditor(){
   editingImages = [];
 }
 
+document.getElementById('fCategory').addEventListener('change', e=>{
+  const val = e.target.value;
+  if(val === '__add__'){
+    addNewCategoryFromEditor();
+    return;
+  }
+  if(val === '__manage__'){
+    document.getElementById('fCategory').value = '';
+    openCatMgr();
+    return;
+  }
+  applyFieldTemplate(val);
+});
+
+function addNewCategoryFromEditor(){
+  const name = prompt('输入新分类名：', '');
+  if(!name) { rebuildCategorySelect(''); return; }
+  const trimmed = name.trim();
+  if(!trimmed){ rebuildCategorySelect(''); return; }
+  if(DEFAULT_CATS.includes(trimmed)){
+    rebuildCategorySelect(trimmed);
+    toast('已选中已有分类');
+    return;
+  }
+  if(customCategories.includes(trimmed)){
+    rebuildCategorySelect(trimmed);
+    toast('分类已存在，已选中');
+    return;
+  }
+  customCategories.push(trimmed);
+  saveCats();
+  rebuildCategorySelect(trimmed);
+  renderSidebar();
+  toast(`已添加分类「${trimmed}」`);
+  applyFieldTemplate(trimmed);
+}
+
+function applyFieldTemplate(cat){
+  const tmpl = FIELD_TEMPLATES[cat] || [];
+  if(!tmpl.length) return;
+  const ta = document.getElementById('fFields');
+  const existing = new Set(
+    ta.value.split('\n').map(l=>l.split('=')[0].trim()).filter(Boolean)
+  );
+  const toAdd = tmpl.filter(f=>!existing.has(f));
+  if(toAdd.length){
+    const prefix = ta.value.trim() ? ta.value.trimEnd() + '\n' : '';
+    ta.value = prefix + toAdd.map(f=>`${f}=`).join('\n');
+  }
+}
+
+/* ================= 分类管理弹窗 ================= */
+const catMgr = document.getElementById('catMgr');
+const catMgrBody = document.getElementById('catMgrBody');
+
+function openCatMgr(){
+  renderCatMgr();
+  catMgr.classList.add('show');
+}
+function closeCatMgr(){
+  catMgr.classList.remove('show');
+}
+document.getElementById('catMgrClose').onclick = closeCatMgr;
+catMgr.addEventListener('click', e=>{
+  if(e.target === catMgr) closeCatMgr();
+});
+document.getElementById('catMgrAdd').onclick = ()=>{
+  const name = prompt('输入新分类名：', '');
+  if(!name) return;
+  const trimmed = name.trim();
+  if(!trimmed){ return; }
+  if(DEFAULT_CATS.includes(trimmed)){
+    toast('默认分类已存在');
+    return;
+  }
+  if(customCategories.includes(trimmed)){
+    toast('分类已存在');
+    return;
+  }
+  customCategories.push(trimmed);
+  saveCats();
+  renderCatMgr();
+  rebuildCategorySelect(trimmed);
+  renderSidebar();
+  toast(`已添加「${trimmed}」`);
+};
+
+function renderCatMgr(){
+  if(!customCategories.length){
+    catMgrBody.innerHTML = `<div class="catmgr-empty">还没有自定义分类<br>点下方按钮添加</div>`;
+    return;
+  }
+  const countMap = {};
+  notes.forEach(n=>{
+    const c = n.category || '';
+    countMap[c] = (countMap[c]||0) + 1;
+  });
+  catMgrBody.innerHTML = customCategories.map((c)=>{
+    const n = countMap[c] || 0;
+    return `<div class="catmgr-item" data-cat="${esc(c)}">
+      <span class="cname">${esc(c)}</span>
+      <span class="cnum">${n} 条</span>
+      <button class="cdel" data-del="${esc(c)}" title="删除分类" type="button">×</button>
+    </div>`;
+  }).join('');
+}
+
+catMgrBody.addEventListener('click', e=>{
+  const del = e.target.closest('[data-del]');
+  if(!del) return;
+  const cat = del.dataset.del;
+  const used = notes.filter(n=>(n.category||'') === cat).length;
+  let ok = true;
+  if(used > 0){
+    ok = confirm(`「${cat}」有 ${used} 条资料在使用。\n\n删除后这些资料将变为「未分类」，确定删除吗？`);
+  }else{
+    ok = confirm(`确定删除分类「${cat}」？`);
+  }
+  if(!ok) return;
+
+  const idx = customCategories.indexOf(cat);
+  if(idx >= 0){
+    customCategories.splice(idx, 1);
+    saveCats();
+  }
+  let changed = 0;
+  notes.forEach(n=>{
+    if((n.category||'') === cat){ n.category = ''; changed++; }
+  });
+  if(changed > 0) saveLocal();
+
+  renderCatMgr();
+  rebuildCategorySelect('');
+  renderAll();
+  toast(changed ? `已删除分类，${changed} 条资料改为未分类` : `已删除分类「${cat}」`);
+});
+
+/* ================= 图片编辑（水平排列） ================= */
 function renderImgEdit(){
   const wrap = document.getElementById('imgEdit');
-  const linkWrap = document.getElementById('imgLinkWrap');
   const hint = document.getElementById('imgHint');
   const MAX_LOCAL = 5;
 
   const localImgs = editingImages.filter(s=>!isLink(s));
   const linkImg = editingImages.find(s=>isLink(s));
 
+  // 全部水平排列：本地图缩略图 → 📷按钮 → 🔗按钮（如果有链接则显示链接条目）
   let html = '';
+
+  // 本地图缩略图
   localImgs.forEach((src)=>{
     const i = editingImages.indexOf(src);
     html += `<div class="thumb">
@@ -741,22 +892,25 @@ function renderImgEdit(){
       <button class="x" data-i="${i}" title="删除" type="button">×</button>
     </div>`;
   });
+
+  // 📷 添加本地图按钮（没满 5 张就显示）
   if(localImgs.length < MAX_LOCAL){
     html += `<button type="button" class="img-add-btn" id="btnAddLocal">📷 拍照/相册</button>`;
   }
-  wrap.innerHTML = html;
 
+  // 🔗 添加链接 或 已有链接条目
   if(linkImg){
-    linkWrap.innerHTML = `
-      <div class="img-link-row">
-        <span class="lk-icon">🔗</span>
-        <span class="lk-url" title="${esc(linkImg)}">${esc(linkImg)}</span>
-        <button type="button" class="lk-btn" data-copy-link title="复制链接">📋 复制</button>
-        <button type="button" class="lk-btn del" data-del-link title="删除">×</button>
-      </div>`;
+    html += `<div class="img-link-row">
+      <span class="lk-icon">🔗</span>
+      <span class="lk-url" title="${esc(linkImg)}">${esc(linkImg)}</span>
+      <button type="button" class="lk-btn" data-copy-link title="复制链接">📋</button>
+      <button type="button" class="lk-btn del" data-del-link title="删除">×</button>
+    </div>`;
   }else{
-    linkWrap.innerHTML = `<button type="button" class="img-add-btn" id="btnAddLink">🔗 添加链接</button>`;
+    html += `<button type="button" class="img-add-btn" id="btnAddLink">🔗 添加链接</button>`;
   }
+
+  wrap.innerHTML = html;
 
   let msg = `本地图 ${localImgs.length}/${MAX_LOCAL}`;
   if(linkImg) msg += ` · 已添加链接（限 1 条）`;
@@ -778,10 +932,7 @@ document.getElementById('imgEdit').addEventListener('click', e=>{
     return;
   }
   if(e.target.closest('#btnAddLocal')) addLocalImage();
-});
-
-document.getElementById('imgLinkWrap').addEventListener('click', e=>{
-  if(e.target.closest('#btnAddLink')){ addLinkImage(); return; }
+  if(e.target.closest('#btnAddLink')) addLinkImage();
   if(e.target.closest('[data-copy-link]')){
     const link = editingImages.find(s=>isLink(s));
     if(link) copyText(link, '已复制图片链接');
@@ -860,21 +1011,6 @@ function compressImage(file, maxSize, cb){
 document.getElementById('btnNew').onclick = ()=>openEditor(null);
 document.getElementById('btnCancel').onclick = closeEditor;
 
-document.getElementById('fCategory').addEventListener('change', e=>{
-  const cat = e.target.value;
-  const tmpl = FIELD_TEMPLATES[cat] || [];
-  if(!tmpl.length) return;
-  const ta = document.getElementById('fFields');
-  const existing = new Set(
-    ta.value.split('\n').map(l=>l.split('=')[0].trim()).filter(Boolean)
-  );
-  const toAdd = tmpl.filter(f=>!existing.has(f));
-  if(toAdd.length){
-    const prefix = ta.value.trim() ? ta.value.trimEnd() + '\n' : '';
-    ta.value = prefix + toAdd.map(f=>`${f}=`).join('\n');
-  }
-});
-
 document.getElementById('btnSave').onclick = ()=>{
   const title = document.getElementById('fTitle').value.trim();
   if(!title){ alert('请填写标题'); return; }
@@ -893,6 +1029,8 @@ document.getElementById('btnSave').onclick = ()=>{
       .split(/[,，]/).map(s=>s.trim()).filter(Boolean);
   const content = document.getElementById('fContent').value;
   const now = today();
+  let category = document.getElementById('fCategory').value;
+  if(category === '__add__' || category === '__manage__') category = '';
 
   const others = notes.filter(n=>n.id !== editingId);
   for(const o of others){
@@ -923,8 +1061,7 @@ document.getElementById('btnSave').onclick = ()=>{
     });
     n.history = n.history.slice(0, 10);
     Object.assign(n, {
-      title,
-      category: document.getElementById('fCategory').value.trim(),
+      title, category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
       updatedAt: now
@@ -932,7 +1069,7 @@ document.getElementById('btnSave').onclick = ()=>{
   }else{
     notes.unshift({
       id: uid(), title,
-      category: document.getElementById('fCategory').value.trim(),
+      category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
       createdAt: now, updatedAt: now, star: false, history: []
@@ -1016,6 +1153,7 @@ function renderCmd(q){
 
   const commands = [
     {name:'新建资料', run:()=>openEditor(null)},
+    {name:'管理自定义分类', run:()=>openCatMgr()},
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
@@ -1130,13 +1268,19 @@ jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 
 /* ================= 导入导出 ================= */
 function exportJSON(){
-  const blob = new Blob([JSON.stringify(notes,null,2)], {type:'application/json'});
+  const payload = {
+    _version: 4,
+    _exportedAt: new Date().toISOString(),
+    customCategories: customCategories.slice(),
+    notes: notes
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `notes_${today()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`已导出 ${notes.length} 条（含图片）`);
+  toast(`已导出 ${notes.length} 条（含图片和分类）`);
 }
 
 function importJSON(){
@@ -1147,15 +1291,31 @@ function importJSON(){
     const reader = new FileReader();
     reader.onload = ()=>{
       try{
-        const data = JSON.parse(reader.result);
-        if(!Array.isArray(data)) throw new Error('格式应为数组');
+        const raw = JSON.parse(reader.result);
+        let data, cats = null;
+        if(Array.isArray(raw)){
+          data = raw;
+        }else if(raw && Array.isArray(raw.notes)){
+          data = raw.notes;
+          if(Array.isArray(raw.customCategories)) cats = raw.customCategories;
+        }else{
+          throw new Error('格式应为数组或 {notes:[...]}');
+        }
+        if(cats){
+          cats.forEach(c=>{
+            if(typeof c === 'string' && !DEFAULT_CATS.includes(c) && !customCategories.includes(c)){
+              customCategories.push(c);
+            }
+          });
+          saveCats();
+        }
         const ids = new Set(notes.map(n=>n.id));
         let added = 0;
         data.forEach(n=>{
           if(!n.id) n.id = uid();
           if(!ids.has(n.id)){ notes.push(n); added++; }
         });
-        saveLocal(); renderAll();
+        saveLocal(); renderAll(); rebuildCategorySelect();
         toast(`导入成功，新增 ${added} 条`);
       }catch(err){ alert('导入失败：'+err.message); }
     };
@@ -1185,9 +1345,11 @@ document.addEventListener('keydown', e=>{
     if(cmd.classList.contains('show')) closeCmd();
     if(jump.classList.contains('show')) closeJump();
     if(gallery.classList.contains('show')) closeGallery();
+    if(catMgr.classList.contains('show')) closeCatMgr();
   }
 });
 
 /* ================= 启动 ================= */
 loadLocal();
+rebuildCategorySelect();
 renderAll();
