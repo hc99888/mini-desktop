@@ -29,7 +29,11 @@
     .attendance-dot.rest { background-color: #34C759; }
     .attendance-dot.crew { background-color: #000000; }
     .day-cell.empty { background: transparent; border: none; cursor: default; }
+    .day-cell.locked { background: #f2f2f2; color: #bbb; cursor: not-allowed; border-color: #eee; }
+    .day-cell.locked .amount { display: none; }
+    .day-cell.locked .attendance-dots { display: none; }
     .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; width: 100%; justify-content: center; }
+    .day-cell .lock-icon { font-size: 0.7rem; color: #bbb; margin-top: 1px; line-height: 1; }
 
     .toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .toolbar button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 4px; }
@@ -550,7 +554,7 @@
           <!-- 全天：左边标签，右边工资 -->
           <div class="attendance-option" data-type="full">
             <div class="opt-label">🔵 全天</div>
-            <input type="number" class="opt-input" id="fullSalary" placeholder="工资" step="1" min="0">
+            <input type="number" class="opt-input" id="fullSalary" placeholder="工资" step="1" min="0" value="260">
             <span class="opt-unit">元</span>
           </div>
           <!-- 上午：左边标签，右边小时 -->
@@ -735,7 +739,7 @@
       saveDailySalary();
     }
 
-    // ===== 计算某条出勤记录的工资 =====
+    // ===== 计算某条出勤记录的工资（修复：优先使用当前日薪） =====
     function calcAttendanceSalary(att) {
       const project = att.project || '未分类';
       const dateStr = att.date || selectedDate;
@@ -744,7 +748,8 @@
       const dailyRate = getMonthlyDailySalary(project, y, m);
       
       if (att.type === 'full') {
-        return att.salary || dailyRate || 0;
+        // 优先使用当前日薪，保证修改日薪后本月/累计一致
+        return dailyRate || att.salary || 0;
       } else if (att.type === 'morning' || att.type === 'afternoon') {
         if (dailyRate === 0) return 0;
         const hourlyRate = dailyRate / STANDARD_HOURS;
@@ -776,9 +781,6 @@
             stats[project] = { full: 0, morning: 0, afternoon: 0, overtime: 0, rest: 0, total: 0, salary: 0 };
           }
           
-          const itemDate = att.date || date;
-          const [y, m] = itemDate.split('-').map(Number);
-          
           if (att.type === 'full') {
             stats[project].full++;
             stats[project].total += 1;
@@ -794,7 +796,6 @@
             stats[project].rest++;
           }
           
-          // 计算工资
           const salary = calcAttendanceSalary(att);
           stats[project].salary += salary;
         }
@@ -802,7 +803,7 @@
       return stats;
     }
 
-    // ===== 累计工资 =====
+    // ===== 累计工资（修复：月份收集使用 att.date || date） =====
     function getTotalSalary(project) {
       let totalDays = 0;
       let totalAmount = 0;
@@ -810,7 +811,8 @@
       
       Object.entries(attendanceRecords).forEach(([date, att]) => {
         if ((att.project || '未分类') === project) {
-          const [y, m] = date.split('-');
+          const dateStr = att.date || date;
+          const [y, m] = dateStr.split('-');
           monthSet.add(`${y}-${m}`);
         }
       });
@@ -1397,6 +1399,13 @@
       renderCalendar();
     }
 
+    // ===== 判断日期是否在未来（锁定） =====
+    function isFutureDate(dateStr) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      return dateStr > todayStr;
+    }
+
     function renderCalendar() {
       document.getElementById('monthTitle').textContent = `${currentYear}年 ${currentMonth}月`;
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
@@ -1419,53 +1428,70 @@
         const cell = document.createElement('div');
         if (cellMonth !== currentMonth) { cell.className = 'day-cell empty'; }
         else {
+          const locked = isFutureDate(dateStr);
           cell.className = 'day-cell';
+          if (locked) cell.classList.add('locked');
           const content = document.createElement('div'); content.className = 'cell-content';
           
-          const singleInfo = getSingleAttendanceInfo(dateStr);
-          const hasCrew = hasCrewAttendance(dateStr);
-          if (singleInfo || hasCrew) {
-            const dotsDiv = document.createElement('div');
-            dotsDiv.className = 'attendance-dots';
-            if (singleInfo) {
-              const dot = document.createElement('span');
-              dot.className = `attendance-dot ${singleInfo.type}`;
-              dotsDiv.appendChild(dot);
-            }
-            if (hasCrew) {
-              const crewDot = document.createElement('span');
-              crewDot.className = 'attendance-dot crew';
-              dotsDiv.appendChild(crewDot);
-            }
-            content.appendChild(dotsDiv);
+          if (locked) {
+            // 未来日期：只显示日期数字 + 锁图标，不显示记账/出勤信息
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = cellDate.getDate();
+            dateSpan.style.fontWeight = '500';
+            dateSpan.style.lineHeight = '1.1';
+            content.appendChild(dateSpan);
+            const lockIcon = document.createElement('div');
+            lockIcon.className = 'lock-icon';
+            lockIcon.textContent = '🔒';
+            content.appendChild(lockIcon);
+            cell.appendChild(content);
+            // 不绑定点击事件
           } else {
-            const placeholder = document.createElement('div');
-            placeholder.style.height = '12px';
-            content.appendChild(placeholder);
+            const singleInfo = getSingleAttendanceInfo(dateStr);
+            const hasCrew = hasCrewAttendance(dateStr);
+            if (singleInfo || hasCrew) {
+              const dotsDiv = document.createElement('div');
+              dotsDiv.className = 'attendance-dots';
+              if (singleInfo) {
+                const dot = document.createElement('span');
+                dot.className = `attendance-dot ${singleInfo.type}`;
+                dotsDiv.appendChild(dot);
+              }
+              if (hasCrew) {
+                const crewDot = document.createElement('span');
+                crewDot.className = 'attendance-dot crew';
+                dotsDiv.appendChild(crewDot);
+              }
+              content.appendChild(dotsDiv);
+            } else {
+              const placeholder = document.createElement('div');
+              placeholder.style.height = '12px';
+              content.appendChild(placeholder);
+            }
+            
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = cellDate.getDate();
+            dateSpan.style.fontWeight = '500';
+            dateSpan.style.lineHeight = '1.1';
+            content.appendChild(dateSpan);
+            if (dateStr === todayStr) cell.classList.add('today');
+            
+            const total = getDayTotal(dateStr);
+            if (total !== 0) {
+              cell.classList.add('has-record');
+              const amtSpan = document.createElement('span');
+              amtSpan.className = 'amount';
+              const formatted = formatAmount(total);
+              if (total < 0) { amtSpan.classList.add('negative'); } else { amtSpan.classList.add('positive'); }
+              amtSpan.textContent = formatted;
+              amtSpan.style.fontSize = getAmountFontSize(formatted);
+              amtSpan.style.lineHeight = '1.1';
+              content.appendChild(amtSpan);
+            }
+            
+            cell.appendChild(content);
+            cell.addEventListener('click', () => openModal(dateStr));
           }
-          
-          const dateSpan = document.createElement('span');
-          dateSpan.textContent = cellDate.getDate();
-          dateSpan.style.fontWeight = '500';
-          dateSpan.style.lineHeight = '1.1';
-          content.appendChild(dateSpan);
-          if (dateStr === todayStr) cell.classList.add('today');
-          
-          const total = getDayTotal(dateStr);
-          if (total !== 0) {
-            cell.classList.add('has-record');
-            const amtSpan = document.createElement('span');
-            amtSpan.className = 'amount';
-            const formatted = formatAmount(total);
-            if (total < 0) { amtSpan.classList.add('negative'); } else { amtSpan.classList.add('positive'); }
-            amtSpan.textContent = formatted;
-            amtSpan.style.fontSize = getAmountFontSize(formatted);
-            amtSpan.style.lineHeight = '1.1';
-            content.appendChild(amtSpan);
-          }
-          
-          cell.appendChild(content);
-          cell.addEventListener('click', () => openModal(dateStr));
         }
         cal.appendChild(cell);
       }
@@ -1674,6 +1700,11 @@
     }
 
     function openModal(dateStr) {
+      // 双重保险：未来日期不允许打开
+      if (isFutureDate(dateStr)) {
+        showToast('未来日期暂不可记账');
+        return;
+      }
       selectedDate = dateStr;
       document.getElementById('modalDate').textContent = `📅 ${dateStr}`;
       renderAllRecords();
@@ -1796,7 +1827,7 @@
       }
       
       // 恢复各项输入
-      document.getElementById('fullSalary').value = '';
+      document.getElementById('fullSalary').value = '260';
       document.getElementById('morningHours').value = '4';
       document.getElementById('afternoonHours').value = '5';
       document.getElementById('overtimeHours').value = '';
