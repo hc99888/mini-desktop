@@ -16,7 +16,8 @@
     .day-cell .attendance-dots { display: flex; gap: 3px; justify-content: center; margin-bottom: 2px; flex-shrink: 0; }
     .attendance-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .attendance-dot.full { background-color: #007aff; }
-    .attendance-dot.half { background-color: #FF9500; }
+    .attendance-dot.morning { background-color: #FF9500; }
+    .attendance-dot.afternoon { background-color: #FF6B35; }
     .attendance-dot.overtime { background-color: #FF3B30; }
     .attendance-dot.rest { background-color: #34C759; }
     .attendance-dot.crew { background-color: #000000; }
@@ -51,8 +52,6 @@
     .btn-danger { background: #dc3545 !important; color: white !important; font-weight: bold !important; border: 1px solid #dc3545 !important; }
     .btn-salary-paid { background: #28a745; color: white; }
     .btn-salary-paid:active { background: #1e7e34; }
-    .btn-salary-rate { background: #17a2b8; color: white; }
-    .btn-salary-rate:active { background: #138496; }
     .btn-salary-clear { background: #dc3545; color: white; }
     .btn-salary-clear:active { background: #a71d2a; }
     .btn-loan-add { background: #e67e22; color: white; }
@@ -149,11 +148,56 @@
     .form-switch button { flex: 1; padding: 8px 4px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.72rem; cursor: pointer; }
     .form-switch button.active { background: #007aff; color: white; border-color: #007aff; }
 
+    /* 出勤选项 - 左右分半布局 */
     .attendance-options { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
-    .attendance-option { padding: 12px; border: 2px solid #eee; border-radius: 10px; text-align: center; cursor: pointer; font-size: 0.9rem; }
-    .attendance-option.selected { border-color: #007aff; background: #e8f0fe; }
-    .attendance-option input { width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 5px; text-align: center; display: none; }
-    .attendance-option.selected input { display: inline-block; }
+    .attendance-option {
+      display: flex;
+      align-items: center;
+      border: 2px solid #eee;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      font-size: 0.9rem;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.2s;
+    }
+    .attendance-option.selected {
+      border-color: #007aff;
+      background: #e8f0fe;
+    }
+    .attendance-option .opt-label {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .attendance-option .opt-input {
+      width: 110px;
+      padding: 8px 6px;
+      border: none;
+      border-left: 2px solid #eee;
+      font-size: 0.9rem;
+      text-align: center;
+      background: #fafafa;
+      -webkit-appearance: none;
+      outline: none;
+      flex-shrink: 0;
+    }
+    .attendance-option.selected .opt-input {
+      border-left-color: #007aff;
+      background: #fff;
+    }
+    .attendance-option .opt-input:focus {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px #007aff;
+    }
+    .attendance-option .opt-unit {
+      padding: 0 8px 0 2px;
+      font-size: 0.8rem;
+      color: #666;
+      flex-shrink: 0;
+    }
 
     .person-menu-modal {
       position: fixed;
