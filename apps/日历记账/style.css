@@ -22,7 +22,11 @@
     .attendance-dot.rest { background-color: #34C759; }
     .attendance-dot.crew { background-color: #000000; }
     .day-cell.empty { background: transparent; border: none; cursor: default; }
+    .day-cell.locked { background: #f2f2f2; color: #bbb; cursor: not-allowed; border-color: #eee; }
+    .day-cell.locked .amount { display: none; }
+    .day-cell.locked .attendance-dots { display: none; }
     .day-cell .cell-content { display: flex; flex-direction: column; align-items: center; width: 100%; justify-content: center; }
+    .day-cell .lock-icon { font-size: 0.7rem; color: #bbb; margin-top: 1px; line-height: 1; }
 
     .toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .toolbar button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 0.75rem; cursor: pointer; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 4px; }
