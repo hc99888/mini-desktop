@@ -1,16 +1,46 @@
 
+/* ================= 分类配置 ================= */
+const CATS_KEY = 'my_notes_categories_v2';
+
+const DEFAULT_CATS_CONFIG = [
+  {name:'中药材', fields:['产地','性味','功效','用量','疗程','禁忌'], builtin:true},
+  {name:'养生',   fields:['适用人群','功效','方法','频率','注意'], builtin:true},
+  {name:'偏方',   fields:['来源','材料','做法','用法','疗程','禁忌'], builtin:true},
+  {name:'疾病',   fields:['症状','病因','调理','饮食','就医建议'], builtin:true},
+  {name:'书籍',   fields:['作者','出版社','核心观点','摘录'], builtin:true},
+  {name:'其他',   fields:[], builtin:true},
+];
+
+let categories = [];
+
+function loadCats(){
+  try{
+    const raw = localStorage.getItem(CATS_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length){
+        categories = parsed;
+        return;
+      }
+    }
+  }catch(e){}
+  categories = JSON.parse(JSON.stringify(DEFAULT_CATS_CONFIG));
+}
+function saveCats(){
+  localStorage.setItem(CATS_KEY, JSON.stringify(categories));
+}
+function getCatByName(name){
+  return categories.find(c=>c.name === name);
+}
+function getCatFields(name){
+  const c = getCatByName(name);
+  return c ? c.fields.slice() : [];
+}
+
 /* ================= 数据层 ================= */
 const STORE_KEY = 'my_notes_v4';
 const VIEW_KEY = 'my_notes_view';
 const SPLIT_KEY = 'my_notes_split';
-const CATS_KEY = 'my_notes_categories';
-
-const DEFAULT_CATS = ['中药材','养生','偏方','疾病','书籍','其他'];
-let customCategories = [];
-try{
-  customCategories = JSON.parse(localStorage.getItem(CATS_KEY) || '[]');
-  if(!Array.isArray(customCategories)) customCategories = [];
-}catch(e){ customCategories = []; }
 
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
@@ -20,7 +50,6 @@ let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
 let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
-function saveCats(){ localStorage.setItem(CATS_KEY, JSON.stringify(customCategories)); }
 function loadLocal(){
   try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
   catch(e){ notes = []; }
@@ -28,15 +57,6 @@ function loadLocal(){
 function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(notes)); }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function today(){ return new Date().toISOString().slice(0,10); }
-
-const FIELD_TEMPLATES = {
-  '中药材': ['产地','性味','功效','用量','疗程','禁忌'],
-  '养生':   ['适用人群','功效','方法','频率','注意'],
-  '偏方':   ['来源','材料','做法','用法','疗程','禁忌'],
-  '疾病':   ['症状','病因','调理','饮食','就医建议'],
-  '书籍':   ['作者','出版社','核心观点','摘录'],
-  '其他':   []
-};
 
 /* ================= 工具 ================= */
 function esc(s){
@@ -120,12 +140,11 @@ function rebuildCategorySelect(selected){
   if(!sel) return;
   const cur = selected !== undefined ? selected : sel.value;
   let html = `<option value="">— 无 —</option>`;
-  DEFAULT_CATS.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
-  customCategories.forEach(c=>{ html += `<option>${esc(c)}</option>`; });
-  html += `<option value="__add__">＋ 添加分类…</option>`;
-  html += `<option value="__manage__">－ 管理分类…</option>`;
+  categories.forEach(c=>{
+    html += `<option value="${esc(c.name)}">${esc(c.name)}</option>`;
+  });
   sel.innerHTML = html;
-  if(cur && cur !== '__add__' && cur !== '__manage__'){
+  if(cur){
     sel.value = cur;
     if(sel.value !== cur) sel.value = '';
   }
@@ -451,6 +470,8 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('cmd').classList.contains('show')) return;
   if(document.getElementById('jump').classList.contains('show')) return;
   if(document.getElementById('catMgr').classList.contains('show')) return;
+  if(document.getElementById('catEdit').classList.contains('show')) return;
+  if(document.getElementById('switchConfirm').classList.contains('show')) return;
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -585,24 +606,19 @@ function updateSplitDisplay(percent){
     if(num) num.textContent = `${percent} / ${100 - percent}`;
   }
 }
-
 function beginDrag(e, handle){
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault(); e.stopPropagation();
   const splitEl = handle.closest('.card-split');
   if(!splitEl) return;
   const rect = splitEl.getBoundingClientRect();
   const startY = getEventY(e);
   const startPercent = splitPercent;
-
   dragState = { handle, splitEl, rect, startY, startPercent };
-
   handle.classList.add('active');
   document.body.classList.add('dragging');
   const num = handle.querySelector('.sh-num');
   if(num) num.textContent = `${splitPercent} / ${100 - splitPercent}`;
 }
-
 function moveDrag(e){
   if(!dragState) return;
   e.preventDefault();
@@ -616,7 +632,6 @@ function moveDrag(e){
   splitPercent = newPercent;
   updateSplitDisplay(splitPercent);
 }
-
 function endDrag(){
   if(!dragState) return;
   const handle = dragState.handle;
@@ -625,13 +640,11 @@ function endDrag(){
   dragState = null;
   localStorage.setItem(SPLIT_KEY, String(splitPercent));
 }
-
 function getEventY(e){
   if(e.touches && e.touches.length) return e.touches[0].clientY;
   if(e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
   return e.clientY;
 }
-
 swiperEl.addEventListener('mousedown', e=>{
   const handle = e.target.closest('.split-handle');
   if(handle) beginDrag(e, handle);
@@ -640,10 +653,8 @@ swiperEl.addEventListener('touchstart', e=>{
   const handle = e.target.closest('.split-handle');
   if(handle) beginDrag(e, handle);
 }, {passive:false});
-
 document.addEventListener('mousemove', moveDrag);
 document.addEventListener('touchmove', moveDrag, {passive:false});
-
 document.addEventListener('mouseup', endDrag);
 document.addEventListener('touchend', endDrag);
 document.addEventListener('touchcancel', endDrag);
@@ -711,6 +722,7 @@ function showHistory(note){
 const editor = document.getElementById('editor');
 let editingId = null;
 let editingImages = [];
+let pendingCategory = '';   // 切换分类时的临时状态
 
 function openEditor(note){
   editingId = note ? note.id : null;
@@ -734,58 +746,142 @@ function closeEditor(){
   editingImages = [];
 }
 
+/* 判断字段框里有没有"值" */
+function fieldsHaveValues(){
+  const text = document.getElementById('fFields').value.trim();
+  if(!text) return false;
+  const lines = text.split('\n');
+  return lines.some(line=>{
+    const i = line.indexOf('=');
+    if(i < 0) return line.trim().length > 0;
+    const v = line.slice(i+1).trim();
+    return v.length > 0;
+  });
+}
+
+/* 判断字段框里有没有"字段名"（不管有没有值） */
+function fieldsHaveNames(){
+  const text = document.getElementById('fFields').value.trim();
+  if(!text) return false;
+  return text.split('\n').some(l=>l.trim().length > 0);
+}
+
+/* 把当前字段框解析成 [{name, value}] */
+function parseFieldsText(){
+  const text = document.getElementById('fFields').value;
+  const result = [];
+  text.split('\n').forEach(line=>{
+    if(!line.trim()) return;
+    const i = line.indexOf('=');
+    if(i < 0){
+      result.push({name: line.trim(), value: ''});
+    }else{
+      result.push({
+        name: line.slice(0,i).trim(),
+        value: line.slice(i+1).trim()
+      });
+    }
+  });
+  return result;
+}
+
+/* 把 [{name, value}] 写回字段框 */
+function writeFieldsText(arr){
+  document.getElementById('fFields').value = arr
+    .filter(x=>x.name)
+    .map(x=> x.value ? `${x.name}=${x.value}` : `${x.name}=`)
+    .join('\n');
+}
+
+/* 应用分类模板（追加模式） */
+function applyTemplateAppend(catName){
+  const tmpl = getCatFields(catName);
+  if(!tmpl.length) return;
+  const current = parseFieldsText();
+  const existing = new Set(current.map(x=>x.name));
+  tmpl.forEach(f=>{
+    if(!existing.has(f)) current.push({name: f, value: ''});
+  });
+  writeFieldsText(current);
+}
+
+/* 应用分类模板（替换模式，只保留字段名，值保留同名的） */
+function applyTemplateReplace(catName){
+  const tmpl = getCatFields(catName);
+  const current = parseFieldsText();
+  const valueMap = {};
+  current.forEach(x=>{ if(x.value) valueMap[x.name] = x.value; });
+  const result = tmpl.map(f=>({
+    name: f,
+    value: valueMap[f] || ''
+  }));
+  writeFieldsText(result);
+}
+
+/* 分类下拉 change */
 document.getElementById('fCategory').addEventListener('change', e=>{
-  const val = e.target.value;
-  if(val === '__add__'){
-    addNewCategoryFromEditor();
+  const newCat = e.target.value;
+  const oldText = document.getElementById('fFields').value;
+
+  // 情况 1：字段框完全空 → 直接套模板
+  if(!oldText.trim()){
+    const tmpl = getCatFields(newCat);
+    if(tmpl.length){
+      document.getElementById('fFields').value = tmpl.map(f=>`${f}=`).join('\n');
+    }
     return;
   }
-  if(val === '__manage__'){
-    document.getElementById('fCategory').value = '';
-    openCatMgr();
+
+  // 情况 2：字段框只有字段名（无值）→ 直接替换
+  if(!fieldsHaveValues()){
+    if(newCat){
+      applyTemplateReplace(newCat);
+    }else{
+      // 选"无"：只清空字段名，保留已有值（这里没值，所以就是清空）
+      document.getElementById('fFields').value = '';
+    }
     return;
   }
-  applyFieldTemplate(val);
+
+  // 情况 3：字段框有值 → 弹窗问
+  pendingCategory = newCat;
+  document.getElementById('switchCatName').textContent = newCat || '无';
+  document.getElementById('switchConfirm').classList.add('show');
 });
 
-function addNewCategoryFromEditor(){
-  const name = prompt('输入新分类名：', '');
-  if(!name) { rebuildCategorySelect(''); return; }
-  const trimmed = name.trim();
-  if(!trimmed){ rebuildCategorySelect(''); return; }
-  if(DEFAULT_CATS.includes(trimmed)){
-    rebuildCategorySelect(trimmed);
-    toast('已选中已有分类');
-    return;
-  }
-  if(customCategories.includes(trimmed)){
-    rebuildCategorySelect(trimmed);
-    toast('分类已存在，已选中');
-    return;
-  }
-  customCategories.push(trimmed);
-  saveCats();
-  rebuildCategorySelect(trimmed);
-  renderSidebar();
-  toast(`已添加分类「${trimmed}」`);
-  applyFieldTemplate(trimmed);
+/* 切换确认弹窗 */
+const switchConfirm = document.getElementById('switchConfirm');
+function closeSwitchConfirm(){
+  switchConfirm.classList.remove('show');
+  // 恢复原选择（无法知道原选择，直接重建下拉，选中空）
+  // 更好：保存"原分类"并在取消时恢复
 }
+document.getElementById('switchClose').onclick = ()=>{
+  closeSwitchConfirm();
+  rebuildCategorySelect(pendingCategoryOld);
+};
+document.getElementById('switchCancel').onclick = ()=>{
+  closeSwitchConfirm();
+  rebuildCategorySelect(pendingCategoryOld);
+};
+document.getElementById('switchAppend').onclick = ()=>{
+  closeSwitchConfirm();
+  applyTemplateAppend(pendingCategory);
+  rebuildCategorySelect(pendingCategory);
+};
+document.getElementById('switchReplace').onclick = ()=>{
+  closeSwitchConfirm();
+  applyTemplateReplace(pendingCategory);
+  rebuildCategorySelect(pendingCategory);
+};
 
-function applyFieldTemplate(cat){
-  const tmpl = FIELD_TEMPLATES[cat] || [];
-  if(!tmpl.length) return;
-  const ta = document.getElementById('fFields');
-  const existing = new Set(
-    ta.value.split('\n').map(l=>l.split('=')[0].trim()).filter(Boolean)
-  );
-  const toAdd = tmpl.filter(f=>!existing.has(f));
-  if(toAdd.length){
-    const prefix = ta.value.trim() ? ta.value.trimEnd() + '\n' : '';
-    ta.value = prefix + toAdd.map(f=>`${f}=`).join('\n');
-  }
-}
+/* 记录切换前的分类 */
+let pendingCategoryOld = '';
+document.getElementById('fCategory').addEventListener('focus', e=>{
+  pendingCategoryOld = e.target.value;
+});
 
-/* ================= 分类管理弹窗 ================= */
+/* ================= 分类管理窗口 ================= */
 const catMgr = document.getElementById('catMgr');
 const catMgrBody = document.getElementById('catMgrBody');
 
@@ -801,77 +897,203 @@ catMgr.addEventListener('click', e=>{
   if(e.target === catMgr) closeCatMgr();
 });
 document.getElementById('catMgrAdd').onclick = ()=>{
-  const name = prompt('输入新分类名：', '');
-  if(!name) return;
-  const trimmed = name.trim();
-  if(!trimmed){ return; }
-  if(DEFAULT_CATS.includes(trimmed)){
-    toast('默认分类已存在');
-    return;
-  }
-  if(customCategories.includes(trimmed)){
-    toast('分类已存在');
-    return;
-  }
-  customCategories.push(trimmed);
-  saveCats();
-  renderCatMgr();
-  rebuildCategorySelect(trimmed);
-  renderSidebar();
-  toast(`已添加「${trimmed}」`);
+  openCatEdit(null);
 };
 
 function renderCatMgr(){
-  if(!customCategories.length){
-    catMgrBody.innerHTML = `<div class="catmgr-empty">还没有自定义分类<br>点下方按钮添加</div>`;
-    return;
-  }
   const countMap = {};
   notes.forEach(n=>{
     const c = n.category || '';
-    countMap[c] = (countMap[c]||0) + 1;
+    if(c) countMap[c] = (countMap[c]||0) + 1;
   });
-  catMgrBody.innerHTML = customCategories.map((c)=>{
-    const n = countMap[c] || 0;
-    return `<div class="catmgr-item" data-cat="${esc(c)}">
-      <span class="cname">${esc(c)}</span>
+  catMgrBody.innerHTML = categories.map((c, i)=>{
+    const n = countMap[c.name] || 0;
+    return `<div class="catmgr-item" data-cat-i="${i}">
+      <span class="cname">${esc(c.name)}</span>
+      ${c.builtin?`<span class="builtin-tag">自带</span>`:''}
       <span class="cnum">${n} 条</span>
-      <button class="cdel" data-del="${esc(c)}" title="删除分类" type="button">×</button>
+      <span class="arrow">›</span>
     </div>`;
   }).join('');
 }
-
 catMgrBody.addEventListener('click', e=>{
-  const del = e.target.closest('[data-del]');
-  if(!del) return;
-  const cat = del.dataset.del;
-  const used = notes.filter(n=>(n.category||'') === cat).length;
-  let ok = true;
-  if(used > 0){
-    ok = confirm(`「${cat}」有 ${used} 条资料在使用。\n\n删除后这些资料将变为「未分类」，确定删除吗？`);
-  }else{
-    ok = confirm(`确定删除分类「${cat}」？`);
-  }
-  if(!ok) return;
-
-  const idx = customCategories.indexOf(cat);
-  if(idx >= 0){
-    customCategories.splice(idx, 1);
-    saveCats();
-  }
-  let changed = 0;
-  notes.forEach(n=>{
-    if((n.category||'') === cat){ n.category = ''; changed++; }
-  });
-  if(changed > 0) saveLocal();
-
-  renderCatMgr();
-  rebuildCategorySelect('');
-  renderAll();
-  toast(changed ? `已删除分类，${changed} 条资料改为未分类` : `已删除分类「${cat}」`);
+  const item = e.target.closest('[data-cat-i]');
+  if(!item) return;
+  const i = parseInt(item.dataset.catI, 10);
+  openCatEdit(i);
 });
 
-/* ================= 图片编辑（水平排列） ================= */
+/* ================= 分类编辑窗口 ================= */
+const catEdit = document.getElementById('catEdit');
+let catEditIndex = -1;         // -1 = 新增
+let catEditFieldsArr = [];     // 编辑中的字段列表
+
+function openCatEdit(index){
+  if(index === null || index === undefined) index = -1;
+  catEditIndex = index;
+  if(index === -1){
+    document.getElementById('catEditTitle').textContent = '新增分类';
+    document.getElementById('catEditName').value = '';
+    catEditFieldsArr = [];
+  }else{
+    const c = categories[index];
+    document.getElementById('catEditTitle').textContent = `修改分类「${c.name}」`;
+    document.getElementById('catEditName').value = c.name;
+    catEditFieldsArr = c.fields.slice();
+  }
+  const delBtn = document.getElementById('catEditDel');
+  if(index === -1 || (index >= 0 && categories[index].builtin)){
+    delBtn.disabled = true;
+    delBtn.textContent = index === -1 ? '' : '自带分类不可删';
+    delBtn.style.visibility = index === -1 ? 'hidden' : 'visible';
+  }else{
+    delBtn.disabled = false;
+    delBtn.textContent = '删除此分类';
+    delBtn.style.visibility = 'visible';
+  }
+  renderCatEditFields();
+  catEdit.classList.add('show');
+  setTimeout(()=>document.getElementById('catEditName').focus(), 100);
+}
+function closeCatEdit(){
+  catEdit.classList.remove('show');
+  catEditIndex = -1;
+  catEditFieldsArr = [];
+}
+document.getElementById('catEditClose').onclick = closeCatEdit;
+document.getElementById('catEditCancel').onclick = closeCatEdit;
+catEdit.addEventListener('click', e=>{
+  if(e.target === catEdit) closeCatEdit();
+});
+
+function renderCatEditFields(){
+  const box = document.getElementById('catEditFields');
+  if(!catEditFieldsArr.length){
+    box.innerHTML = `<div class="field-empty">还没有字段，点下方"添加字段"</div>`;
+    return;
+  }
+  box.innerHTML = catEditFieldsArr.map((f, i)=>
+    `<div class="field-row-item" data-fi="${i}">
+      <span class="fname">${esc(f)}</span>
+      <button type="button" class="fbtn" data-edit-field="${i}" title="改名">✎</button>
+      <button type="button" class="fbtn del" data-del-field="${i}" title="删除">×</button>
+    </div>`
+  ).join('');
+}
+document.getElementById('catEditFields').addEventListener('click', e=>{
+  const edit = e.target.closest('[data-edit-field]');
+  if(edit){
+    const i = parseInt(edit.dataset.editField,10);
+    const old = catEditFieldsArr[i];
+    const nv = prompt('修改字段名：', old);
+    if(nv === null) return;
+    const trimmed = nv.trim();
+    if(!trimmed){ toast('字段名不能为空'); return; }
+    if(catEditFieldsArr.includes(trimmed) && trimmed !== old){
+      toast('字段名已存在'); return;
+    }
+    catEditFieldsArr[i] = trimmed;
+    renderCatEditFields();
+    return;
+  }
+  const del = e.target.closest('[data-del-field]');
+  if(del){
+    const i = parseInt(del.dataset.delField,10);
+    if(!confirm(`删除字段「${catEditFieldsArr[i]}」？`)) return;
+    catEditFieldsArr.splice(i,1);
+    renderCatEditFields();
+  }
+});
+document.getElementById('catEditAddField').onclick = ()=>{
+  const name = prompt('输入新字段名：', '');
+  if(!name) return;
+  const trimmed = name.trim();
+  if(!trimmed){ return; }
+  if(catEditFieldsArr.includes(trimmed)){
+    toast('字段名已存在');
+    return;
+  }
+  catEditFieldsArr.push(trimmed);
+  renderCatEditFields();
+};
+
+/* 保存分类编辑 */
+document.getElementById('catEditOk').onclick = ()=>{
+  const newName = document.getElementById('catEditName').value.trim();
+  if(!newName){ alert('请填写分类名'); return; }
+  if(catEditIndex === -1){
+    // 新增
+    if(categories.some(c=>c.name === newName)){
+      alert('分类名已存在');
+      return;
+    }
+    categories.push({
+      name: newName,
+      fields: catEditFieldsArr.slice(),
+      builtin: false
+    });
+    saveCats();
+    rebuildCategorySelect(newName);
+    renderAll();
+    toast(`已添加分类「${newName}」`);
+  }else{
+    const c = categories[catEditIndex];
+    const oldName = c.name;
+    // 改分类名
+    if(newName !== oldName){
+      if(categories.some((x, i)=> i !== catEditIndex && x.name === newName)){
+        alert('分类名已存在');
+        return;
+      }
+      c.name = newName;
+      // 已有资料跟着改
+      let changed = 0;
+      notes.forEach(n=>{
+        if(n.category === oldName){ n.category = newName; changed++; }
+      });
+      if(changed) saveLocal();
+    }
+    c.fields = catEditFieldsArr.slice();
+    saveCats();
+    rebuildCategorySelect(c.name);
+    renderAll();
+    toast(`已保存分类「${c.name}」`);
+  }
+  closeCatEdit();
+  renderCatMgr();
+};
+
+/* 删除分类 */
+document.getElementById('catEditDel').onclick = ()=>{
+  if(catEditIndex < 0) return;
+  const c = categories[catEditIndex];
+  if(c.builtin){
+    toast('自带分类不可删除');
+    return;
+  }
+  const used = notes.filter(n=>n.category === c.name).length;
+  let ok = true;
+  if(used > 0){
+    ok = confirm(`「${c.name}」有 ${used} 条资料在使用。\n\n删除后这些资料将变为「未分类」，确定吗？`);
+  }else{
+    ok = confirm(`确定删除分类「${c.name}」？`);
+  }
+  if(!ok) return;
+  categories.splice(catEditIndex, 1);
+  saveCats();
+  let changed = 0;
+  notes.forEach(n=>{
+    if(n.category === c.name){ n.category = ''; changed++; }
+  });
+  if(changed) saveLocal();
+  rebuildCategorySelect('');
+  renderAll();
+  renderCatMgr();
+  closeCatEdit();
+  toast(changed ? `已删除分类，${changed} 条资料改为未分类` : `已删除分类「${c.name}」`);
+};
+
+/* ================= 图片编辑 ================= */
 function renderImgEdit(){
   const wrap = document.getElementById('imgEdit');
   const hint = document.getElementById('imgHint');
@@ -880,10 +1102,7 @@ function renderImgEdit(){
   const localImgs = editingImages.filter(s=>!isLink(s));
   const linkImg = editingImages.find(s=>isLink(s));
 
-  // 全部水平排列：本地图缩略图 → 📷按钮 → 🔗按钮（如果有链接则显示链接条目）
   let html = '';
-
-  // 本地图缩略图
   localImgs.forEach((src)=>{
     const i = editingImages.indexOf(src);
     html += `<div class="thumb">
@@ -892,13 +1111,9 @@ function renderImgEdit(){
       <button class="x" data-i="${i}" title="删除" type="button">×</button>
     </div>`;
   });
-
-  // 📷 添加本地图按钮（没满 5 张就显示）
   if(localImgs.length < MAX_LOCAL){
     html += `<button type="button" class="img-add-btn" id="btnAddLocal">📷 拍照/相册</button>`;
   }
-
-  // 🔗 添加链接 或 已有链接条目
   if(linkImg){
     html += `<div class="img-link-row">
       <span class="lk-icon">🔗</span>
@@ -1153,7 +1368,7 @@ function renderCmd(q){
 
   const commands = [
     {name:'新建资料', run:()=>openEditor(null)},
-    {name:'管理自定义分类', run:()=>openCatMgr()},
+    {name:'管理分类修改', run:()=>openCatMgr()},
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
@@ -1269,9 +1484,9 @@ jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 /* ================= 导入导出 ================= */
 function exportJSON(){
   const payload = {
-    _version: 4,
+    _version: 5,
     _exportedAt: new Date().toISOString(),
-    customCategories: customCategories.slice(),
+    categories: categories,
     notes: notes
   };
   const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
@@ -1297,14 +1512,20 @@ function importJSON(){
           data = raw;
         }else if(raw && Array.isArray(raw.notes)){
           data = raw.notes;
-          if(Array.isArray(raw.customCategories)) cats = raw.customCategories;
+          if(Array.isArray(raw.categories)) cats = raw.categories;
         }else{
           throw new Error('格式应为数组或 {notes:[...]}');
         }
         if(cats){
+          // 合并分类：保留已有，补上新的
           cats.forEach(c=>{
-            if(typeof c === 'string' && !DEFAULT_CATS.includes(c) && !customCategories.includes(c)){
-              customCategories.push(c);
+            if(!c || !c.name) return;
+            if(!categories.some(x=>x.name === c.name)){
+              categories.push({
+                name: c.name,
+                fields: Array.isArray(c.fields) ? c.fields.slice() : [],
+                builtin: false
+              });
             }
           });
           saveCats();
@@ -1346,10 +1567,16 @@ document.addEventListener('keydown', e=>{
     if(jump.classList.contains('show')) closeJump();
     if(gallery.classList.contains('show')) closeGallery();
     if(catMgr.classList.contains('show')) closeCatMgr();
+    if(catEdit.classList.contains('show')) closeCatEdit();
+    if(switchConfirm.classList.contains('show')){
+      switchConfirm.classList.remove('show');
+      rebuildCategorySelect(pendingCategoryOld);
+    }
   }
 });
 
 /* ================= 启动 ================= */
+loadCats();
 loadLocal();
 rebuildCategorySelect();
 renderAll();
