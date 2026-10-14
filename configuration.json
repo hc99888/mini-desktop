@@ -78,10 +78,5 @@
     "name": "非常",
     "icon": "apps/非常/logo.webp",
     "url": "apps/非常/"
-  },
-  {
-    "name": "年龄查询02",
-    "icon": "apps/年龄查询02/logo.webp",
-    "url": "apps/年龄查询02/"
   }
 ]
