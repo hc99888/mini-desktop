@@ -68,5 +68,10 @@
     "name": "资料库",
     "icon": "apps/资料库/logo.png",
     "url": "apps/资料库/"
+  },
+  {
+    "name": "几点",
+    "icon": "apps/几点/logo.webp",
+    "url": "apps/几点/"
   }
 ]
