@@ -88,5 +88,10 @@
     "name": "年龄查询33",
     "icon": "apps/年龄查询33/logo.webp",
     "url": "apps/年龄查询33/"
+  },
+  {
+    "name": "缺不缺52",
+    "icon": "apps/缺不缺52/logo.webp",
+    "url": "apps/缺不缺52/"
   }
 ]
