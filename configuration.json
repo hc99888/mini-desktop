@@ -73,5 +73,10 @@
     "name": "红果",
     "icon": "apps/红果/logo.webp",
     "url": "apps/红果/"
+  },
+  {
+    "name": "非常",
+    "icon": "apps/非常/logo.webp",
+    "url": "apps/非常/"
   }
 ]
