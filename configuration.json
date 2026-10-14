@@ -83,5 +83,10 @@
     "name": "年龄查询02",
     "icon": "apps/年龄查询02/logo.webp",
     "url": "apps/年龄查询02/"
+  },
+  {
+    "name": "年龄查询33",
+    "icon": "apps/年龄查询33/logo.webp",
+    "url": "apps/年龄查询33/"
   }
 ]
