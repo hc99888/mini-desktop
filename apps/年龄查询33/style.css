@@ -1,0 +1,853 @@
+
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            background: linear-gradient(145deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+
+        /* ===== 卡片容器 ===== */
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 36px;
+            padding: 28px 30px 30px;
+            max-width: 480px;
+            width: 100%;
+            height: 95vh;
+            max-height: 700px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+
+        .container:hover {
+            transform: translateY(-2px);
+        }
+
+        /* ===== 抬头 ===== */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 2px dashed #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .header .zodiac-icon {
+            font-size: 40px;
+            line-height: 1;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a202c;
+            letter-spacing: 2px;
+        }
+
+        /* ===== Tab 切换 ===== */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            background: #f1f4f9;
+            border-radius: 16px;
+            padding: 5px;
+            flex-shrink: 0;
+        }
+
+        .tabs .tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #718096;
+        }
+
+        .tabs .tab-btn.active {
+            background: white;
+            color: #2d3748;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .tabs .tab-btn:hover:not(.active) {
+            color: #2d3748;
+        }
+
+        /* ===== 面板容器 ===== */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+            flex: 1;
+            display: none;
+            flex-direction: column;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 输入区域 ===== */
+        .input-group {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+
+        .input-group .field-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .input-group .field-group .label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a5568;
+            white-space: nowrap;
+        }
+
+        .input-group select {
+            padding: 10px 8px;
+            border: 2px solid #d0d7e2;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 76px;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A5568' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 26px;
+            text-align: center;
+            color: #dce3ec;
+        }
+
+        /* 下拉框选择后变红色 */
+        .input-group select.has-value {
+            color: #e53e3e !important;
+            font-weight: 600;
+        }
+
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .input-group select option {
+            color: #2d3748;
+        }
+
+        .input-group .separator {
+            font-size: 22px;
+            font-weight: 700;
+            color: #a0aec0;
+            padding: 0 2px;
+        }
+
+        /* ===== 模式切换 ===== */
+        .mode-toggle {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            background: #f1f4f9;
+            border-radius: 14px;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+
+        .mode-toggle .mode-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 11px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: #718096;
+        }
+
+        .mode-toggle .mode-btn.active {
+            background: white;
+            color: #2d3748;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .mode-toggle .mode-btn:hover:not(.active) {
+            color: #2d3748;
+        }
+
+        /* ===== 年龄输入行 ===== */
+        .age-input-group {
+            display: none;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px 16px;
+            background: #f7fafc;
+            border-radius: 16px;
+            border: 2px dashed #d0d7e2;
+            flex-shrink: 0;
+        }
+
+        .age-input-group.show {
+            display: flex;
+        }
+
+        .age-input-group .label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        /* 年龄输入框 - 加宽 */
+        .age-input-group input {
+            width: 120px;
+            padding: 8px 10px;
+            border: 2px solid #d0d7e2;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 400;
+            text-align: center;
+            color: #e8edf3;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        /* 输入时变红色 */
+        .age-input-group input.has-value {
+            color: #e53e3e !important;
+            font-weight: 600;
+        }
+
+        .age-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .age-input-group input::-webkit-outer-spin-button,
+        .age-input-group input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .age-input-group input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* ===== 查询按钮 ===== */
+        .btn-query {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 18px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            flex-shrink: 0;
+        }
+
+        .btn-query:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-query:active {
+            transform: translateY(0px);
+        }
+
+        /* ============================================================= */
+        /* ===== 结果区域 - 老年人大字体 ===== */
+        /* ============================================================= */
+        .result-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: 2px;
+        }
+
+        .result-wrapper::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .result-wrapper::-webkit-scrollbar-track {
+            background: #f1f4f9;
+            border-radius: 10px;
+        }
+
+        .result-wrapper::-webkit-scrollbar-thumb {
+            background: #c3cfe2;
+            border-radius: 10px;
+        }
+
+        .result-card {
+            background: #f7fafc;
+            border-radius: 22px;
+            padding: 30px 22px;
+            text-align: center;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .result-card.has-result {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        }
+
+        .result-item {
+            margin: 5px 0;
+        }
+
+        .age-number {
+            font-size: 68px;
+            font-weight: 800;
+            color: #2d3748;
+            line-height: 1.2;
+        }
+
+        .age-number span {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 80px;
+        }
+
+        .birth-info {
+            font-size: 19px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            background: rgba(102, 126, 234, 0.12);
+            padding: 6px 24px;
+            border-radius: 24px;
+            display: inline-block;
+            font-weight: 500;
+        }
+
+        .birth-status {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .zodiac-display {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 40px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-top: 4px;
+        }
+
+        .zodiac-emoji {
+            font-size: 62px;
+            line-height: 1;
+        }
+
+        .zodiac-name {
+            background: linear-gradient(135deg, #f56565, #ed64a6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 42px;
+        }
+
+        .extra-info {
+            font-size: 20px;
+            color: #4a5568;
+            margin-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 14px;
+            width: 85%;
+            font-weight: 500;
+        }
+
+        .placeholder-text {
+            color: #a0aec0;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .error-text {
+            color: #e53e3e;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        /* ============================================================= */
+        /* ===== 婚配结果 - 老年人大字体 ===== */
+        /* ============================================================= */
+        .match-result-card {
+            background: #f7fafc;
+            border-radius: 22px;
+            padding: 30px 22px;
+            text-align: center;
+            min-height: 170px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .match-result-card.has-result {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        }
+
+        .match-result-card .match-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            font-size: 38px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .match-result-card .match-main .zodiac-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .match-result-card .match-main .zodiac-item .emoji {
+            font-size: 56px;
+        }
+
+        .match-result-card .match-main .zodiac-item .name {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .match-result-card .match-main .match-icon {
+            font-size: 40px;
+        }
+
+        .match-result-card .match-main .match-icon.good {
+            color: #28a745;
+        }
+
+        .match-result-card .match-main .match-icon.bad {
+            color: #dc3545;
+        }
+
+        .match-detail {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            width: 100%;
+        }
+
+        .match-detail .label {
+            font-size: 18px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .match-detail .good-tags,
+        .match-detail .bad-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .match-tag {
+            padding: 6px 20px;
+            border-radius: 24px;
+            font-size: 19px;
+            font-weight: 600;
+        }
+
+        .match-tag.good {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #b7e4c7;
+        }
+
+        .match-tag.bad {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .match-tag .emoji {
+            margin-right: 4px;
+        }
+
+        .match-tip {
+            font-size: 18px;
+            color: #4a5568;
+            margin-top: 12px;
+            background: rgba(102, 126, 234, 0.12);
+            padding: 8px 24px;
+            border-radius: 22px;
+            display: inline-block;
+            font-weight: 500;
+        }
+
+        .match-placeholder {
+            color: #a0aec0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .match-placeholder .big-emoji {
+            font-size: 56px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        /* ============================================================ */
+        /* 手机小屏适配 */
+        /* ============================================================ */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+
+            .container {
+                padding: 18px 14px 20px;
+                border-radius: 28px;
+                height: 96vh;
+                max-height: 680px;
+            }
+
+            .header .zodiac-icon {
+                font-size: 32px;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .tabs .tab-btn {
+                font-size: 15px;
+                padding: 8px 0;
+            }
+
+            .mode-toggle .mode-btn {
+                font-size: 14px;
+                padding: 6px 0;
+            }
+
+            .input-group {
+                gap: 4px;
+            }
+            .input-group select {
+                min-width: 58px;
+                font-size: 16px;
+                padding: 8px 22px 8px 6px;
+                color: #dce3ec;
+            }
+            .input-group select.has-value {
+                color: #e53e3e !important;
+            }
+            .input-group select:focus {
+                color: #2d3748;
+            }
+
+            .input-group .field-group .label {
+                font-size: 14px;
+            }
+            .input-group .separator {
+                font-size: 18px;
+            }
+
+            .age-input-group {
+                padding: 8px 12px;
+                gap: 6px;
+            }
+            .age-input-group .label {
+                font-size: 14px;
+            }
+            .age-input-group input {
+                width: 90px;
+                font-size: 18px;
+                padding: 6px 8px;
+                color: #e8edf3;
+            }
+            .age-input-group input.has-value {
+                color: #e53e3e !important;
+            }
+
+            .btn-query {
+                font-size: 18px;
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .result-card {
+                padding: 22px 16px;
+                min-height: 130px;
+                border-radius: 18px;
+            }
+
+            .age-number {
+                font-size: 52px;
+            }
+            .age-number span {
+                font-size: 62px;
+            }
+
+            .birth-info {
+                font-size: 17px;
+                padding: 5px 18px;
+            }
+            .birth-status {
+                font-size: 16px;
+            }
+
+            .zodiac-emoji {
+                font-size: 48px;
+            }
+            .zodiac-display {
+                font-size: 32px;
+            }
+            .zodiac-name {
+                font-size: 34px;
+            }
+
+            .extra-info {
+                font-size: 18px;
+                padding-top: 12px;
+                margin-top: 10px;
+            }
+
+            .match-result-card {
+                padding: 22px 16px;
+                min-height: 150px;
+                border-radius: 18px;
+            }
+            .match-result-card .match-main {
+                font-size: 30px;
+                gap: 18px;
+            }
+            .match-result-card .match-main .zodiac-item .emoji {
+                font-size: 44px;
+            }
+            .match-result-card .match-main .zodiac-item .name {
+                font-size: 19px;
+            }
+            .match-result-card .match-main .match-icon {
+                font-size: 32px;
+            }
+            .match-tag {
+                font-size: 17px;
+                padding: 5px 16px;
+            }
+            .match-tip {
+                font-size: 16px;
+                padding: 6px 18px;
+            }
+            .match-placeholder {
+                font-size: 16px;
+            }
+            .match-placeholder .big-emoji {
+                font-size: 48px;
+            }
+            .match-detail .label {
+                font-size: 16px;
+            }
+        }
+
+        /* ============================================================ */
+        /* 超小屏 */
+        /* ============================================================ */
+        @media (max-width: 380px) {
+            body {
+                padding: 4px;
+            }
+            .container {
+                padding: 14px 10px 16px;
+                border-radius: 22px;
+                max-height: 600px;
+            }
+            .header .zodiac-icon {
+                font-size: 26px;
+            }
+            .header h1 {
+                font-size: 17px;
+            }
+            .tabs .tab-btn {
+                font-size: 13px;
+                padding: 6px 0;
+            }
+            .mode-toggle .mode-btn {
+                font-size: 12px;
+                padding: 5px 0;
+            }
+            .input-group select {
+                min-width: 48px;
+                font-size: 14px;
+                padding: 6px 18px 6px 4px;
+                color: #dce3ec;
+            }
+            .input-group select.has-value {
+                color: #e53e3e !important;
+            }
+            .input-group select:focus {
+                color: #2d3748;
+            }
+            .input-group .field-group .label {
+                font-size: 12px;
+            }
+            .input-group .separator {
+                font-size: 14px;
+            }
+            .age-input-group input {
+                width: 70px;
+                font-size: 16px;
+                color: #e8edf3;
+            }
+            .age-input-group input.has-value {
+                color: #e53e3e !important;
+            }
+            .btn-query {
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            .age-number {
+                font-size: 42px;
+            }
+            .age-number span {
+                font-size: 50px;
+            }
+            .zodiac-emoji {
+                font-size: 38px;
+            }
+            .zodiac-display {
+                font-size: 26px;
+            }
+            .zodiac-name {
+                font-size: 28px;
+            }
+            .birth-info {
+                font-size: 15px;
+                padding: 4px 14px;
+            }
+            .extra-info {
+                font-size: 16px;
+            }
+
+            .match-result-card .match-main {
+                font-size: 24px;
+                gap: 14px;
+            }
+            .match-result-card .match-main .zodiac-item .emoji {
+                font-size: 36px;
+            }
+            .match-result-card .match-main .zodiac-item .name {
+                font-size: 16px;
+            }
+            .match-tag {
+                font-size: 15px;
+                padding: 4px 12px;
+            }
+            .match-tip {
+                font-size: 14px;
+                padding: 5px 14px;
+            }
+        }
+
+        /* ============================================================ */
+        /* 横屏/平板适配 */
+        /* ============================================================ */
+        @media (min-height: 800px) and (max-width: 768px) {
+            .container {
+                max-height: 600px;
+                padding: 28px 32px 32px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .container {
+                height: auto;
+                min-height: 540px;
+                padding: 36px 40px 40px;
+            }
+            .result-card {
+                min-height: 190px;
+            }
+            .match-result-card {
+                min-height: 210px;
+            }
+        }
+    
