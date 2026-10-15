@@ -40,11 +40,6 @@
     "url": "apps/3D福彩/"
   },
   {
-    "name": "年龄查询",
-    "icon": "apps/年龄查询/logo.jpg",
-    "url": "apps/年龄查询/"
-  },
-  {
     "name": "缺不缺",
     "icon": "apps/缺不缺/logo.webp",
     "url": "apps/缺不缺/"
@@ -68,5 +63,10 @@
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.webp",
     "url": "apps/编辑AI/"
+  },
+  {
+    "name": "年龄查询",
+    "icon": "apps/年龄查询/logo.webp",
+    "url": "apps/年龄查询/"
   }
 ]
