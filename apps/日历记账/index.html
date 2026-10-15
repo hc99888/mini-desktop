@@ -550,6 +550,18 @@
           <label>项目/老板：</label>
           <input type="text" id="attendanceProject" placeholder="例如：A厂">
         </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>加班折算：</label>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="overtimeRuleMode" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:0.9rem; -webkit-appearance:none;">
+              <option value="hourly">按小时计算</option>
+              <option value="half">满N小时算半天</option>
+            </select>
+            <input type="number" id="overtimeRuleHours" value="3" min="0.5" step="0.5"
+                   style="width:70px; padding:10px 6px; border:1px solid #ddd; border-radius:8px; text-align:center; font-size:0.9rem;">
+            <span style="font-size:0.85rem; color:#666;">小时</span>
+          </div>
+        </div>
         <div class="attendance-options" id="attendanceOptions">
           <!-- 全天：左边标签，右边工资 -->
           <div class="attendance-option" data-type="full">
@@ -560,13 +572,13 @@
           <!-- 上午：左边标签，右边小时 -->
           <div class="attendance-option" data-type="morning">
             <div class="opt-label">🟠 上午</div>
-            <input type="number" class="opt-input" id="morningHours" placeholder="小时" step="0.5" min="0" value="4">
+            <input type="number" class="opt-input" id="morningHours" placeholder="小时" step="0.5" min="0" value="4.5">
             <span class="opt-unit">时</span>
           </div>
           <!-- 下午：左边标签，右边小时 -->
           <div class="attendance-option" data-type="afternoon">
             <div class="opt-label">🟠 下午</div>
-            <input type="number" class="opt-input" id="afternoonHours" placeholder="小时" step="0.5" min="0" value="5">
+            <input type="number" class="opt-input" id="afternoonHours" placeholder="小时" step="0.5" min="0" value="4.5">
             <span class="opt-unit">时</span>
           </div>
           <!-- 加班：左边标签，右边小时 -->
@@ -638,6 +650,7 @@
     const SALARY_PAID_KEY = 'salary_paid';
     const LOAN_KEY = 'loan_records';
     const DAILY_SALARY_KEY = 'daily_salary_records';
+    const OVERTIME_RULE_KEY = 'overtime_rule';
 
     let currentYear, currentMonth;
     let records = [];
@@ -648,6 +661,7 @@
     let salaryPaid = {};
     let loanRecords = [];
     let dailySalary = {};  // { "A厂": { "2026-05": 260, "2026-06": 300 } }
+    let overtimeRule = {}; // { "A厂": { mode: "half", hours: 3 }, "B厂": { mode: "hourly" } }
     let selectedDate = null;
     let lastInput = { category: '', note: '' };
     let currentForm = 'expense';
@@ -699,6 +713,8 @@
     function saveLoanRecords() { localStorage.setItem(LOAN_KEY, JSON.stringify(loanRecords)); }
     function loadDailySalary() { const raw = localStorage.getItem(DAILY_SALARY_KEY); dailySalary = raw ? JSON.parse(raw) : {}; }
     function saveDailySalary() { localStorage.setItem(DAILY_SALARY_KEY, JSON.stringify(dailySalary)); }
+    function loadOvertimeRule() { const raw = localStorage.getItem(OVERTIME_RULE_KEY); overtimeRule = raw ? JSON.parse(raw) : {}; }
+    function saveOvertimeRule() { localStorage.setItem(OVERTIME_RULE_KEY, JSON.stringify(overtimeRule)); }
 
     function saveLastInput(category, note) {
       lastInput = { category, note };
@@ -714,7 +730,6 @@
       if (!dailySalary[project]) return 0;
       const key = `${year}-${String(month).padStart(2,'0')}`;
       if (dailySalary[project][key] !== undefined) return dailySalary[project][key];
-      // 找最近的历史日薪
       const keys = Object.keys(dailySalary[project]).sort();
       let lastRate = 0;
       for (const k of keys) {
@@ -723,7 +738,6 @@
       return lastRate;
     }
 
-    // ===== 获取某项目最新的日薪（用于计算） =====
     function getLatestDailySalary(project) {
       if (!dailySalary[project]) return 0;
       const keys = Object.keys(dailySalary[project]).sort();
@@ -731,7 +745,6 @@
       return dailySalary[project][keys[keys.length - 1]];
     }
 
-    // ===== 设置某项目某月的日薪 =====
     function setMonthlyDailySalary(project, year, month, salary) {
       if (!dailySalary[project]) dailySalary[project] = {};
       const key = `${year}-${String(month).padStart(2,'0')}`;
@@ -739,7 +752,40 @@
       saveDailySalary();
     }
 
-    // ===== 计算某条出勤记录的工资（修复：优先使用当前日薪） =====
+    // ===== 加班折算规则 =====
+    function getOvertimeRule(project) {
+      const r = overtimeRule[project];
+      if (!r) return { mode: 'hourly', hours: 3 };
+      if (r.mode === 'half') return { mode: 'half', hours: r.hours || 3 };
+      return { mode: 'hourly', hours: 3 };
+    }
+
+    function setOvertimeRule(project, mode, hours) {
+      if (mode === 'half') {
+        overtimeRule[project] = { mode: 'half', hours: hours || 3 };
+      } else {
+        overtimeRule[project] = { mode: 'hourly' };
+      }
+      saveOvertimeRule();
+    }
+
+    // 计算加班工资
+    function calcOvertimeSalary(project, hours, dailyRate) {
+      if (!hours || hours <= 0) return 0;
+      if (dailyRate === 0) return 0;
+      const hourlyRate = dailyRate / STANDARD_HOURS;
+      const rule = getOvertimeRule(project);
+      if (rule.mode === 'hourly') {
+        return hours * hourlyRate;
+      }
+      // 满 N 小时算半天，可叠加
+      const N = rule.hours || 3;
+      const halfDays = Math.floor(hours / N);       // 每满 N 小时算半天
+      const remainHours = hours - halfDays * N;     // 剩余不足 N 小时
+      return halfDays * (dailyRate / 2) + remainHours * hourlyRate;
+    }
+
+    // ===== 计算某条出勤记录的工资 =====
     function calcAttendanceSalary(att) {
       const project = att.project || '未分类';
       const dateStr = att.date || selectedDate;
@@ -748,25 +794,32 @@
       const dailyRate = getMonthlyDailySalary(project, y, m);
       
       if (att.type === 'full') {
-        // 优先使用当前日薪，保证修改日薪后本月/累计一致
         return dailyRate || att.salary || 0;
       } else if (att.type === 'morning' || att.type === 'afternoon') {
         if (dailyRate === 0) return 0;
         const hourlyRate = dailyRate / STANDARD_HOURS;
         return (att.hours || 0) * hourlyRate;
       } else if (att.type === 'overtime') {
-        if (dailyRate === 0) return 0;
-        const hourlyRate = dailyRate / STANDARD_HOURS;
-        return (att.hours || 0) * hourlyRate;
+        return calcOvertimeSalary(project, att.hours || 0, dailyRate);
       }
       return 0;
     }
 
-    // ===== 出勤天数 =====
+    // ===== 出勤天数（用于出勤统计） =====
+    // 注：加班天数按“出勤天数”折算显示
     function getAttendanceDays(att) {
       if (att.type === 'full') return 1;
       if (att.type === 'morning' || att.type === 'afternoon') return 0.5;
-      return 0;  // 加班和休息不计出勤天数
+      if (att.type === 'overtime') {
+        // 加班按规则折算成出勤天数（0.5 的倍数）
+        const project = att.project || '未分类';
+        const rule = getOvertimeRule(project);
+        if (rule.mode === 'half') {
+          const N = rule.hours || 3;
+          return Math.floor((att.hours || 0) / N) * 0.5;
+        }
+      }
+      return 0;
     }
 
     // ===== 单人考勤按项目分组统计 =====
@@ -778,7 +831,7 @@
         if (date.startsWith(prefix)) {
           const project = att.project || '未分类';
           if (!stats[project]) {
-            stats[project] = { full: 0, morning: 0, afternoon: 0, overtime: 0, rest: 0, total: 0, salary: 0 };
+            stats[project] = { full: 0, morning: 0, afternoon: 0, overtime: 0, overtimeDays: 0, rest: 0, total: 0, salary: 0 };
           }
           
           if (att.type === 'full') {
@@ -792,6 +845,9 @@
             stats[project].total += 0.5;
           } else if (att.type === 'overtime') {
             stats[project].overtime += (att.hours || 0);
+            const overtimeDays = getAttendanceDays(att);
+            stats[project].overtimeDays += overtimeDays;
+            stats[project].total += overtimeDays;
           } else if (att.type === 'rest') {
             stats[project].rest++;
           }
@@ -803,7 +859,7 @@
       return stats;
     }
 
-    // ===== 累计工资（修复：月份收集使用 att.date || date） =====
+    // ===== 累计工资 =====
     function getTotalSalary(project) {
       let totalDays = 0;
       let totalAmount = 0;
@@ -869,6 +925,11 @@
       if (!selectedDate) { showToast('请先选择日期'); return; }
       const project = document.getElementById('attendanceProject').value.trim() || '未分类';
       
+      // 保存该项目的加班规则
+      const ruleMode = document.getElementById('overtimeRuleMode').value;
+      const ruleHours = parseFloat(document.getElementById('overtimeRuleHours').value) || 3;
+      setOvertimeRule(project, ruleMode, ruleHours);
+      
       if (!selectedAttType || selectedAttType === 'none') {
         if (attendanceRecords[selectedDate]) {
           delete attendanceRecords[selectedDate];
@@ -895,7 +956,6 @@
         const salaryInput = document.getElementById('fullSalary').value.trim();
         let salary = parseFloat(salaryInput);
         
-        // 如果没有输入工资，用历史日薪
         if (isNaN(salary) || salary <= 0) {
           const [y, m] = selectedDate.split('-').map(Number);
           salary = getMonthlyDailySalary(project, y, m);
@@ -905,7 +965,6 @@
           }
         }
         
-        // 保存该月日薪
         const [y, m] = selectedDate.split('-').map(Number);
         setMonthlyDailySalary(project, y, m, salary);
         
@@ -930,7 +989,6 @@
           return;
         }
         
-        // 检查是否有日薪
         const [y, m] = selectedDate.split('-').map(Number);
         const dailyRate = getMonthlyDailySalary(project, y, m);
         if (dailyRate === 0) {
@@ -976,7 +1034,7 @@
         saveAttendance();
         if (attendanceModal) attendanceModal.classList.remove('active');
         renderCalendar();
-        const salary = hours * (dailyRate / STANDARD_HOURS);
+        const salary = calcOvertimeSalary(project, hours, dailyRate);
         showToast(`✅ 加班 ${hours}小时 = ¥${salary.toFixed(2)}`);
         return;
       }
@@ -1007,6 +1065,11 @@
         salaryPaid[trimmed] = salaryPaid[oldName];
         delete salaryPaid[oldName];
         saveSalaryPaid();
+      }
+      if (overtimeRule[oldName]) {
+        overtimeRule[trimmed] = overtimeRule[oldName];
+        delete overtimeRule[oldName];
+        saveOvertimeRule();
       }
       saveAttendance();
       renderCalendar();
@@ -1067,7 +1130,7 @@
     };
 
     window.clearProject = function(project) {
-      const confirmMsg = `确定清空【${project}】的全部数据？\n\n包括：\n• 所有考勤记录\n• 日薪设置\n• 收款记录\n\n此操作不可恢复！`;
+      const confirmMsg = `确定清空【${project}】的全部数据？\n\n包括：\n• 所有考勤记录\n• 日薪设置\n• 加班规则\n• 收款记录\n\n此操作不可恢复！`;
       if (!confirm(confirmMsg)) return;
       
       let deletedCount = 0;
@@ -1085,6 +1148,10 @@
       if (salaryPaid[project]) {
         delete salaryPaid[project];
         saveSalaryPaid();
+      }
+      if (overtimeRule[project]) {
+        delete overtimeRule[project];
+        saveOvertimeRule();
       }
       
       saveAttendance();
@@ -1399,7 +1466,6 @@
       renderCalendar();
     }
 
-    // ===== 判断日期是否在未来（锁定） =====
     function isFutureDate(dateStr) {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
@@ -1434,7 +1500,6 @@
           const content = document.createElement('div'); content.className = 'cell-content';
           
           if (locked) {
-            // 未来日期：只显示日期数字 + 锁图标，不显示记账/出勤信息
             const dateSpan = document.createElement('span');
             dateSpan.textContent = cellDate.getDate();
             dateSpan.style.fontWeight = '500';
@@ -1445,7 +1510,6 @@
             lockIcon.textContent = '🔒';
             content.appendChild(lockIcon);
             cell.appendChild(content);
-            // 不绑定点击事件
           } else {
             const singleInfo = getSingleAttendanceInfo(dateStr);
             const hasCrew = hasCrewAttendance(dateStr);
@@ -1602,6 +1666,10 @@
             const paymentList = getPaymentList(name);
             const [y, m] = [currentYear, currentMonth];
             const dailyRate = getMonthlyDailySalary(name, y, m);
+            const rule = getOvertimeRule(name);
+            const ruleText = rule.mode === 'half'
+              ? `满${rule.hours}小时算半天`
+              : '按小时';
             
             html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
               <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
@@ -1610,10 +1678,11 @@
                   <button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名</button>
                 </div>
               </div>
+              <div class="stat-row"><span>加班折算</span><span>${ruleText}</span></div>
               <div class="stat-row"><span>🔵 全天</span><span>${s.full} 次</span></div>
               <div class="stat-row"><span>🟠 上午</span><span>${s.morning} 次</span></div>
               <div class="stat-row"><span>🟠 下午</span><span>${s.afternoon} 次</span></div>
-              <div class="stat-row"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 小时</span></div>
+              <div class="stat-row"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 小时${s.overtimeDays > 0 ? '（折' + s.overtimeDays.toFixed(1) + '天）' : ''}</span></div>
               <div class="stat-row"><span>🟢 休息</span><span>${s.rest} 天</span></div>
               <div class="stat-row" style="font-weight:bold;border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;"><span>📌 本月出勤</span><span>${s.total.toFixed(1)} 天</span></div>
               <div class="stat-row" style="font-weight:bold;"><span>💰 本月应发</span><span>¥${s.salary.toFixed(2)}</span></div>
@@ -1700,7 +1769,6 @@
     }
 
     function openModal(dateStr) {
-      // 双重保险：未来日期不允许打开
       if (isFutureDate(dateStr)) {
         showToast('未来日期暂不可记账');
         return;
@@ -1826,10 +1894,17 @@
         document.getElementById('attendanceProject').value = '';
       }
       
+      // 恢复该项目的加班规则
+      const projectForRule = document.getElementById('attendanceProject').value.trim() || '未分类';
+      const rule = getOvertimeRule(projectForRule);
+      document.getElementById('overtimeRuleMode').value = rule.mode;
+      document.getElementById('overtimeRuleHours').value = rule.hours || 3;
+      toggleOvertimeHoursVisibility();
+      
       // 恢复各项输入
       document.getElementById('fullSalary').value = '260';
-      document.getElementById('morningHours').value = '4';
-      document.getElementById('afternoonHours').value = '5';
+      document.getElementById('morningHours').value = '4.5';
+      document.getElementById('afternoonHours').value = '4.5';
       document.getElementById('overtimeHours').value = '';
       
       if (cur) {
@@ -1843,7 +1918,6 @@
           document.getElementById('overtimeHours').value = cur.hours;
         }
       } else {
-        // 没记录时，如果项目有历史日薪，自动填入
         const project = document.getElementById('attendanceProject').value.trim();
         if (project) {
           const [y, m] = selectedDate.split('-').map(Number);
@@ -1984,6 +2058,16 @@
       document.querySelectorAll('#attendanceOptions .attendance-option').forEach(o => {
         o.classList.toggle('selected', o.dataset.type === selectedAttType);
       });
+    }
+
+    function toggleOvertimeHoursVisibility() {
+      const mode = document.getElementById('overtimeRuleMode').value;
+      const hoursInput = document.getElementById('overtimeRuleHours');
+      if (mode === 'half') {
+        hoursInput.style.display = 'block';
+      } else {
+        hoursInput.style.display = 'none';
+      }
     }
 
     function setCrewAttendanceSimple(name, type, project) {
@@ -2129,7 +2213,7 @@
       Object.entries(crewAttendance).forEach(([date, dayData]) => { if (selectedMonths.includes(`${date.split('-')[0]}-${date.split('-')[1]}`)) fCrewAttendance[date] = dayData; });
       const fAdvances = advances.filter(adv => adv.date && selectedMonths.includes(`${adv.date.split('-')[0]}-${adv.date.split('-')[1]}`));
       const fLoans = loanRecords.filter(loan => loan.date && selectedMonths.includes(`${loan.date.split('-')[0]}-${loan.date.split('-')[1]}`));
-      const data = { version: 6, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances, salaryPaid, loanRecords: fLoans, dailySalary };
+      const data = { version: 7, exportTime: new Date().toISOString(), records: fRecords, attendance: fAttendance, crewAttendance: fCrewAttendance, crewList, advances: fAdvances, salaryPaid, loanRecords: fLoans, dailySalary, overtimeRule };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.download = `记账备份_${selectedMonths.join('_')}.json`; a.href = URL.createObjectURL(blob);
       document.body.appendChild(a); a.click();
@@ -2151,6 +2235,7 @@
             salaryPaid = data.salaryPaid || {};
             loanRecords = data.loanRecords || [];
             dailySalary = data.dailySalary || {};
+            overtimeRule = data.overtimeRule || {};
           } else {
             const ids = new Set(records.map(r => r.id));
             records = [...records, ...(data.records||[]).filter(r => !ids.has(r.id))];
@@ -2161,8 +2246,9 @@
             if (data.salaryPaid) Object.assign(salaryPaid, data.salaryPaid);
             if (data.loanRecords) { const lIds = new Set(loanRecords.map(l => l.id)); loanRecords = [...loanRecords, ...data.loanRecords.filter(l => !lIds.has(l.id))]; }
             if (data.dailySalary) Object.assign(dailySalary, data.dailySalary);
+            if (data.overtimeRule) Object.assign(overtimeRule, data.overtimeRule);
           }
-          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary();
+          saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList(); saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary(); saveOvertimeRule();
           renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
           showToast('✅ 导入成功');
         } catch (err) { alert('导入失败'); }
@@ -2236,9 +2322,7 @@
     document.getElementById('attendanceOptions').addEventListener('click', e => {
       const opt = e.target.closest('.attendance-option');
       if (!opt) return;
-      // 如果点的是输入框，不切换选择
       if (e.target.classList.contains('opt-input')) {
-        // 选中当前选项
         selectedAttType = opt.dataset.type;
         updateAttUI();
         return;
@@ -2256,6 +2340,25 @@
           updateAttUI();
         }
       });
+    });
+
+    // 加班规则下拉切换
+    document.getElementById('overtimeRuleMode').addEventListener('change', toggleOvertimeHoursVisibility);
+
+    // 项目输入框变化时，自动带出该项目的加班规则
+    document.getElementById('attendanceProject').addEventListener('change', () => {
+      const project = document.getElementById('attendanceProject').value.trim() || '未分类';
+      const rule = getOvertimeRule(project);
+      document.getElementById('overtimeRuleMode').value = rule.mode;
+      document.getElementById('overtimeRuleHours').value = rule.hours || 3;
+      toggleOvertimeHoursVisibility();
+    });
+    document.getElementById('attendanceProject').addEventListener('blur', () => {
+      const project = document.getElementById('attendanceProject').value.trim() || '未分类';
+      const rule = getOvertimeRule(project);
+      document.getElementById('overtimeRuleMode').value = rule.mode;
+      document.getElementById('overtimeRuleHours').value = rule.hours || 3;
+      toggleOvertimeHoursVisibility();
     });
 
     document.getElementById('switchSingle').addEventListener('click', () => {
@@ -2307,7 +2410,7 @@
     let confirmCb = null;
     document.getElementById('clearAllBtn').addEventListener('click', () => {
       document.getElementById('confirmMessage').textContent = '确定清空所有数据？';
-      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryPaid = {}; loanRecords = []; dailySalary = {}; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary(); renderCalendar(); showToast('🗑️ 已清空'); };
+      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryPaid = {}; loanRecords = []; dailySalary = {}; overtimeRule = {}; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary(); saveOvertimeRule(); renderCalendar(); showToast('🗑️ 已清空'); };
       document.getElementById('confirmDialog').classList.add('active');
     });
     document.getElementById('confirmCancel').addEventListener('click', () => document.getElementById('confirmDialog').classList.remove('active'));
@@ -2332,6 +2435,7 @@
     loadSalaryPaid();
     loadLoanRecords();
     loadDailySalary();
+    loadOvertimeRule();
     loadLastInput();
     renderCalendar();
     updateAdvanceSelect();
