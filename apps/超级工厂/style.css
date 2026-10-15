@@ -222,7 +222,6 @@
     .split-textarea::-webkit-scrollbar-thumb:hover { background: var(--accent-primary-dark); }
     .split-textarea { scrollbar-width: thin; scrollbar-color: var(--accent-primary) var(--bg-tertiary); }
 
-    /* ===== 卡片网格：加 align-items 防止拉伸 ===== */
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
