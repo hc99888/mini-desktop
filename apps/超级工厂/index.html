@@ -228,7 +228,6 @@
     .split-textarea::-webkit-scrollbar-thumb:hover { background: var(--accent-primary-dark); }
     .split-textarea { scrollbar-width: thin; scrollbar-color: var(--accent-primary) var(--bg-tertiary); }
 
-    /* ===== 卡片网格：加 align-items 防止拉伸 ===== */
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -574,7 +573,7 @@
             </div>
           </div>
 
-          <div class="block delete-block collapsible" id="backupBlock">
+          <div class="block delete-block collapsible collapsed" id="backupBlock">
             <div class="collapsible-header" id="toggleBackup">
               <span class="arrow" id="backupArrow">▼</span>
               <span class="block-tag">#04</span>
@@ -1222,6 +1221,78 @@ ${splitHtml.value}
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         return new TextDecoder().decode(bytes);
       }
+
+      // base64 -> Blob（二进制安全）
+      function base64ToBlob(base64, mime) {
+        const byteChars = atob(base64);
+        const byteNumbers = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        return new Blob([byteNumbers], { type: mime });
+      }
+
+      // base64 -> File（用于回填 <input type="file">）
+      function base64ToFile(base64, filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const mimeMap = {
+          png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+          webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml'
+        };
+        const blob = base64ToBlob(base64, mimeMap[ext] || 'application/octet-stream');
+        return new File([blob], filename, { type: blob.type });
+      }
+
+      // 把 File 塞进 <input type="file">
+      function setFileInput(inputEl, file) {
+        try {
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          inputEl.files = dt.files;
+          inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
+        } catch (e) {
+          console.warn('setFileInput 失败:', e);
+          return false;
+        }
+      }
+
+      // 在指定目录下探测 logo 文件
+      async function findLogoInDir(gitUser, gitRepo, gitToken, basePath) {
+        const exts = ['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'];
+        for (const ext of exts) {
+          const path = `${basePath}/logo.${ext}`;
+          try {
+            const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path });
+            if (file?.content) return { content: file.content, filename: `logo.${ext}`, path };
+          } catch (e) { /* 404 忽略 */ }
+        }
+        // 兜底：无扩展名 logo
+        try {
+          const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `${basePath}/logo` });
+          if (file?.content) return { content: file.content, filename: 'logo', path: `${basePath}/logo` };
+        } catch (e) {}
+        return null;
+      }
+
+      // 回填图标到 input，带日志
+      async function restoreIconFromRemote(gitUser, gitRepo, gitToken, basePath, label) {
+        const iconInput = document.getElementById('iconFile');
+        const iconRow = document.getElementById('iconFileRow');
+        const logo = await findLogoInDir(gitUser, gitRepo, gitToken, basePath);
+        if (logo && logo.content) {
+          const fileObj = base64ToFile(logo.content, logo.filename);
+          const ok = setFileInput(iconInput, fileObj);
+          if (ok) {
+            log(`🖼️ 已回填图标${label ? ' (' + label + ')' : ''}: ${logo.filename}`);
+            return true;
+          }
+        }
+        // 没找到或回填失败：清空，避免残留上一个应用的图标
+        iconInput.value = '';
+        iconRow.classList.remove('highlight');
+        log(`⚠️ 未找到图标 logo.*${label ? ' (' + label + ')' : ''}，请手动选择`);
+        return false;
+      }
+
       function getAppFilesSafe() {
         return {
           html: fullTextarea.value || '<!DOCTYPE html><meta charset="UTF-8"><title>应用</title><h1>⚡</h1>',
@@ -1673,6 +1744,9 @@ ${splitHtml.value}
                 if (fullTextarea.value) setMode('full');
                 updatePreview();
                 log(`✅ 已加载 ${name} 的代码文件`);
+
+                // 自动回填图标
+                await restoreIconFromRemote(gitUser, gitRepo, gitToken, `apps/${name}`, name);
               } catch (e) { log(`⚠️ 加载代码文件失败: ${e.message}`); }
             });
           });
@@ -1777,6 +1851,9 @@ ${splitHtml.value}
                 if (fullTextarea.value) setMode('full');
                 updatePreview();
                 log(`✅ 已加载备份 ${folderName} 的代码文件`);
+
+                // 自动回填图标
+                await restoreIconFromRemote(gitUser, gitRepo, gitToken, path, folderName);
               } catch (e) {
                 log(`⚠️ 加载备份文件失败: ${e.message}`);
               }
