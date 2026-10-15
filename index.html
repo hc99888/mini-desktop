@@ -5,7 +5,6 @@
   <title>迷你桌面系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
-  <!-- 注意：你实际文件名是 manifest.webmanifest.txt，这里直接引用它，无需重命名 -->
   <link rel="manifest" href="manifest.webmanifest.txt">
   <meta name="theme-color" content="#020617">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,7 +29,6 @@
       font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
-    /* ============ 桌面根容器 ============ */
     #desktop {
       position: fixed;
       inset: 0;
@@ -41,7 +39,6 @@
         #020617;
     }
 
-    /* 横向排列所有页的轨道 */
     .pages-track {
       display: flex;
       height: 100%;
@@ -49,7 +46,6 @@
       will-change: transform;
     }
 
-    /* 单页 */
     .page {
       flex: 0 0 100%;
       height: 100%;
@@ -62,10 +58,9 @@
     }
     .page::-webkit-scrollbar { display: none; }
 
-    /* ============ 图标网格 ============ */
     .icon-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr); /* 小屏默认 4 列 */
+      grid-template-columns: repeat(4, 1fr);
       gap: 22px 6px;
       justify-items: center;
       align-items: start;
@@ -75,12 +70,12 @@
 
     @media (min-width: 480px) {
       .icon-grid {
-        grid-template-columns: repeat(5, 1fr); /* 大屏 5 列 */
+        grid-template-columns: repeat(5, 1fr);
         gap: 26px 10px;
       }
     }
 
-    /* ============ 单个图标 ============ */
+    /* ============ 图标 ============ */
     .app-icon {
       width: 100%;
       display: flex;
@@ -90,7 +85,7 @@
       position: relative;
       cursor: pointer;
       touch-action: pan-y;
-      transition: transform 0.15s ease, opacity 0.2s ease;
+      transition: transform 0.18s ease, opacity 0.18s ease;
       will-change: transform;
     }
 
@@ -127,22 +122,58 @@
       pointer-events: none;
     }
 
-    /* 拖拽中 */
-    .app-icon.dragging {
-      opacity: 0.85;
+    /* 被拖拽的源图标：留一个空占位（视觉上彻底消失，但占着格子） */
+    .app-icon.placeholder {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 跟着手指跑的 ghost */
+    .drag-ghost {
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
       transform: scale(1.12);
-      z-index: 999;
-    }
-    .app-icon.dragging img {
-      box-shadow: 0 14px 28px rgba(0,0,0,0.7);
+      filter: drop-shadow(0 14px 24px rgba(0,0,0,0.6));
+      transition: none;
     }
 
-    /* 拖拽时禁止页面滚动干扰 */
-    body.dragging-active .page {
+    .drag-ghost img {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      object-fit: cover;
+      background: #1e293b;
+    }
+
+    @media (min-width: 480px) {
+      .drag-ghost img {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+      }
+    }
+
+    .drag-ghost span {
+      font-size: 11.5px;
+      color: #e2e8f0;
+      text-align: center;
+      line-height: 1.25;
+      max-width: 80px;
       overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-all;
     }
 
-    /* ============ 底部 Dock ============ */
+    body.dragging-active .page { overflow: hidden; }
+
+    /* ============ Dock ============ */
     #dock {
       position: fixed;
       left: 50%;
@@ -161,7 +192,7 @@
       z-index: 50;
     }
 
-    /* ============ 分页指示器 ============ */
+    /* ============ 分页点 ============ */
     #dots {
       position: fixed;
       left: 50%;
@@ -211,13 +242,8 @@
 <body>
 
 <div id="desktop"></div>
-
 <div id="dots"></div>
-
-<div id="dock">
-  <span class="dock-title">迷你桌面</span>
-</div>
-
+<div id="dock"><span class="dock-title">迷你桌面</span></div>
 <div id="loading">正在加载应用列表...</div>
 <div id="error" class="hidden">应用列表加载失败，请检查 configuration.json</div>
 
@@ -227,19 +253,11 @@
 ========================================================= */
 const APPS_JSON_URL = 'configuration.json';
 const STORAGE_KEY = 'mini-desktop-order-v1';
+const DEMO_MODE = true;   // 测试用，正式改 false
 
-// 演示模式：true = 复制数据凑够 3 页，方便测试滑屏/拖拽
-// 正式使用请改成 false
-const DEMO_MODE = true;
-
-/* =========================================================
-   每页容量：由 CSS 列数决定
-   - 小屏 4 列 × 5 行 = 20
-   - 大屏 5 列 × 5 行 = 25
-========================================================= */
+/* 每页容量：小屏 4×5=20，大屏 5×5=25 */
 function getPageSize() {
-  const isBig = window.matchMedia('(min-width: 480px)').matches;
-  return isBig ? 25 : 20;
+  return window.matchMedia('(min-width: 480px)').matches ? 25 : 20;
 }
 
 /* =========================================================
@@ -256,7 +274,7 @@ const loadingEl = document.getElementById('loading');
 const errorEl = document.getElementById('error');
 
 /* =========================================================
-   加载数据
+   加载
 ========================================================= */
 async function loadApps() {
   try {
@@ -267,17 +285,13 @@ async function loadApps() {
 
     apps = apps.filter(a => a && a.name && a.url);
 
-    // 演示模式：复制数据凑够 3 页
     if (DEMO_MODE) {
       const need = getPageSize() * 3;
       const base = apps.slice();
       let i = 0;
       while (apps.length < need && base.length > 0) {
         const src = base[i % base.length];
-        apps.push({
-          ...src,
-          name: src.name + '_' + (Math.floor(i / base.length) + 1)
-        });
+        apps.push({ ...src, name: src.name + '_' + (Math.floor(i / base.length) + 1) });
         i++;
       }
     }
@@ -293,26 +307,20 @@ async function loadApps() {
 }
 
 /* =========================================================
-   持久化：按 name 恢复顺序
+   持久化
 ========================================================= */
 function applyStoredOrder(apps) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!Array.isArray(saved) || !saved.length) return apps;
-
     const map = new Map(apps.map(a => [a.name, a]));
     const ordered = [];
     saved.forEach(name => {
-      if (map.has(name)) {
-        ordered.push(map.get(name));
-        map.delete(name);
-      }
+      if (map.has(name)) { ordered.push(map.get(name)); map.delete(name); }
     });
     map.forEach(a => ordered.push(a));
     return ordered;
-  } catch {
-    return apps;
-  }
+  } catch { return apps; }
 }
 
 function saveOrder() {
@@ -322,7 +330,7 @@ function saveOrder() {
 }
 
 /* =========================================================
-   渲染
+   渲染（只在数据变化时调用，不在拖拽中调用）
 ========================================================= */
 function render() {
   pageSize = getPageSize();
@@ -342,10 +350,8 @@ function render() {
 
     const start = p * pageSize;
     const slice = allApps.slice(start, start + pageSize);
-
-    slice.forEach((app, idxInPage) => {
-      const globalIndex = start + idxInPage;
-      grid.appendChild(createIcon(app, globalIndex));
+    slice.forEach((app, i) => {
+      grid.appendChild(createIcon(app, start + i));
     });
 
     page.appendChild(grid);
@@ -354,7 +360,6 @@ function render() {
 
   desktopEl.innerHTML = '';
   desktopEl.appendChild(track);
-
   renderDots();
   setTrackTransform(-currentPage * window.innerWidth, false);
 }
@@ -375,7 +380,6 @@ function createIcon(app, globalIndex) {
 
   el.appendChild(img);
   el.appendChild(label);
-
   attachIconEvents(el, app);
   return el;
 }
@@ -391,8 +395,9 @@ function renderDots() {
 }
 
 function updateDots() {
-  const dots = dotsEl.querySelectorAll('.dot');
-  dots.forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  dotsEl.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentPage);
+  });
 }
 
 /* =========================================================
@@ -412,28 +417,18 @@ function goToPage(p, animate = true) {
 }
 
 /* =========================================================
-   滑屏（触摸 + 鼠标）
+   滑屏
 ========================================================= */
-let dragPage = {
-  active: false,
-  startX: 0,
-  startY: 0,
-  dx: 0,
-  dy: 0,
-  locked: false,
-  startTime: 0
-};
+let dragPage = { active: false, startX: 0, startY: 0, dx: 0, dy: 0, locked: false, startTime: 0 };
 
 function onPointerDown(e) {
-  if (e.target.closest('.app-icon.dragging')) return;
-  if (longPressState.timer) return;
-
+  if (dragState.active) return;               // 拖拽中不翻页
+  if (longPressState.timer) return;           // 长按中不翻页
   const t = e.touches ? e.touches[0] : e;
   dragPage.active = true;
   dragPage.startX = t.clientX;
   dragPage.startY = t.clientY;
-  dragPage.dx = 0;
-  dragPage.dy = 0;
+  dragPage.dx = 0; dragPage.dy = 0;
   dragPage.locked = false;
   dragPage.startTime = Date.now();
 }
@@ -443,8 +438,7 @@ function onPointerMove(e) {
   const t = e.touches ? e.touches[0] : e;
   const dx = t.clientX - dragPage.startX;
   const dy = t.clientY - dragPage.startY;
-  dragPage.dx = dx;
-  dragPage.dy = dy;
+  dragPage.dx = dx; dragPage.dy = dy;
 
   if (!dragPage.locked) {
     if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
@@ -477,13 +471,9 @@ function onPointerUp() {
   const threshold = window.innerWidth * 0.22;
   const fast = v > 0.45;
 
-  if (dx < -threshold || (fast && dx < -30)) {
-    goToPage(currentPage + 1);
-  } else if (dx > threshold || (fast && dx > 30)) {
-    goToPage(currentPage - 1);
-  } else {
-    goToPage(currentPage);
-  }
+  if (dx < -threshold || (fast && dx < -30)) goToPage(currentPage + 1);
+  else if (dx > threshold || (fast && dx > 30)) goToPage(currentPage - 1);
+  else goToPage(currentPage);
   dragPage.locked = false;
 }
 
@@ -491,24 +481,21 @@ desktopEl.addEventListener('touchstart', onPointerDown, { passive: true });
 desktopEl.addEventListener('touchmove', onPointerMove, { passive: false });
 desktopEl.addEventListener('touchend', onPointerUp);
 desktopEl.addEventListener('touchcancel', onPointerUp);
-
 desktopEl.addEventListener('mousedown', onPointerDown);
 window.addEventListener('mousemove', onPointerMove);
 window.addEventListener('mouseup', onPointerUp);
 
 /* =========================================================
-   图标事件：点击 + 长按拖拽
+   图标：点击 + 长按
 ========================================================= */
-const longPressState = { timer: null, iconEl: null, app: null, startX: 0, startY: 0 };
+const longPressState = { timer: null, startX: 0, startY: 0 };
 
 function attachIconEvents(el, app) {
-  let moved = false;
-  let longPressed = false;
+  let moved = false, longPressed = false;
 
   const start = (e) => {
     if (e.button !== undefined && e.button !== 0) return;
-    moved = false;
-    longPressed = false;
+    moved = false; longPressed = false;
     cancelLongPress();
 
     longPressState.timer = setTimeout(() => {
@@ -522,19 +509,14 @@ function attachIconEvents(el, app) {
       const t = e.touches ? e.touches[0] : e;
       const dx = Math.abs(t.clientX - longPressState.startX);
       const dy = Math.abs(t.clientY - longPressState.startY);
-      if (dx > 8 || dy > 8) {
-        moved = true;
-        cancelLongPress();
-      }
+      if (dx > 8 || dy > 8) { moved = true; cancelLongPress(); }
     }
   };
 
   const end = () => {
     cancelLongPress();
     if (longPressed) return;
-    if (!moved) {
-      window.open(app.url, '_blank');
-    }
+    if (!moved) window.open(app.url, '_blank');
   };
 
   el.addEventListener('touchstart', (e) => {
@@ -543,7 +525,6 @@ function attachIconEvents(el, app) {
     longPressState.startY = t.clientY;
     start(e);
   }, { passive: true });
-
   el.addEventListener('touchmove', move, { passive: true });
   el.addEventListener('touchend', end);
   el.addEventListener('touchcancel', () => cancelLongPress());
@@ -566,49 +547,65 @@ function cancelLongPress() {
 }
 
 /* =========================================================
-   拖拽模式（单页内排序）
+   拖拽（iOS 风格：实时换位 + 节点移动，不重建）
 ========================================================= */
-let drag = {
+const dragState = {
   active: false,
-  iconEl: null,
-  ghostEl: null,
-  startIndex: -1,
-  currentIndex: -1,
+  sourceEl: null,     // 被拖拽的原节点（留空占位）
+  ghostEl: null,      // 跟手指的克隆
+  app: null,
+  pageEl: null,
+  pageIndex: 0,
+  startLocalIndex: 0, // 在当前页里的局部索引
+  currentLocalIndex: 0,
   offsetX: 0,
   offsetY: 0,
-  pageEl: null
+  lastTargetEl: null,
 };
 
 function enterDragMode(el, app, e) {
-  if (drag.active) return;
-
+  if (dragState.active) return;
   const t = e.touches ? e.touches[0] : e;
   const rect = el.getBoundingClientRect();
 
-  drag.active = true;
-  drag.iconEl = el;
-  drag.startIndex = parseInt(el.dataset.index, 10);
-  drag.currentIndex = drag.startIndex;
-  drag.offsetX = t.clientX - rect.left;
-  drag.offsetY = t.clientY - rect.top;
-  drag.pageEl = el.closest('.page');
+  dragState.active = true;
+  dragState.sourceEl = el;
+  dragState.app = app;
+  dragState.pageEl = el.closest('.page');
+  dragState.pageIndex = parseInt(dragState.pageEl.dataset.page, 10);
+  dragState.offsetX = t.clientX - rect.left;
+  dragState.offsetY = t.clientY - rect.top;
 
-  document.body.classList.add('dragging-active');
+  // 计算源在当前页的局部索引
+  const grid = dragState.pageEl.querySelector('.icon-grid');
+  const nodes = Array.from(grid.children);
+  dragState.startLocalIndex = nodes.indexOf(el);
+  dragState.currentLocalIndex = dragState.startLocalIndex;
+  dragState.lastTargetEl = null;
 
-  const ghost = el.cloneNode(true);
-  ghost.classList.add('dragging');
-  ghost.style.position = 'fixed';
-  ghost.style.left = (t.clientX - drag.offsetX) + 'px';
-  ghost.style.top = (t.clientY - drag.offsetY) + 'px';
+  // 源节点变成占位（视觉消失，但保留占位）
+  el.classList.add('placeholder');
+  el.style.transform = 'scale(0.9)';
+
+  // 创建 ghost 跟手指
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  const img = document.createElement('img');
+  img.src = app.icon || 'icon-192.png';
+  const label = document.createElement('span');
+  label.textContent = app.name;
+  ghost.appendChild(img);
+  ghost.appendChild(label);
+
+  // 初始位置 = 源图标位置
+  ghost.style.left = rect.left + 'px';
+  ghost.style.top = rect.top + 'px';
   ghost.style.width = rect.width + 'px';
   ghost.style.height = rect.height + 'px';
-  ghost.style.pointerEvents = 'none';
-  ghost.style.zIndex = '9999';
   document.body.appendChild(ghost);
-  drag.ghostEl = ghost;
+  dragState.ghostEl = ghost;
 
-  el.style.opacity = '0.25';
-
+  document.body.classList.add('dragging-active');
   if (navigator.vibrate) navigator.vibrate(15);
 
   document.addEventListener('touchmove', onDragMove, { passive: false });
@@ -619,78 +616,90 @@ function enterDragMode(el, app, e) {
 }
 
 function onDragMove(e) {
-  if (!drag.active) return;
+  if (!dragState.active) return;
   e.preventDefault?.();
-
   const t = e.touches ? e.touches[0] : e;
-  const gx = t.clientX - drag.offsetX;
-  const gy = t.clientY - drag.offsetY;
 
-  drag.ghostEl.style.left = gx + 'px';
-  drag.ghostEl.style.top = gy + 'px';
+  // ghost 跟手
+  const gx = t.clientX - dragState.offsetX;
+  const gy = t.clientY - dragState.offsetY;
+  dragState.ghostEl.style.left = gx + 'px';
+  dragState.ghostEl.style.top = gy + 'px';
 
+  // 手指下的目标图标
   const elBelow = document.elementFromPoint(t.clientX, t.clientY);
-  const targetIcon = elBelow?.closest('.app-icon');
+  const targetEl = elBelow?.closest('.app-icon');
 
-  if (targetIcon && targetIcon !== drag.iconEl && drag.pageEl.contains(targetIcon)) {
-    const targetIndex = parseInt(targetIcon.dataset.index, 10);
-    if (targetIndex !== drag.currentIndex) {
-      swapInData(drag.currentIndex, targetIndex);
-      drag.currentIndex = targetIndex;
-      reorderDOM(drag.pageEl);
-    }
+  if (!targetEl || targetEl === dragState.sourceEl) return;
+  if (!dragState.pageEl.contains(targetEl)) return;
+
+  const grid = dragState.pageEl.querySelector('.icon-grid');
+  const nodes = Array.from(grid.children);
+  const targetLocal = nodes.indexOf(targetEl);
+
+  if (targetLocal === -1 || targetLocal === dragState.currentLocalIndex) return;
+
+  // 关键：只移动 DOM 节点，不重建
+  // 把 sourceEl 插到 targetEl 前面（如果往后移）或者后面（如果往前移）
+  if (targetLocal > dragState.currentLocalIndex) {
+    grid.insertBefore(dragState.sourceEl, nodes[targetLocal].nextSibling);
+  } else {
+    grid.insertBefore(dragState.sourceEl, nodes[targetLocal]);
   }
-}
 
-function swapInData(a, b) {
-  if (a < 0 || b < 0 || a >= allApps.length || b >= allApps.length) return;
-  [allApps[a], allApps[b]] = [allApps[b], allApps[a]];
-}
+  // 数据同步：把 allApps 里对应项也交换
+  const start = dragState.pageIndex * pageSize;
+  const fromGlobal = start + dragState.currentLocalIndex;
+  const toGlobal = start + targetLocal;
+  if (fromGlobal !== toGlobal && fromGlobal >= 0 && toGlobal >= 0 &&
+      fromGlobal < allApps.length && toGlobal < allApps.length) {
+    const [moved] = allApps.splice(fromGlobal, 1);
+    allApps.splice(toGlobal, 0, moved);
+  }
 
-function reorderDOM(pageEl) {
-  const grid = pageEl.querySelector('.icon-grid');
-  const pageIndex = parseInt(pageEl.dataset.page, 10);
-  const start = pageIndex * pageSize;
-  const slice = allApps.slice(start, start + pageSize);
+  dragState.currentLocalIndex = targetLocal;
 
-  grid.innerHTML = '';
-  slice.forEach((app, i) => {
-    const el = createIcon(app, start + i);
-    if (start + i === drag.currentIndex) {
-      el.style.opacity = '0.25';
-    }
-    grid.appendChild(el);
+  // 更新所有节点的 data-index（因为顺序变了）
+  Array.from(grid.children).forEach((child, i) => {
+    child.dataset.index = start + i;
   });
 }
 
 function onDragEnd() {
-  if (!drag.active) return;
-  drag.active = false;
-
+  if (!dragState.active) return;
+  dragState.active = false;
   document.body.classList.remove('dragging-active');
 
-  if (drag.ghostEl) {
-    drag.ghostEl.remove();
-    drag.ghostEl = null;
+  // 移除 ghost
+  if (dragState.ghostEl) {
+    dragState.ghostEl.remove();
+    dragState.ghostEl = null;
   }
 
-  render();
+  // 源节点恢复
+  if (dragState.sourceEl) {
+    dragState.sourceEl.classList.remove('placeholder');
+    dragState.sourceEl.style.transform = '';
+  }
+
+  // 保存顺序
   saveOrder();
+
+  // 清理
+  dragState.sourceEl = null;
+  dragState.pageEl = null;
+  dragState.app = null;
+  dragState.lastTargetEl = null;
 
   document.removeEventListener('touchmove', onDragMove);
   document.removeEventListener('touchend', onDragEnd);
   document.removeEventListener('touchcancel', onDragEnd);
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
-
-  drag.iconEl = null;
-  drag.pageEl = null;
-  drag.startIndex = -1;
-  drag.currentIndex = -1;
 }
 
 /* =========================================================
-   窗口尺寸变化 → 重新分页
+   窗口尺寸变化
 ========================================================= */
 let resizeTimer = null;
 window.addEventListener('resize', () => {
@@ -710,9 +719,6 @@ window.addEventListener('resize', () => {
 ========================================================= */
 loadApps();
 
-/* =========================================================
-   PWA Service Worker
-========================================================= */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(console.error);
