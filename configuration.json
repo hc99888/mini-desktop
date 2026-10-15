@@ -15,11 +15,6 @@
     "url": "apps/仓库资源/"
   },
   {
-    "name": "手指画画",
-    "icon": "apps/手指画画/logo.png",
-    "url": "apps/手指画画/"
-  },
-  {
     "name": "测试音乐工厂",
     "icon": "apps/测试音乐工厂/logo.png",
     "url": "apps/测试音乐工厂/"
@@ -68,5 +63,10 @@
     "name": "年龄查询",
     "icon": "apps/年龄查询/logo.webp",
     "url": "apps/年龄查询/"
+  },
+  {
+    "name": "手指画画",
+    "icon": "apps/手指画画/logo.webp",
+    "url": "apps/手指画画/"
   }
 ]
