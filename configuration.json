@@ -60,13 +60,13 @@
     "url": "apps/资料库/"
   },
   {
-    "name": "超级工厂",
-    "icon": "apps/超级工厂/logo.png",
-    "url": "apps/超级工厂/"
-  },
-  {
     "name": "日历记账",
     "icon": "apps/日历记账/logo.jpg",
     "url": "apps/日历记账/"
+  },
+  {
+    "name": "超级工厂",
+    "icon": "apps/超级工厂/logo.png",
+    "url": "apps/超级工厂/"
   }
 ]
