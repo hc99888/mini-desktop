@@ -35,11 +35,6 @@
     "url": "apps/日历记账/"
   },
   {
-    "name": "超级工厂",
-    "icon": "apps/超级工厂/logo.png",
-    "url": "apps/超级工厂/"
-  },
-  {
     "name": "编辑AI",
     "icon": "apps/编辑AI/logo.webp",
     "url": "apps/编辑AI/"
@@ -68,5 +63,10 @@
     "name": "书签应用",
     "icon": "apps/书签应用/logo.webp",
     "url": "apps/书签应用/"
+  },
+  {
+    "name": "超级工厂",
+    "icon": "apps/超级工厂/logo.webp",
+    "url": "apps/超级工厂/"
   }
 ]
