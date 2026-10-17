@@ -1596,22 +1596,53 @@ function giteeFilePath(){
 
 const EMPTY_PLACEHOLDER = ['{}', '', 'null', '{"notes":[]}', '{"notes":[],"categories":[]}'];
 
-async function doSyncUpload(){
+async function doSyncUpload(skipConfirm){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
   const btn = document.getElementById('syncUpload');
   btn.disabled = true;
-  syncMsg('⏳ 正在上传…');
+  syncMsg('⏳ 正在检查远端…');
 
   try{
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}`;
+    const path = giteeFilePath();
+    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}`;
+
+    // 1. 查文件是否存在
     let sha = null;
     const r1 = await fetch(`${url}?access_token=${encodeURIComponent(cfg.token)}`);
     if(r1.ok){
       const data = await r1.json();
       sha = data.sha;
+    }else if(r1.status === 404){
+      sha = null;
+    }else{
+      const err = await r1.text();
+      syncMsg(`❌ 查询文件失败：${r1.status}\n${err}`, true);
+      btn.disabled = false;
+      return;
     }
 
+    // 2. 如果文件已存在，确认是否覆盖
+    if(sha && !skipConfirm){
+      const tmpText = JSON.stringify(buildSyncPayload(), null, 2);
+      const ok = confirm(
+        `远端已存在文件：\n${path}\n\n` +
+        `本地当前 ${notes.length} 条资料\n` +
+        `本次将上传大小约 ${(tmpText.length/1024).toFixed(1)} KB\n\n` +
+        `是否覆盖远端？\n\n` +
+        `点「确定」= 覆盖远端\n` +
+        `点「取消」= 取消上传`
+      );
+      if(!ok){
+        syncMsg('已取消上传');
+        btn.disabled = false;
+        return;
+      }
+    }
+
+    // 3. 构造并上传
+    syncMsg(sha ? '⏳ 正在覆盖远端…' : '⏳ 正在新建远端文件…');
     const text = JSON.stringify(buildSyncPayload(), null, 2);
     const content = btoa(unescape(encodeURIComponent(text)));
 
@@ -1629,7 +1660,7 @@ async function doSyncUpload(){
     });
 
     if(r2.ok){
-      syncMsg(`✅ 上传成功\n路径：${giteeFilePath()}\n大小：${(text.length/1024).toFixed(1)} KB`);
+      syncMsg(`✅ ${sha ? '覆盖' : '新建'}成功\n路径：${path}\n大小：${(text.length/1024).toFixed(1)} KB`);
     }else{
       const err = await r2.text();
       syncMsg(`❌ 上传失败：${r2.status}\n${err}`, true);
@@ -1648,10 +1679,12 @@ async function doSyncDownload(silent){
   syncMsg('⏳ 正在下载…');
 
   try{
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}?access_token=${encodeURIComponent(cfg.token)}`;
+    const path = giteeFilePath();
+    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}?access_token=${encodeURIComponent(cfg.token)}`;
     const r = await fetch(url);
     if(!r.ok){
-      syncMsg(`❌ 下载失败：${r.status}\n（仓库里还没有 ${giteeFilePath()} ？）`, true);
+      syncMsg(`❌ 下载失败：${r.status}\n（仓库里还没有 ${path} ？）`, true);
       if(btn) btn.disabled = false;
       return;
     }
@@ -1674,7 +1707,7 @@ async function doSyncDownload(silent){
     try{
       payload = JSON.parse(text);
     }catch(e){
-      syncMsg('❌ 远端不是有效 JSON，可能是空占位文件', true);
+      syncMsg('❌ 远端不是有效 JSON', true);
       if(btn) btn.disabled = false;
       return;
     }
@@ -1707,7 +1740,7 @@ async function doSyncDownload(silent){
   if(btn) btn.disabled = false;
 }
 
-document.getElementById('syncUpload').onclick = doSyncUpload;
+document.getElementById('syncUpload').onclick = ()=>doSyncUpload(false);
 document.getElementById('syncDownload').onclick = ()=>doSyncDownload(false);
 
 document.getElementById('syncNow').onclick = async ()=>{
@@ -1715,10 +1748,12 @@ document.getElementById('syncNow').onclick = async ()=>{
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
   const btn = document.getElementById('syncNow');
   btn.disabled = true;
-  syncMsg('⏳ 正在同步…');
+  syncMsg('⏳ 正在检查远端…');
 
   try{
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}?access_token=${encodeURIComponent(cfg.token)}`;
+    const path = giteeFilePath();
+    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}?access_token=${encodeURIComponent(cfg.token)}`;
 
     let remote = null;
     try{
@@ -1737,9 +1772,9 @@ document.getElementById('syncNow').onclick = async ()=>{
     }catch(e){}
 
     if(!remote || !Array.isArray(remote.notes)){
-      syncMsg('远端没有有效数据，正在上传…');
+      syncMsg('远端没有有效数据，正在新建备份…');
       btn.disabled = false;
-      await doSyncUpload();
+      await doSyncUpload(true);
       return;
     }
 
@@ -1752,7 +1787,8 @@ document.getElementById('syncNow').onclick = async ()=>{
       const use = confirm(
         `远端数据较新：\n本地 ${localCount} 条（更新 ${new Date(localTime).toLocaleString()}）\n` +
         `远端 ${remoteCount} 条（更新 ${new Date(remoteTime).toLocaleString()}）\n\n` +
-        `点「确定」= 用远端覆盖本地\n点「取消」= 用本地覆盖远端`
+        `点「确定」= 用远端覆盖本地\n` +
+        `点「取消」= 用本地覆盖远端（会再问一次）`
       );
       if(use){
         notes = remote.notes;
@@ -1766,12 +1802,12 @@ document.getElementById('syncNow').onclick = async ()=>{
         syncMsg(`✅ 已下载远端数据（${notes.length} 条）`);
       }else{
         btn.disabled = false;
-        await doSyncUpload();
+        await doSyncUpload(false);
         return;
       }
     }else{
       btn.disabled = false;
-      await doSyncUpload();
+      await doSyncUpload(false);
       return;
     }
   }catch(e){
