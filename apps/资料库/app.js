@@ -1360,9 +1360,10 @@ function renderCmd(q){
       filter = {category:'',tag:'',keyword:''};
       currentIndex = 0; renderAll();
     }},
+    {name:'⚠️ 清空数据', danger:true, run:()=>openClearData()},
   ];
   commands.forEach(c=>{
-    if(!q || c.name.toLowerCase().includes(q)) items.push({type:'cmd', name:c.name, run:c.run});
+    if(!q || c.name.toLowerCase().includes(q)) items.push({type:'cmd', name:c.name, run:c.run, danger:c.danger});
   });
 
   if(q){
@@ -1399,7 +1400,7 @@ function renderCmd(q){
   }
 
   cmdList.innerHTML = items.length
-    ? items.map((it,i)=>`<div class="cmd-item ${i===cmdIndex?'sel':''}" data-i="${i}">
+    ? items.map((it,i)=>`<div class="cmd-item ${i===cmdIndex?'sel':''} ${it.danger?'danger':''}" data-i="${i}">
         <span>${it.type==='cmd'?'⚡ ':'📄 '}${esc(it.name)}</span></div>`).join('')
     : `<div class="cmd-item">无匹配</div>`;
   cmdList._items = items;
@@ -1532,6 +1533,39 @@ function toast(msg){
   toastTimer = setTimeout(()=>el.classList.remove('show'), 1800);
 }
 
+/* ================= 清空数据 ================= */
+function openClearData(){
+  closeCmd();
+  setTimeout(()=>{
+    if(notes.length === 0){
+      toast('资料库已经是空的');
+      return;
+    }
+    const total = notes.length;
+    const input = prompt(
+      `⚠️ 清空全部资料？\n\n` +
+      `当前共 ${total} 条资料，将全部删除。\n` +
+      `（分类配置、Gitee 设置会保留）\n\n` +
+      `此操作不可撤销！\n` +
+      `如果确定，请输入「清空」两个字：`
+    );
+    if(input === null) return;
+    if(input.trim() !== '清空'){
+      toast('已取消');
+      return;
+    }
+    if(!confirm(`最后确认：删除全部 ${total} 条资料？\n\n确定后不可恢复。`)){
+      return;
+    }
+    notes = [];
+    saveLocal();
+    currentIndex = 0;
+    filter = {category:'',tag:'',keyword:''};
+    renderAll();
+    toast(`已清空 ${total} 条资料`);
+  }, 100);
+}
+
 /* ================= Gitee 配置 ================= */
 const SYNC_KEY = 'my_notes_gitee_cfg';
 
@@ -1616,9 +1650,9 @@ async function giteeListDir(dirPath){
 const giteeSet = document.getElementById('giteeSet');
 const gsetMsgEl = document.getElementById('gsetMsg');
 
-let gsetLocked = true;          // 默认锁定
+let gsetLocked = true;
 let gsetLockTimer = null;
-const GSET_LOCK_TIMEOUT = 5000; // 5 秒
+const GSET_LOCK_TIMEOUT = 5000;
 
 function setGsetLocked(locked){
   gsetLocked = locked;
@@ -1635,7 +1669,6 @@ function setGsetLocked(locked){
     lockIcon.textContent = '🔒';
     inputs.forEach(inp=>{ inp.disabled = true; });
     if(gsetLockTimer){ clearTimeout(gsetLockTimer); gsetLockTimer = null; }
-    // 打码 Token
     const pass = document.getElementById('gsetPass');
     if(pass) pass.type = 'password';
     updateTokenEye();
@@ -1678,7 +1711,6 @@ function openGiteeSet(){
   gsetMsgEl.textContent = '';
   gsetMsgEl.classList.remove('err');
 
-  // 默认打码 + 锁定
   document.getElementById('gsetPass').type = 'password';
   updateTokenEye();
   setGsetLocked(true);
@@ -1701,7 +1733,6 @@ function gsetMsg(msg, isErr){
   gsetMsgEl.classList.toggle('err', !!isErr);
 }
 
-/* 解锁按钮 */
 document.getElementById('gsetUnlock').onclick = ()=>{
   if(gsetLocked){
     setGsetLocked(false);
@@ -1711,15 +1742,14 @@ document.getElementById('gsetUnlock').onclick = ()=>{
   }
 };
 
-/* Token 眼睛：显示 → 5 秒后自动打码 */
 document.getElementById('gsetPassEye').onclick = ()=>{
-  if(gsetLocked) return;     // 锁定时眼睛无效
+  if(gsetLocked) return;
   const pass = document.getElementById('gsetPass');
   if(!pass) return;
   if(pass.type === 'password'){
     pass.type = 'text';
     updateTokenEye();
-    scheduleAutoLock();      // 重新计时
+    scheduleAutoLock();
   }else{
     pass.type = 'password';
     updateTokenEye();
@@ -1727,7 +1757,6 @@ document.getElementById('gsetPassEye').onclick = ()=>{
   }
 };
 
-/* 任何输入都重置 5 秒计时 */
 document.querySelectorAll('#giteeSet .gset-body input').forEach(inp=>{
   inp.addEventListener('input', ()=>{
     if(!gsetLocked) scheduleAutoLock();
@@ -1737,7 +1766,6 @@ document.querySelectorAll('#giteeSet .gset-body input').forEach(inp=>{
   });
 });
 
-/* 保存设置 */
 document.getElementById('gsetSave').onclick = ()=>{
   if(gsetLocked){ gsetMsg('请先点「● 开启」解锁', true); return; }
   const owner = document.getElementById('gsetUser').value.trim();
