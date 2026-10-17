@@ -472,6 +472,7 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('catMgr').classList.contains('show')) return;
   if(document.getElementById('catEdit').classList.contains('show')) return;
   if(document.getElementById('switchConfirm').classList.contains('show')) return;
+  if(document.getElementById('syncPanel').classList.contains('show')) return;
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -722,7 +723,7 @@ function showHistory(note){
 const editor = document.getElementById('editor');
 let editingId = null;
 let editingImages = [];
-let pendingCategory = '';   // 切换分类时的临时状态
+let pendingCategory = '';
 
 function openEditor(note){
   editingId = note ? note.id : null;
@@ -746,7 +747,6 @@ function closeEditor(){
   editingImages = [];
 }
 
-/* 判断字段框里有没有"值" */
 function fieldsHaveValues(){
   const text = document.getElementById('fFields').value.trim();
   if(!text) return false;
@@ -759,14 +759,6 @@ function fieldsHaveValues(){
   });
 }
 
-/* 判断字段框里有没有"字段名"（不管有没有值） */
-function fieldsHaveNames(){
-  const text = document.getElementById('fFields').value.trim();
-  if(!text) return false;
-  return text.split('\n').some(l=>l.trim().length > 0);
-}
-
-/* 把当前字段框解析成 [{name, value}] */
 function parseFieldsText(){
   const text = document.getElementById('fFields').value;
   const result = [];
@@ -785,7 +777,6 @@ function parseFieldsText(){
   return result;
 }
 
-/* 把 [{name, value}] 写回字段框 */
 function writeFieldsText(arr){
   document.getElementById('fFields').value = arr
     .filter(x=>x.name)
@@ -793,7 +784,6 @@ function writeFieldsText(arr){
     .join('\n');
 }
 
-/* 应用分类模板（追加模式） */
 function applyTemplateAppend(catName){
   const tmpl = getCatFields(catName);
   if(!tmpl.length) return;
@@ -805,7 +795,6 @@ function applyTemplateAppend(catName){
   writeFieldsText(current);
 }
 
-/* 应用分类模板（替换模式，只保留字段名，值保留同名的） */
 function applyTemplateReplace(catName){
   const tmpl = getCatFields(catName);
   const current = parseFieldsText();
@@ -818,12 +807,10 @@ function applyTemplateReplace(catName){
   writeFieldsText(result);
 }
 
-/* 分类下拉 change */
 document.getElementById('fCategory').addEventListener('change', e=>{
   const newCat = e.target.value;
   const oldText = document.getElementById('fFields').value;
 
-  // 情况 1：字段框完全空 → 直接套模板
   if(!oldText.trim()){
     const tmpl = getCatFields(newCat);
     if(tmpl.length){
@@ -832,29 +819,23 @@ document.getElementById('fCategory').addEventListener('change', e=>{
     return;
   }
 
-  // 情况 2：字段框只有字段名（无值）→ 直接替换
   if(!fieldsHaveValues()){
     if(newCat){
       applyTemplateReplace(newCat);
     }else{
-      // 选"无"：只清空字段名，保留已有值（这里没值，所以就是清空）
       document.getElementById('fFields').value = '';
     }
     return;
   }
 
-  // 情况 3：字段框有值 → 弹窗问
   pendingCategory = newCat;
   document.getElementById('switchCatName').textContent = newCat || '无';
   document.getElementById('switchConfirm').classList.add('show');
 });
 
-/* 切换确认弹窗 */
 const switchConfirm = document.getElementById('switchConfirm');
 function closeSwitchConfirm(){
   switchConfirm.classList.remove('show');
-  // 恢复原选择（无法知道原选择，直接重建下拉，选中空）
-  // 更好：保存"原分类"并在取消时恢复
 }
 document.getElementById('switchClose').onclick = ()=>{
   closeSwitchConfirm();
@@ -875,7 +856,6 @@ document.getElementById('switchReplace').onclick = ()=>{
   rebuildCategorySelect(pendingCategory);
 };
 
-/* 记录切换前的分类 */
 let pendingCategoryOld = '';
 document.getElementById('fCategory').addEventListener('focus', e=>{
   pendingCategoryOld = e.target.value;
@@ -925,8 +905,8 @@ catMgrBody.addEventListener('click', e=>{
 
 /* ================= 分类编辑窗口 ================= */
 const catEdit = document.getElementById('catEdit');
-let catEditIndex = -1;         // -1 = 新增
-let catEditFieldsArr = [];     // 编辑中的字段列表
+let catEditIndex = -1;
+let catEditFieldsArr = [];
 
 function openCatEdit(index){
   if(index === null || index === undefined) index = -1;
@@ -1017,12 +997,10 @@ document.getElementById('catEditAddField').onclick = ()=>{
   renderCatEditFields();
 };
 
-/* 保存分类编辑 */
 document.getElementById('catEditOk').onclick = ()=>{
   const newName = document.getElementById('catEditName').value.trim();
   if(!newName){ alert('请填写分类名'); return; }
   if(catEditIndex === -1){
-    // 新增
     if(categories.some(c=>c.name === newName)){
       alert('分类名已存在');
       return;
@@ -1039,14 +1017,12 @@ document.getElementById('catEditOk').onclick = ()=>{
   }else{
     const c = categories[catEditIndex];
     const oldName = c.name;
-    // 改分类名
     if(newName !== oldName){
       if(categories.some((x, i)=> i !== catEditIndex && x.name === newName)){
         alert('分类名已存在');
         return;
       }
       c.name = newName;
-      // 已有资料跟着改
       let changed = 0;
       notes.forEach(n=>{
         if(n.category === oldName){ n.category = newName; changed++; }
@@ -1063,7 +1039,6 @@ document.getElementById('catEditOk').onclick = ()=>{
   renderCatMgr();
 };
 
-/* 删除分类 */
 document.getElementById('catEditDel').onclick = ()=>{
   if(catEditIndex < 0) return;
   const c = categories[catEditIndex];
@@ -1369,6 +1344,7 @@ function renderCmd(q){
   const commands = [
     {name:'新建资料', run:()=>openEditor(null)},
     {name:'管理分类修改', run:()=>openCatMgr()},
+    {name:'Gitee 同步', run:()=>openSyncPanel()},
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
@@ -1517,7 +1493,6 @@ function importJSON(){
           throw new Error('格式应为数组或 {notes:[...]}');
         }
         if(cats){
-          // 合并分类：保留已有，补上新的
           cats.forEach(c=>{
             if(!c || !c.name) return;
             if(!categories.some(x=>x.name === c.name)){
@@ -1555,6 +1530,258 @@ function toast(msg){
   toastTimer = setTimeout(()=>el.classList.remove('show'), 1800);
 }
 
+/* ================= Gitee 同步 ================= */
+const SYNC_KEY = 'my_notes_gitee_cfg';
+
+function buildSyncPayload(){
+  return {
+    _version: 5,
+    _exportedAt: new Date().toISOString(),
+    categories: categories,
+    notes: notes
+  };
+}
+
+function getSyncCfg(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveSyncCfg(cfg){
+  localStorage.setItem(SYNC_KEY, JSON.stringify(cfg));
+}
+
+const syncPanel = document.getElementById('syncPanel');
+const syncMsgEl = document.getElementById('syncMsg');
+
+function openSyncPanel(){
+  const cfg = getSyncCfg();
+  document.getElementById('syncUser').value = cfg.owner || '';
+  document.getElementById('syncPass').value = cfg.token || '';
+  document.getElementById('syncPath').value = cfg.repo || '';
+  document.getElementById('syncFilePath').value = cfg.filePath || '我的数据库/资料库.json';
+  syncMsgEl.textContent = '';
+  syncMsgEl.classList.remove('err');
+  syncPanel.classList.add('show');
+}
+function closeSyncPanel(){ syncPanel.classList.remove('show'); }
+
+document.getElementById('syncClose').onclick = closeSyncPanel;
+syncPanel.addEventListener('click', e=>{
+  if(e.target === syncPanel) closeSyncPanel();
+});
+
+function syncMsg(msg, isErr){
+  syncMsgEl.textContent = msg;
+  syncMsgEl.classList.toggle('err', !!isErr);
+}
+
+document.getElementById('syncSave').onclick = ()=>{
+  const owner = document.getElementById('syncUser').value.trim();
+  const token = document.getElementById('syncPass').value.trim();
+  const repo = document.getElementById('syncPath').value.trim();
+  const filePath = document.getElementById('syncFilePath').value.trim() || '我的数据库/资料库.json';
+  if(!owner){ syncMsg('请填写 Gitee 用户名', true); return; }
+  if(!token){ syncMsg('请填写私人令牌', true); return; }
+  if(!repo){ syncMsg('请填写仓库名', true); return; }
+  saveSyncCfg({owner, token, repo, filePath});
+  syncMsg('✅ 已保存设置');
+};
+
+const GITEE_API = 'https://gitee.com/api/v5';
+
+function giteeFilePath(){
+  const cfg = getSyncCfg();
+  return cfg.filePath || '我的数据库/资料库.json';
+}
+
+const EMPTY_PLACEHOLDER = ['{}', '', 'null', '{"notes":[]}', '{"notes":[],"categories":[]}'];
+
+async function doSyncUpload(){
+  const cfg = getSyncCfg();
+  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
+  const btn = document.getElementById('syncUpload');
+  btn.disabled = true;
+  syncMsg('⏳ 正在上传…');
+
+  try{
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}`;
+    let sha = null;
+    const r1 = await fetch(`${url}?access_token=${encodeURIComponent(cfg.token)}`);
+    if(r1.ok){
+      const data = await r1.json();
+      sha = data.sha;
+    }
+
+    const text = JSON.stringify(buildSyncPayload(), null, 2);
+    const content = btoa(unescape(encodeURIComponent(text)));
+
+    const body = {
+      access_token: cfg.token,
+      content: content,
+      message: `同步 ${new Date().toLocaleString()}`
+    };
+    if(sha) body.sha = sha;
+
+    const r2 = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if(r2.ok){
+      syncMsg(`✅ 上传成功\n路径：${giteeFilePath()}\n大小：${(text.length/1024).toFixed(1)} KB`);
+    }else{
+      const err = await r2.text();
+      syncMsg(`❌ 上传失败：${r2.status}\n${err}`, true);
+    }
+  }catch(e){
+    syncMsg('❌ 上传出错：' + e.message, true);
+  }
+  btn.disabled = false;
+}
+
+async function doSyncDownload(silent){
+  const cfg = getSyncCfg();
+  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
+  const btn = document.getElementById('syncDownload');
+  if(btn) btn.disabled = true;
+  syncMsg('⏳ 正在下载…');
+
+  try{
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}?access_token=${encodeURIComponent(cfg.token)}`;
+    const r = await fetch(url);
+    if(!r.ok){
+      syncMsg(`❌ 下载失败：${r.status}\n（仓库里还没有 ${giteeFilePath()} ？）`, true);
+      if(btn) btn.disabled = false;
+      return;
+    }
+    const data = await r.json();
+    let text = '';
+    try{
+      text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    }catch(e){
+      text = '';
+    }
+
+    const trimmed = (text || '').trim();
+    if(!trimmed || EMPTY_PLACEHOLDER.includes(trimmed)){
+      syncMsg('ℹ️ 远端是空占位文件，先点「⬆ 仅上传」上传数据', true);
+      if(btn) btn.disabled = false;
+      return;
+    }
+
+    let payload;
+    try{
+      payload = JSON.parse(text);
+    }catch(e){
+      syncMsg('❌ 远端不是有效 JSON，可能是空占位文件', true);
+      if(btn) btn.disabled = false;
+      return;
+    }
+
+    if(!payload || !Array.isArray(payload.notes)){
+      syncMsg('❌ 远端数据格式错误（没有 notes 字段）', true);
+      if(btn) btn.disabled = false;
+      return;
+    }
+
+    if(!silent){
+      if(!confirm('下载成功，是否用远端数据覆盖本地？\n\n注意：本地当前资料会被替换。')){
+        if(btn) btn.disabled = false;
+        syncMsg('已下载，未覆盖本地');
+        return;
+      }
+    }
+    notes = payload.notes;
+    if(Array.isArray(payload.categories)){
+      categories = payload.categories;
+      saveCats();
+    }
+    saveLocal();
+    rebuildCategorySelect();
+    renderAll();
+    syncMsg(`✅ 已用远端数据覆盖本地（${notes.length} 条）`);
+  }catch(e){
+    syncMsg('❌ 下载出错：' + e.message, true);
+  }
+  if(btn) btn.disabled = false;
+}
+
+document.getElementById('syncUpload').onclick = doSyncUpload;
+document.getElementById('syncDownload').onclick = ()=>doSyncDownload(false);
+
+document.getElementById('syncNow').onclick = async ()=>{
+  const cfg = getSyncCfg();
+  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
+  const btn = document.getElementById('syncNow');
+  btn.disabled = true;
+  syncMsg('⏳ 正在同步…');
+
+  try{
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${giteeFilePath()}?access_token=${encodeURIComponent(cfg.token)}`;
+
+    let remote = null;
+    try{
+      const r = await fetch(url);
+      if(r.ok){
+        const data = await r.json();
+        let text = '';
+        try{
+          text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+        }catch(e){ text = ''; }
+        const trimmed = (text || '').trim();
+        if(trimmed && !EMPTY_PLACEHOLDER.includes(trimmed)){
+          try{ remote = JSON.parse(text); }catch(e){ remote = null; }
+        }
+      }
+    }catch(e){}
+
+    if(!remote || !Array.isArray(remote.notes)){
+      syncMsg('远端没有有效数据，正在上传…');
+      btn.disabled = false;
+      await doSyncUpload();
+      return;
+    }
+
+    const localCount = notes.length;
+    const remoteCount = remote.notes.length;
+    const localTime = notes.reduce((m,n)=> Math.max(m, new Date(n.updatedAt || 0).getTime()), 0);
+    const remoteTime = remote.notes.reduce((m,n)=> Math.max(m, new Date(n.updatedAt || 0).getTime()), 0);
+
+    if(remoteTime > localTime && remoteCount >= localCount){
+      const use = confirm(
+        `远端数据较新：\n本地 ${localCount} 条（更新 ${new Date(localTime).toLocaleString()}）\n` +
+        `远端 ${remoteCount} 条（更新 ${new Date(remoteTime).toLocaleString()}）\n\n` +
+        `点「确定」= 用远端覆盖本地\n点「取消」= 用本地覆盖远端`
+      );
+      if(use){
+        notes = remote.notes;
+        if(Array.isArray(remote.categories)){
+          categories = remote.categories;
+          saveCats();
+        }
+        saveLocal();
+        rebuildCategorySelect();
+        renderAll();
+        syncMsg(`✅ 已下载远端数据（${notes.length} 条）`);
+      }else{
+        btn.disabled = false;
+        await doSyncUpload();
+        return;
+      }
+    }else{
+      btn.disabled = false;
+      await doSyncUpload();
+      return;
+    }
+  }catch(e){
+    syncMsg('❌ 同步出错：' + e.message, true);
+  }
+  btn.disabled = false;
+};
+
+document.getElementById('btnSync').onclick = openSyncPanel;
+
 /* ================= 快捷键 ================= */
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){
@@ -1568,6 +1795,7 @@ document.addEventListener('keydown', e=>{
     if(gallery.classList.contains('show')) closeGallery();
     if(catMgr.classList.contains('show')) closeCatMgr();
     if(catEdit.classList.contains('show')) closeCatEdit();
+    if(syncPanel.classList.contains('show')) closeSyncPanel();
     if(switchConfirm.classList.contains('show')){
       switchConfirm.classList.remove('show');
       rebuildCategorySelect(pendingCategoryOld);
