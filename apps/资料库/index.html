@@ -736,7 +736,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .catedit-foot .btn-cancel{background:#eef0ed;color:#333;border:none;}
 .catedit-foot .btn-cancel:hover{background:#e0e3df;}
 
-/* ============ Gitee 同步 ============ */
+/* ============ Gitee 同步弹窗 ============ */
 #syncPanel{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:center;justify-content:center;z-index:79;
@@ -744,8 +744,8 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 #syncPanel.show{display:flex;}
 .sync-box{
-  background:#fff;border-radius:12px;width:100%;max-width:460px;
-  max-height:88vh;display:flex;flex-direction:column;
+  background:#fff;border-radius:12px;width:100%;max-width:420px;
+  max-height:85vh;display:flex;flex-direction:column;
   box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;
 }
 .sync-head{
@@ -764,22 +764,18 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   flex:1;overflow-y:auto;padding:14px 18px;
   -webkit-overflow-scrolling:touch;
 }
-.sync-body label{
-  display:block;font-size:12px;margin:10px 0 5px;
-  color:#1f2420;font-weight:700;
+.sync-info{
+  font-size:12.5px;color:#666;line-height:1.7;margin-bottom:12px;
+  padding:10px 12px;background:#fafbfa;border-radius:8px;
 }
-.sync-body label:first-child{margin-top:0;}
-.sync-body input{
-  width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
-  font-size:15px;outline:none;background:#fff;color:#1f2420;
+.sync-info b{color:var(--main);}
+.sync-tips{
+  font-size:11.5px;color:#999;line-height:1.8;
+  padding:10px 12px;background:#fafbfa;border-radius:8px;
+  margin-bottom:10px;
 }
-.sync-body input:focus{
-  border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);
-}
-.sync-body input::placeholder{color:#c8ccc8;font-weight:400;opacity:1;}
-.sync-hint{
-  font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.7;
-}
+.sync-tips div{margin:2px 0;}
+.sync-tips b{color:var(--main);}
 .sync-msg{
   font-size:12.5px;color:var(--main);
   margin-top:10px;min-height:18px;line-height:1.6;
@@ -790,18 +786,194 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   padding:12px 18px;
   padding-bottom:calc(12px + var(--safe-bottom));
   border-top:1px solid var(--line);
-  display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
   background:#fff;
 }
 .sync-btn{
-  padding:9px 14px;border-radius:7px;
+  padding:9px 16px;border-radius:7px;
   border:1px solid var(--line);background:#fff;color:#555;
   font-size:13px;cursor:pointer;transition:.15s;
+  flex:1;min-width:110px;min-height:40px;
 }
 .sync-btn:hover{border-color:var(--main);color:var(--main);}
 .sync-btn.primary{background:var(--main);color:#fff;border-color:var(--main);}
 .sync-btn.primary:hover{opacity:.9;color:#fff;}
 .sync-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* 下载文件列表 */
+.file-list{
+  border:1px solid var(--line);border-radius:8px;
+  max-height:280px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.file-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-bottom:1px solid var(--line);
+  cursor:pointer;transition:.15s;
+  font-size:13px;
+}
+.file-item:last-child{border-bottom:none;}
+.file-item:hover{background:var(--main-soft);}
+.file-item .fi-name{flex:1;color:#333;word-break:break-all;min-width:0;}
+.file-item .fi-meta{font-size:11px;color:var(--muted);flex-shrink:0;}
+.file-empty{padding:20px;text-align:center;color:#aaa;font-size:12.5px;}
+
+/* 下载选项小窗 */
+#dlChoice{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+  align-items:center;justify-content:center;z-index:81;
+  padding:20px 16px;
+}
+#dlChoice.show{display:flex;}
+.dl-box{
+  background:#fff;border-radius:12px;width:100%;max-width:380px;
+  overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);
+}
+.dl-head{
+  padding:14px 18px;border-bottom:1px solid var(--line);
+}
+.dl-head h3{margin:0 0 4px;font-size:14px;color:var(--main);word-break:break-all;}
+.dl-head .dl-meta{font-size:11.5px;color:var(--muted);}
+.dl-body{padding:12px 18px;display:flex;flex-direction:column;gap:8px;}
+.dl-btn{
+  padding:12px 16px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:#333;
+  font-size:14px;cursor:pointer;transition:.15s;
+  text-align:left;display:flex;align-items:center;gap:8px;
+}
+.dl-btn:hover{border-color:var(--main);color:var(--main);}
+.dl-btn.primary{background:var(--main);color:#fff;border-color:var(--main);}
+.dl-btn.primary:hover{opacity:.9;color:#fff;}
+.dl-foot{
+  padding:10px 18px;border-top:1px solid var(--line);
+  display:flex;justify-content:flex-end;
+}
+.dl-foot button{
+  padding:8px 16px;border-radius:7px;
+  background:#eef0ed;color:#333;font-size:13px;cursor:pointer;border:none;
+}
+.dl-foot button:hover{background:#e0e3df;}
+
+/* ============ Gitee 设置弹窗 ============ */
+#giteeSet{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
+  align-items:center;justify-content:center;z-index:79;
+  padding:20px 16px;
+}
+#giteeSet.show{display:flex;}
+.gset-box{
+  background:#fff;border-radius:12px;width:100%;max-width:460px;
+  max-height:88vh;display:flex;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;
+}
+.gset-head{
+  padding:14px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.gset-head h3{margin:0;font-size:15px;color:var(--main);}
+.gset-close{
+  background:rgba(0,0,0,.05);color:#555;
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;border:none;
+}
+.gset-close:hover{background:rgba(0,0,0,.1);}
+.gset-body{
+  flex:1;overflow-y:auto;padding:14px 18px;
+  -webkit-overflow-scrolling:touch;
+}
+.gset-body label{
+  display:block;font-size:12px;margin:10px 0 5px;
+  color:#1f2420;font-weight:700;
+}
+.gset-body label:first-child{margin-top:0;}
+.gset-body input{
+  width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
+  font-size:15px;outline:none;background:#fff;color:#1f2420;
+}
+.gset-body input:focus{
+  border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);
+}
+.gset-body input::placeholder{color:#c8ccc8;font-weight:400;opacity:1;}
+.gset-hint{
+  font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.7;
+}
+.gset-msg{
+  font-size:12.5px;color:var(--main);
+  margin-top:10px;min-height:18px;line-height:1.6;
+  white-space:pre-wrap;word-break:break-word;
+}
+.gset-msg.err{color:#c33;}
+
+/* Token 眼睛按钮 */
+.gset-pass-wrap{
+  display:flex;gap:6px;align-items:center;
+}
+.gset-pass-wrap input{flex:1;min-width:0;}
+.gset-eye{
+  flex-shrink:0;width:42px;height:42px;
+  border:1px solid var(--line);background:#fff;color:#555;
+  border-radius:7px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.15s;
+}
+.gset-eye:hover{border-color:var(--main);color:var(--main);}
+.gset-eye:disabled{opacity:.4;cursor:not-allowed;}
+
+/* 锁定遮罩 */
+.gset-lock-mask{
+  position:absolute;inset:0;
+  background:rgba(246,247,245,.85);
+  display:flex;align-items:center;justify-content:center;
+  z-index:10;
+}
+.gset-lock-mask .lock-content{
+  text-align:center;
+  padding:20px;
+  color:#666;font-size:13px;line-height:1.7;
+}
+.gset-lock-mask .lock-content .lock-icon{
+  font-size:40px;margin-bottom:10px;
+}
+.gset-body{position:relative;}
+
+/* 底部按钮水平排列 */
+.gset-foot{
+  padding:12px 18px;
+  padding-bottom:calc(12px + var(--safe-bottom));
+  border-top:1px solid var(--line);
+  display:flex;
+  gap:10px;
+  justify-content:stretch;
+  background:#fff;
+}
+.gset-btn{
+  flex:1;
+  padding:10px 20px;border-radius:7px;
+  border:1px solid var(--line);background:#fff;color:#555;
+  font-size:14px;cursor:pointer;transition:.15s;
+  min-height:42px;
+  display:inline-flex;align-items:center;justify-content:center;
+  white-space:nowrap;
+}
+.gset-btn.save{
+  border-color:var(--main);
+  background:var(--main);
+  color:#fff;
+}
+.gset-btn.save:hover{opacity:.9;}
+.gset-btn.save:disabled{
+  opacity:.4;cursor:not-allowed;
+  background:#eef0ed;color:#aaa;border-color:var(--line);
+}
+.gset-btn.unlock{
+  border-color:var(--star);
+  background:var(--star);
+  color:#1f2420;
+  font-weight:600;
+}
+.gset-btn.unlock:hover{background:#e5a812;border-color:#e5a812;}
 
 #toast{
   position:fixed;left:50%;bottom:calc(60px + var(--safe-bottom));
@@ -860,7 +1032,7 @@ body.dragging *{
     <button id="btnMenu" title="分类">☰</button>
     <span class="brand">📚 资料库</span>
     <button id="btnNew" class="primary">＋ 新建</button>
-    <button id="btnSync" class="icon-btn" title="Gitee 同步">☁️</button>
+    <button id="btnGitee" title="Gitee 同步">Gitee</button>
     <button id="btnView" class="icon-btn" title="切换视图">▤</button>
     <button id="btnCmd" class="icon-btn" title="Ctrl+K">⌘</button>
   </header>
@@ -1001,7 +1173,7 @@ body.dragging *{
   <button class="g-nav g-next" id="gNext">›</button>
 </div>
 
-<!-- Gitee 同步面板 -->
+<!-- Gitee 同步弹窗 -->
 <div id="syncPanel">
   <div class="sync-box">
     <div class="sync-head">
@@ -1009,29 +1181,85 @@ body.dragging *{
       <button class="sync-close" id="syncClose" type="button">✕</button>
     </div>
     <div class="sync-body">
+      <div class="sync-info" id="syncInfo"></div>
+      <div class="sync-tips">
+        <div><b>☁️ 一键同步</b>：资料库 ↔ Gitee（智能比较，谁新用谁）</div>
+        <div><b>⬆ 上传</b>：手机文件 → Gitee 备份（按日期编号）</div>
+        <div><b>⬇ 下载</b>：列出 Gitee 文件，可下载到手机或导入资料库</div>
+      </div>
+      <div class="sync-msg" id="syncMsg"></div>
+      <div id="syncFileListWrap" style="display:none;">
+        <div class="file-list" id="syncFileList"></div>
+      </div>
+    </div>
+    <div class="sync-foot">
+      <button type="button" class="sync-btn primary" id="syncNow">☁️ 一键同步</button>
+      <button type="button" class="sync-btn" id="syncUpload">⬆ 上传</button>
+      <button type="button" class="sync-btn" id="syncDownload">⬇ 下载</button>
+    </div>
+  </div>
+</div>
+
+<!-- 下载选择小窗 -->
+<div id="dlChoice">
+  <div class="dl-box">
+    <div class="dl-head">
+      <h3 id="dlName">文件</h3>
+      <div class="dl-meta" id="dlMeta"></div>
+    </div>
+    <div class="dl-body">
+      <button class="dl-btn primary" id="dlToPhone">📱 下载到手机</button>
+      <button class="dl-btn" id="dlToLib">📥 导入资料库</button>
+    </div>
+    <div class="dl-foot">
+      <button type="button" id="dlCancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gitee 设置弹窗 -->
+<div id="giteeSet">
+  <div class="gset-box">
+    <div class="gset-head">
+      <h3>Gitee 设置 <span id="gsetLockIcon" style="font-size:14px;color:#999;">🔒</span></h3>
+      <button class="gset-close" id="gsetClose" type="button">✕</button>
+    </div>
+    <div class="gset-body">
       <label>Gitee 用户名</label>
-      <input id="syncUser" placeholder="例如 hc99" autocomplete="off">
+      <input id="gsetUser" placeholder="例如 hc99" autocomplete="off">
 
       <label>私人令牌（Token）</label>
-      <input id="syncPass" type="password" placeholder="粘贴私人令牌" autocomplete="off">
+      <div class="gset-pass-wrap">
+        <input id="gsetPass" type="password" placeholder="粘贴私人令牌" autocomplete="off">
+        <button type="button" class="gset-eye" id="gsetPassEye" title="显示/隐藏">👁</button>
+      </div>
 
       <label>仓库名（不是完整地址，只填名字）</label>
-      <input id="syncPath" placeholder="例如 my-notes" autocomplete="off">
+      <input id="gsetRepo" placeholder="例如 my-notes" autocomplete="off">
 
       <label>文件路径（含文件夹）</label>
-      <input id="syncFilePath" placeholder="例如 我的数据库/资料库.json" autocomplete="off">
+      <input id="gsetPath" placeholder="例如 我的数据库/资料库.json" autocomplete="off">
 
-      <div class="sync-hint">
+      <div class="gset-hint">
         在 gitee.com 生成私人令牌：设置 → 安全设置 → 私人令牌<br>
         仓库要设为「私有」，防止别人看到你的资料
       </div>
-      <div class="sync-msg" id="syncMsg"></div>
+      <div class="gset-msg" id="gsetMsg"></div>
+
+      <!-- 锁定遮罩 -->
+      <div class="gset-lock-mask" id="gsetLockMask">
+        <div class="lock-content">
+          <div class="lock-icon">🔒</div>
+          <div>设置已锁定</div>
+          <div style="font-size:11.5px;color:#999;margin-top:6px;">
+            点下方「● 开启」解锁
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="sync-foot">
-      <button type="button" class="sync-btn" id="syncSave">保存设置</button>
-      <button type="button" class="sync-btn primary" id="syncNow">☁️ 一键同步</button>
-      <button type="button" class="sync-btn" id="syncUpload">⬆ 仅上传</button>
-      <button type="button" class="sync-btn" id="syncDownload">⬇ 仅下载</button>
+    <div class="gset-foot">
+      <button type="button" class="gset-btn save" id="gsetSave" disabled>保存设置</button>
+      <button type="button" class="gset-btn unlock" id="gsetUnlock">● 开启</button>
     </div>
   </div>
 </div>
@@ -1513,6 +1741,8 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('catEdit').classList.contains('show')) return;
   if(document.getElementById('switchConfirm').classList.contains('show')) return;
   if(document.getElementById('syncPanel').classList.contains('show')) return;
+  if(document.getElementById('giteeSet').classList.contains('show')) return;
+  if(document.getElementById('dlChoice').classList.contains('show')) return;
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -2384,7 +2614,7 @@ function renderCmd(q){
   const commands = [
     {name:'新建资料', run:()=>openEditor(null)},
     {name:'管理分类修改', run:()=>openCatMgr()},
-    {name:'Gitee 同步', run:()=>openSyncPanel()},
+    {name:'Gitee 设置', run:()=>openGiteeSet()},
     {name:'导入 JSON', run:()=>importJSON()},
     {name:'导出 JSON', run:()=>exportJSON()},
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
@@ -2570,7 +2800,7 @@ function toast(msg){
   toastTimer = setTimeout(()=>el.classList.remove('show'), 1800);
 }
 
-/* ================= Gitee 同步 ================= */
+/* ================= Gitee 配置 ================= */
 const SYNC_KEY = 'my_notes_gitee_cfg';
 
 function buildSyncPayload(){
@@ -2590,17 +2820,228 @@ function saveSyncCfg(cfg){
   localStorage.setItem(SYNC_KEY, JSON.stringify(cfg));
 }
 
+const GITEE_API = 'https://gitee.com/api/v5';
+
+function giteeFilePath(){
+  const cfg = getSyncCfg();
+  return cfg.filePath || '我的数据库/资料库.json';
+}
+function giteeDirPath(){
+  const p = giteeFilePath();
+  const i = p.lastIndexOf('/');
+  return i >= 0 ? p.slice(0, i) : '';
+}
+
+function encodeGiteePath(path){
+  return path.split('/').map(s=>encodeURIComponent(s)).join('/');
+}
+
+const EMPTY_PLACEHOLDER = ['{}', '', 'null', '{"notes":[]}', '{"notes":[],"categories":[]}'];
+
+async function giteeGet(path){
+  const cfg = getSyncCfg();
+  const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}?access_token=${encodeURIComponent(cfg.token)}`;
+  return fetch(url);
+}
+async function giteePut(path, contentBase64, message, sha){
+  const cfg = getSyncCfg();
+  const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}`;
+  const body = {
+    access_token: cfg.token,
+    content: contentBase64,
+    message: message || `同步 ${new Date().toLocaleString()}`
+  };
+  if(sha) body.sha = sha;
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+async function giteeDelete(path, sha, message){
+  const cfg = getSyncCfg();
+  const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}`;
+  const body = {
+    access_token: cfg.token,
+    sha: sha,
+    message: message || `删除 ${new Date().toLocaleString()}`
+  };
+  return fetch(url, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+async function giteeListDir(dirPath){
+  const cfg = getSyncCfg();
+  const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(dirPath)}?access_token=${encodeURIComponent(cfg.token)}`;
+  const r = await fetch(url);
+  if(!r.ok) return null;
+  return await r.json();
+}
+
+/* ================= Gitee 设置弹窗（带锁） ================= */
+const giteeSet = document.getElementById('giteeSet');
+const gsetMsgEl = document.getElementById('gsetMsg');
+
+let gsetLocked = true;          // 默认锁定
+let gsetLockTimer = null;
+const GSET_LOCK_TIMEOUT = 5000; // 5 秒
+
+function setGsetLocked(locked){
+  gsetLocked = locked;
+  const mask = document.getElementById('gsetLockMask');
+  const saveBtn = document.getElementById('gsetSave');
+  const unlockBtn = document.getElementById('gsetUnlock');
+  const lockIcon = document.getElementById('gsetLockIcon');
+  const inputs = document.querySelectorAll('#giteeSet .gset-body input');
+
+  if(locked){
+    mask.style.display = 'flex';
+    saveBtn.disabled = true;
+    unlockBtn.textContent = '● 开启';
+    lockIcon.textContent = '🔒';
+    inputs.forEach(inp=>{ inp.disabled = true; });
+    if(gsetLockTimer){ clearTimeout(gsetLockTimer); gsetLockTimer = null; }
+    // 打码 Token
+    const pass = document.getElementById('gsetPass');
+    if(pass) pass.type = 'password';
+    updateTokenEye();
+  }else{
+    mask.style.display = 'none';
+    saveBtn.disabled = false;
+    unlockBtn.textContent = '🔓 已解锁';
+    lockIcon.textContent = '🔓';
+    inputs.forEach(inp=>{ inp.disabled = false; });
+  }
+}
+
+function scheduleAutoLock(){
+  if(gsetLockTimer) clearTimeout(gsetLockTimer);
+  if(gsetLocked) return;
+  gsetLockTimer = setTimeout(()=>{
+    setGsetLocked(true);
+  }, GSET_LOCK_TIMEOUT);
+}
+
+function updateTokenEye(){
+  const eye = document.getElementById('gsetPassEye');
+  const pass = document.getElementById('gsetPass');
+  if(!eye || !pass) return;
+  if(pass.type === 'password'){
+    eye.textContent = '👁';
+    eye.title = '显示 Token';
+  }else{
+    eye.textContent = '🙈';
+    eye.title = '隐藏 Token';
+  }
+}
+
+function openGiteeSet(){
+  const cfg = getSyncCfg();
+  document.getElementById('gsetUser').value = cfg.owner || '';
+  document.getElementById('gsetPass').value = cfg.token || '';
+  document.getElementById('gsetRepo').value = cfg.repo || '';
+  document.getElementById('gsetPath').value = cfg.filePath || '我的数据库/资料库.json';
+  gsetMsgEl.textContent = '';
+  gsetMsgEl.classList.remove('err');
+
+  // 默认打码 + 锁定
+  document.getElementById('gsetPass').type = 'password';
+  updateTokenEye();
+  setGsetLocked(true);
+
+  giteeSet.classList.add('show');
+}
+function closeGiteeSet(){
+  giteeSet.classList.remove('show');
+  if(gsetLockTimer){ clearTimeout(gsetLockTimer); gsetLockTimer = null; }
+  setGsetLocked(true);
+}
+
+document.getElementById('gsetClose').onclick = closeGiteeSet;
+giteeSet.addEventListener('click', e=>{
+  if(e.target === giteeSet) closeGiteeSet();
+});
+
+function gsetMsg(msg, isErr){
+  gsetMsgEl.textContent = msg;
+  gsetMsgEl.classList.toggle('err', !!isErr);
+}
+
+/* 解锁按钮 */
+document.getElementById('gsetUnlock').onclick = ()=>{
+  if(gsetLocked){
+    setGsetLocked(false);
+    scheduleAutoLock();
+  }else{
+    setGsetLocked(true);
+  }
+};
+
+/* Token 眼睛：显示 → 5 秒后自动打码 */
+document.getElementById('gsetPassEye').onclick = ()=>{
+  if(gsetLocked) return;     // 锁定时眼睛无效
+  const pass = document.getElementById('gsetPass');
+  if(!pass) return;
+  if(pass.type === 'password'){
+    pass.type = 'text';
+    updateTokenEye();
+    scheduleAutoLock();      // 重新计时
+  }else{
+    pass.type = 'password';
+    updateTokenEye();
+    scheduleAutoLock();
+  }
+};
+
+/* 任何输入都重置 5 秒计时 */
+document.querySelectorAll('#giteeSet .gset-body input').forEach(inp=>{
+  inp.addEventListener('input', ()=>{
+    if(!gsetLocked) scheduleAutoLock();
+  });
+  inp.addEventListener('focus', ()=>{
+    if(!gsetLocked) scheduleAutoLock();
+  });
+});
+
+/* 保存设置 */
+document.getElementById('gsetSave').onclick = ()=>{
+  if(gsetLocked){ gsetMsg('请先点「● 开启」解锁', true); return; }
+  const owner = document.getElementById('gsetUser').value.trim();
+  const token = document.getElementById('gsetPass').value.trim();
+  const repo = document.getElementById('gsetRepo').value.trim();
+  const filePath = document.getElementById('gsetPath').value.trim() || '我的数据库/资料库.json';
+  if(!owner){ gsetMsg('请填写 Gitee 用户名', true); return; }
+  if(!token){ gsetMsg('请填写私人令牌', true); return; }
+  if(!repo){ gsetMsg('请填写仓库名', true); return; }
+  saveSyncCfg({owner, token, repo, filePath});
+  gsetMsg('✅ 已保存设置');
+  scheduleAutoLock();
+};
+
+/* ================= Gitee 同步弹窗 ================= */
 const syncPanel = document.getElementById('syncPanel');
 const syncMsgEl = document.getElementById('syncMsg');
+const syncInfoEl = document.getElementById('syncInfo');
+const syncFileListWrap = document.getElementById('syncFileListWrap');
+const syncFileListEl = document.getElementById('syncFileList');
 
 function openSyncPanel(){
   const cfg = getSyncCfg();
-  document.getElementById('syncUser').value = cfg.owner || '';
-  document.getElementById('syncPass').value = cfg.token || '';
-  document.getElementById('syncPath').value = cfg.repo || '';
-  document.getElementById('syncFilePath').value = cfg.filePath || '我的数据库/资料库.json';
+  if(!cfg.owner || !cfg.token || !cfg.repo){
+    toast('请先在 ⌘ 面板设置 Gitee 账号');
+    return;
+  }
+  syncInfoEl.innerHTML = `
+    账号：<b>${esc(cfg.owner)}</b><br>
+    仓库：<b>${esc(cfg.repo)}</b><br>
+    主文件：<b>${esc(cfg.filePath || '我的数据库/资料库.json')}</b>
+  `;
   syncMsgEl.textContent = '';
   syncMsgEl.classList.remove('err');
+  syncFileListWrap.style.display = 'none';
+  syncFileListEl.innerHTML = '';
   syncPanel.classList.add('show');
 }
 function closeSyncPanel(){ syncPanel.classList.remove('show'); }
@@ -2615,155 +3056,214 @@ function syncMsg(msg, isErr){
   syncMsgEl.classList.toggle('err', !!isErr);
 }
 
-document.getElementById('syncSave').onclick = ()=>{
-  const owner = document.getElementById('syncUser').value.trim();
-  const token = document.getElementById('syncPass').value.trim();
-  const repo = document.getElementById('syncPath').value.trim();
-  const filePath = document.getElementById('syncFilePath').value.trim() || '我的数据库/资料库.json';
-  if(!owner){ syncMsg('请填写 Gitee 用户名', true); return; }
-  if(!token){ syncMsg('请填写私人令牌', true); return; }
-  if(!repo){ syncMsg('请填写仓库名', true); return; }
-  saveSyncCfg({owner, token, repo, filePath});
-  syncMsg('✅ 已保存设置');
-};
-
-const GITEE_API = 'https://gitee.com/api/v5';
-
-function giteeFilePath(){
-  const cfg = getSyncCfg();
-  return cfg.filePath || '我的数据库/资料库.json';
-}
-
-const EMPTY_PLACEHOLDER = ['{}', '', 'null', '{"notes":[]}', '{"notes":[],"categories":[]}'];
-
-async function doSyncUpload(skipConfirm){
+/* ================= 上传（先选文件 → 再填名字） ================= */
+async function doSyncUpload(){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
-  const btn = document.getElementById('syncUpload');
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = async ()=>{
+    const file = input.files[0]; if(!file) return;
+
+    const prefix = prompt('请输入文件名前缀（比如 A厂、资料库）：', '');
+    if(!prefix){
+      syncMsg('已取消上传', true);
+      return;
+    }
+    const trimmedPrefix = prefix.trim();
+    if(!trimmedPrefix){
+      syncMsg('文件名前缀不能为空', true);
+      return;
+    }
+
+    const btn = document.getElementById('syncUpload');
+    btn.disabled = true;
+    syncMsg('⏳ 正在读取文件…');
+
+    try{
+      const text = await file.text();
+      try{ JSON.parse(text); }catch(e){ throw new Error('文件不是有效 JSON'); }
+
+      const dir = giteeDirPath();
+      const dateStr = today();
+      syncMsg('⏳ 正在检查远端文件…');
+      let existingNames = [];
+      const list = await giteeListDir(dir);
+      if(Array.isArray(list)){
+        existingNames = list.map(x=>x.name);
+      }
+
+      let num = 1;
+      let fileName;
+      while(true){
+        fileName = `${trimmedPrefix}-${dateStr}T${num}.json`;
+        if(!existingNames.includes(fileName)) break;
+        num++;
+      }
+
+      const fullPath = dir ? `${dir}/${fileName}` : fileName;
+      syncMsg(`⏳ 正在上传：${fileName}…`);
+
+      const contentB64 = btoa(unescape(encodeURIComponent(text)));
+      const r = await giteePut(fullPath, contentB64, `上传 ${fileName}`);
+      if(r.ok){
+        syncMsg(`✅ 上传成功\n文件名：${fileName}\n大小：${(text.length/1024).toFixed(1)} KB`);
+      }else{
+        const err = await r.text();
+        syncMsg(`❌ 上传失败：${r.status}\n${err}`, true);
+      }
+    }catch(e){
+      syncMsg('❌ 出错：' + e.message, true);
+    }
+    btn.disabled = false;
+  };
+
+  input.click();
+}
+
+/* ================= 下载（列出 Gitee 文件） ================= */
+async function doSyncDownload(){
+  const cfg = getSyncCfg();
+  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
+  const btn = document.getElementById('syncDownload');
   btn.disabled = true;
-  syncMsg('⏳ 正在检查远端…');
+  syncMsg('⏳ 正在读取远端文件列表…');
 
   try{
-    const path = giteeFilePath();
-    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}`;
+    const dir = giteeDirPath();
+    const list = await giteeListDir(dir);
+    if(!list || !Array.isArray(list)){
+      syncMsg('❌ 无法列出目录（可能目录为空或路径不对）', true);
+      btn.disabled = false;
+      return;
+    }
+    const files = list
+      .filter(x => x.type === 'file' && /\.json$/i.test(x.name))
+      .sort((a,b)=> (b.name||'').localeCompare(a.name||''));
 
-    // 1. 查文件是否存在
-    let sha = null;
-    const r1 = await fetch(`${url}?access_token=${encodeURIComponent(cfg.token)}`);
-    if(r1.ok){
-      const data = await r1.json();
-      sha = data.sha;
-    }else if(r1.status === 404){
-      sha = null;
-    }else{
-      const err = await r1.text();
-      syncMsg(`❌ 查询文件失败：${r1.status}\n${err}`, true);
+    if(!files.length){
+      syncMsg('ℹ️ 目录里还没有 JSON 文件');
       btn.disabled = false;
       return;
     }
 
-    // 2. 如果文件已存在，确认是否覆盖
-    if(sha && !skipConfirm){
-      const tmpText = JSON.stringify(buildSyncPayload(), null, 2);
-      const ok = confirm(
-        `远端已存在文件：\n${path}\n\n` +
-        `本地当前 ${notes.length} 条资料\n` +
-        `本次将上传大小约 ${(tmpText.length/1024).toFixed(1)} KB\n\n` +
-        `是否覆盖远端？\n\n` +
-        `点「确定」= 覆盖远端\n` +
-        `点「取消」= 取消上传`
-      );
-      if(!ok){
-        syncMsg('已取消上传');
-        btn.disabled = false;
-        return;
-      }
-    }
+    syncMsg(`📂 共 ${files.length} 个文件，点选要下载的：`);
+    syncFileListWrap.style.display = 'block';
+    syncFileListEl.innerHTML = files.map((f, i)=>{
+      const size = f.size ? `${(f.size/1024).toFixed(1)} KB` : '';
+      return `<div class="file-item" data-fi="${i}">
+        <span class="fi-name">${esc(f.name)}</span>
+        <span class="fi-meta">${size}</span>
+      </div>`;
+    }).join('');
 
-    // 3. 构造并上传
-    syncMsg(sha ? '⏳ 正在覆盖远端…' : '⏳ 正在新建远端文件…');
-    const text = JSON.stringify(buildSyncPayload(), null, 2);
-    const content = btoa(unescape(encodeURIComponent(text)));
-
-    const body = {
-      access_token: cfg.token,
-      content: content,
-      message: `同步 ${new Date().toLocaleString()}`
-    };
-    if(sha) body.sha = sha;
-
-    const r2 = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if(r2.ok){
-      syncMsg(`✅ ${sha ? '覆盖' : '新建'}成功\n路径：${path}\n大小：${(text.length/1024).toFixed(1)} KB`);
-    }else{
-      const err = await r2.text();
-      syncMsg(`❌ 上传失败：${r2.status}\n${err}`, true);
-    }
+    syncFileListEl._files = files;
+    syncFileListEl._dir = dir;
   }catch(e){
-    syncMsg('❌ 上传出错：' + e.message, true);
+    syncMsg('❌ 出错：' + e.message, true);
   }
   btn.disabled = false;
 }
 
-async function doSyncDownload(silent){
-  const cfg = getSyncCfg();
-  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
-  const btn = document.getElementById('syncDownload');
-  if(btn) btn.disabled = true;
-  syncMsg('⏳ 正在下载…');
+syncFileListEl.addEventListener('click', e=>{
+  const item = e.target.closest('.file-item'); if(!item) return;
+  const i = parseInt(item.dataset.fi, 10);
+  const files = syncFileListEl._files || [];
+  const f = files[i];
+  if(!f) return;
+  openDownloadChoice(f, syncFileListEl._dir || '');
+});
 
+/* ================= 下载选项弹窗 ================= */
+const dlChoice = document.getElementById('dlChoice');
+const dlNameEl = document.getElementById('dlName');
+const dlMetaEl = document.getElementById('dlMeta');
+let dlTargetFile = null;
+let dlTargetDir = '';
+
+function openDownloadChoice(file, dir){
+  dlTargetFile = file;
+  dlTargetDir = dir;
+  dlNameEl.textContent = file.name;
+  dlMetaEl.textContent = file.size ? `${(file.size/1024).toFixed(1)} KB` : '';
+  dlChoice.classList.add('show');
+}
+function closeDownloadChoice(){
+  dlChoice.classList.remove('show');
+  dlTargetFile = null;
+  dlTargetDir = '';
+}
+document.getElementById('dlCancel').onclick = closeDownloadChoice;
+dlChoice.addEventListener('click', e=>{
+  if(e.target === dlChoice) closeDownloadChoice();
+});
+
+document.getElementById('dlToPhone').onclick = async ()=>{
+  if(!dlTargetFile) return;
+  const file = dlTargetFile;
+  const dir = dlTargetDir;
+  closeDownloadChoice();
+
+  syncMsg('⏳ 正在下载文件…');
   try{
-    const path = giteeFilePath();
-    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}?access_token=${encodeURIComponent(cfg.token)}`;
+    const cfg = getSyncCfg();
+    const fullPath = dir ? `${dir}/${file.name}` : file.name;
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(fullPath)}?access_token=${encodeURIComponent(cfg.token)}`;
     const r = await fetch(url);
     if(!r.ok){
-      syncMsg(`❌ 下载失败：${r.status}\n（仓库里还没有 ${path} ？）`, true);
-      if(btn) btn.disabled = false;
+      syncMsg(`❌ 下载失败：${r.status}`, true);
       return;
     }
     const data = await r.json();
     let text = '';
     try{
       text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
-    }catch(e){
-      text = '';
-    }
+    }catch(e){ text = ''; }
 
-    const trimmed = (text || '').trim();
-    if(!trimmed || EMPTY_PLACEHOLDER.includes(trimmed)){
-      syncMsg('ℹ️ 远端是空占位文件，先点「⬆ 仅上传」上传数据', true);
-      if(btn) btn.disabled = false;
+    const blob = new Blob([text], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    syncMsg(`✅ 已下载到手机：${file.name}`);
+  }catch(e){
+    syncMsg('❌ 下载出错：' + e.message, true);
+  }
+};
+
+document.getElementById('dlToLib').onclick = async ()=>{
+  if(!dlTargetFile) return;
+  const file = dlTargetFile;
+  const dir = dlTargetDir;
+
+  if(!confirm(`确定用「${file.name}」覆盖当前资料库？\n\n当前 ${notes.length} 条资料会被替换。`)){
+    return;
+  }
+  closeDownloadChoice();
+
+  syncMsg('⏳ 正在读取文件…');
+  try{
+    const cfg = getSyncCfg();
+    const fullPath = dir ? `${dir}/${file.name}` : file.name;
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(fullPath)}?access_token=${encodeURIComponent(cfg.token)}`;
+    const r = await fetch(url);
+    if(!r.ok){
+      syncMsg(`❌ 读取失败：${r.status}`, true);
       return;
     }
-
-    let payload;
+    const data = await r.json();
+    let text = '';
     try{
-      payload = JSON.parse(text);
-    }catch(e){
-      syncMsg('❌ 远端不是有效 JSON', true);
-      if(btn) btn.disabled = false;
-      return;
-    }
+      text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    }catch(e){ text = ''; }
 
+    const payload = JSON.parse(text);
     if(!payload || !Array.isArray(payload.notes)){
-      syncMsg('❌ 远端数据格式错误（没有 notes 字段）', true);
-      if(btn) btn.disabled = false;
+      syncMsg('❌ 文件格式错误（没有 notes 字段）', true);
       return;
-    }
-
-    if(!silent){
-      if(!confirm('下载成功，是否用远端数据覆盖本地？\n\n注意：本地当前资料会被替换。')){
-        if(btn) btn.disabled = false;
-        syncMsg('已下载，未覆盖本地');
-        return;
-      }
     }
     notes = payload.notes;
     if(Array.isArray(payload.categories)){
@@ -2773,17 +3273,14 @@ async function doSyncDownload(silent){
     saveLocal();
     rebuildCategorySelect();
     renderAll();
-    syncMsg(`✅ 已用远端数据覆盖本地（${notes.length} 条）`);
+    syncMsg(`✅ 已导入资料库（${notes.length} 条）`);
   }catch(e){
-    syncMsg('❌ 下载出错：' + e.message, true);
+    syncMsg('❌ 导入出错：' + e.message, true);
   }
-  if(btn) btn.disabled = false;
-}
+};
 
-document.getElementById('syncUpload').onclick = ()=>doSyncUpload(false);
-document.getElementById('syncDownload').onclick = ()=>doSyncDownload(false);
-
-document.getElementById('syncNow').onclick = async ()=>{
+/* ================= 一键同步 ================= */
+async function doSyncNow(){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
   const btn = document.getElementById('syncNow');
@@ -2792,8 +3289,7 @@ document.getElementById('syncNow').onclick = async ()=>{
 
   try{
     const path = giteeFilePath();
-    const encodedPath = path.split('/').map(s=>encodeURIComponent(s)).join('/');
-    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodedPath}?access_token=${encodeURIComponent(cfg.token)}`;
+    const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}?access_token=${encodeURIComponent(cfg.token)}`;
 
     let remote = null;
     try{
@@ -2814,7 +3310,7 @@ document.getElementById('syncNow').onclick = async ()=>{
     if(!remote || !Array.isArray(remote.notes)){
       syncMsg('远端没有有效数据，正在新建备份…');
       btn.disabled = false;
-      await doSyncUpload(true);
+      await doSyncNowUpload(true);
       return;
     }
 
@@ -2842,21 +3338,85 @@ document.getElementById('syncNow').onclick = async ()=>{
         syncMsg(`✅ 已下载远端数据（${notes.length} 条）`);
       }else{
         btn.disabled = false;
-        await doSyncUpload(false);
+        await doSyncNowUpload(false);
         return;
       }
     }else{
       btn.disabled = false;
-      await doSyncUpload(false);
+      await doSyncNowUpload(false);
       return;
     }
   }catch(e){
     syncMsg('❌ 同步出错：' + e.message, true);
   }
   btn.disabled = false;
+}
+
+async function doSyncNowUpload(skipConfirm){
+  const cfg = getSyncCfg();
+  if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
+  const path = giteeFilePath();
+
+  let sha = null;
+  try{
+    const r1 = await giteeGet(path);
+    if(r1.ok){
+      const data = await r1.json();
+      sha = data.sha;
+    }
+  }catch(e){}
+
+  if(sha && !skipConfirm){
+    const tmpText = JSON.stringify(buildSyncPayload(), null, 2);
+    const ok = confirm(
+      `远端已存在文件：\n${path}\n\n` +
+      `本地当前 ${notes.length} 条资料\n` +
+      `本次将上传大小约 ${(tmpText.length/1024).toFixed(1)} KB\n\n` +
+      `是否覆盖远端？`
+    );
+    if(!ok){
+      syncMsg('已取消上传');
+      return;
+    }
+  }
+
+  if(sha){
+    syncMsg('⏳ 正在删除旧文件…');
+    const rd = await giteeDelete(path, sha);
+    if(!rd.ok){
+      const err = await rd.text();
+      syncMsg(`❌ 删除旧文件失败：${rd.status}\n${err}`, true);
+      return;
+    }
+  }
+
+  syncMsg('⏳ 正在上传新文件…');
+  const text = JSON.stringify(buildSyncPayload(), null, 2);
+  const content = btoa(unescape(encodeURIComponent(text)));
+  const r2 = await giteePut(path, content, `同步 ${new Date().toLocaleString()}`);
+  if(r2.ok){
+    syncMsg(`✅ 上传成功（${sha ? '已覆盖' : '新建'}）\n路径：${path}\n大小：${(text.length/1024).toFixed(1)} KB`);
+  }else{
+    const err = await r2.text();
+    syncMsg(`❌ 上传失败：${r2.status}\n${err}`, true);
+  }
+}
+
+document.getElementById('syncNow').onclick = ()=>{
+  syncFileListWrap.style.display = 'none';
+  doSyncNow();
 };
 
-document.getElementById('btnSync').onclick = openSyncPanel;
+document.getElementById('syncUpload').onclick = ()=>{
+  syncFileListWrap.style.display = 'none';
+  doSyncUpload();
+};
+
+document.getElementById('syncDownload').onclick = ()=>{
+  doSyncDownload();
+};
+
+document.getElementById('btnGitee').onclick = openSyncPanel;
 
 /* ================= 快捷键 ================= */
 document.addEventListener('keydown', e=>{
@@ -2872,6 +3432,8 @@ document.addEventListener('keydown', e=>{
     if(catMgr.classList.contains('show')) closeCatMgr();
     if(catEdit.classList.contains('show')) closeCatEdit();
     if(syncPanel.classList.contains('show')) closeSyncPanel();
+    if(giteeSet.classList.contains('show')) closeGiteeSet();
+    if(dlChoice.classList.contains('show')) closeDownloadChoice();
     if(switchConfirm.classList.contains('show')){
       switchConfirm.classList.remove('show');
       rebuildCategorySelect(pendingCategoryOld);
@@ -2884,6 +3446,7 @@ loadCats();
 loadLocal();
 rebuildCategorySelect();
 renderAll();
+updateTokenEye();
 </script>
 </body>
 </html>
