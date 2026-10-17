@@ -728,7 +728,7 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .catedit-foot .btn-cancel{background:#eef0ed;color:#333;border:none;}
 .catedit-foot .btn-cancel:hover{background:#e0e3df;}
 
-/* ============ Gitee 同步 ============ */
+/* ============ Gitee 同步弹窗 ============ */
 #syncPanel{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:center;justify-content:center;z-index:79;
@@ -736,8 +736,8 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 #syncPanel.show{display:flex;}
 .sync-box{
-  background:#fff;border-radius:12px;width:100%;max-width:460px;
-  max-height:88vh;display:flex;flex-direction:column;
+  background:#fff;border-radius:12px;width:100%;max-width:420px;
+  max-height:85vh;display:flex;flex-direction:column;
   box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;
 }
 .sync-head{
@@ -756,22 +756,18 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   flex:1;overflow-y:auto;padding:14px 18px;
   -webkit-overflow-scrolling:touch;
 }
-.sync-body label{
-  display:block;font-size:12px;margin:10px 0 5px;
-  color:#1f2420;font-weight:700;
+.sync-info{
+  font-size:12.5px;color:#666;line-height:1.7;margin-bottom:12px;
+  padding:10px 12px;background:#fafbfa;border-radius:8px;
 }
-.sync-body label:first-child{margin-top:0;}
-.sync-body input{
-  width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
-  font-size:15px;outline:none;background:#fff;color:#1f2420;
+.sync-info b{color:var(--main);}
+.sync-tips{
+  font-size:11.5px;color:#999;line-height:1.8;
+  padding:10px 12px;background:#fafbfa;border-radius:8px;
+  margin-bottom:10px;
 }
-.sync-body input:focus{
-  border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);
-}
-.sync-body input::placeholder{color:#c8ccc8;font-weight:400;opacity:1;}
-.sync-hint{
-  font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.7;
-}
+.sync-tips div{margin:2px 0;}
+.sync-tips b{color:var(--main);}
 .sync-msg{
   font-size:12.5px;color:var(--main);
   margin-top:10px;min-height:18px;line-height:1.6;
@@ -782,18 +778,194 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   padding:12px 18px;
   padding-bottom:calc(12px + var(--safe-bottom));
   border-top:1px solid var(--line);
-  display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
   background:#fff;
 }
 .sync-btn{
-  padding:9px 14px;border-radius:7px;
+  padding:9px 16px;border-radius:7px;
   border:1px solid var(--line);background:#fff;color:#555;
   font-size:13px;cursor:pointer;transition:.15s;
+  flex:1;min-width:110px;min-height:40px;
 }
 .sync-btn:hover{border-color:var(--main);color:var(--main);}
 .sync-btn.primary{background:var(--main);color:#fff;border-color:var(--main);}
 .sync-btn.primary:hover{opacity:.9;color:#fff;}
 .sync-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* 下载文件列表 */
+.file-list{
+  border:1px solid var(--line);border-radius:8px;
+  max-height:280px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.file-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-bottom:1px solid var(--line);
+  cursor:pointer;transition:.15s;
+  font-size:13px;
+}
+.file-item:last-child{border-bottom:none;}
+.file-item:hover{background:var(--main-soft);}
+.file-item .fi-name{flex:1;color:#333;word-break:break-all;min-width:0;}
+.file-item .fi-meta{font-size:11px;color:var(--muted);flex-shrink:0;}
+.file-empty{padding:20px;text-align:center;color:#aaa;font-size:12.5px;}
+
+/* 下载选项小窗 */
+#dlChoice{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+  align-items:center;justify-content:center;z-index:81;
+  padding:20px 16px;
+}
+#dlChoice.show{display:flex;}
+.dl-box{
+  background:#fff;border-radius:12px;width:100%;max-width:380px;
+  overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);
+}
+.dl-head{
+  padding:14px 18px;border-bottom:1px solid var(--line);
+}
+.dl-head h3{margin:0 0 4px;font-size:14px;color:var(--main);word-break:break-all;}
+.dl-head .dl-meta{font-size:11.5px;color:var(--muted);}
+.dl-body{padding:12px 18px;display:flex;flex-direction:column;gap:8px;}
+.dl-btn{
+  padding:12px 16px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:#333;
+  font-size:14px;cursor:pointer;transition:.15s;
+  text-align:left;display:flex;align-items:center;gap:8px;
+}
+.dl-btn:hover{border-color:var(--main);color:var(--main);}
+.dl-btn.primary{background:var(--main);color:#fff;border-color:var(--main);}
+.dl-btn.primary:hover{opacity:.9;color:#fff;}
+.dl-foot{
+  padding:10px 18px;border-top:1px solid var(--line);
+  display:flex;justify-content:flex-end;
+}
+.dl-foot button{
+  padding:8px 16px;border-radius:7px;
+  background:#eef0ed;color:#333;font-size:13px;cursor:pointer;border:none;
+}
+.dl-foot button:hover{background:#e0e3df;}
+
+/* ============ Gitee 设置弹窗 ============ */
+#giteeSet{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
+  align-items:center;justify-content:center;z-index:79;
+  padding:20px 16px;
+}
+#giteeSet.show{display:flex;}
+.gset-box{
+  background:#fff;border-radius:12px;width:100%;max-width:460px;
+  max-height:88vh;display:flex;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;
+}
+.gset-head{
+  padding:14px 18px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.gset-head h3{margin:0;font-size:15px;color:var(--main);}
+.gset-close{
+  background:rgba(0,0,0,.05);color:#555;
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;border:none;
+}
+.gset-close:hover{background:rgba(0,0,0,.1);}
+.gset-body{
+  flex:1;overflow-y:auto;padding:14px 18px;
+  -webkit-overflow-scrolling:touch;
+}
+.gset-body label{
+  display:block;font-size:12px;margin:10px 0 5px;
+  color:#1f2420;font-weight:700;
+}
+.gset-body label:first-child{margin-top:0;}
+.gset-body input{
+  width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;
+  font-size:15px;outline:none;background:#fff;color:#1f2420;
+}
+.gset-body input:focus{
+  border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);
+}
+.gset-body input::placeholder{color:#c8ccc8;font-weight:400;opacity:1;}
+.gset-hint{
+  font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.7;
+}
+.gset-msg{
+  font-size:12.5px;color:var(--main);
+  margin-top:10px;min-height:18px;line-height:1.6;
+  white-space:pre-wrap;word-break:break-word;
+}
+.gset-msg.err{color:#c33;}
+
+/* Token 眼睛按钮 */
+.gset-pass-wrap{
+  display:flex;gap:6px;align-items:center;
+}
+.gset-pass-wrap input{flex:1;min-width:0;}
+.gset-eye{
+  flex-shrink:0;width:42px;height:42px;
+  border:1px solid var(--line);background:#fff;color:#555;
+  border-radius:7px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.15s;
+}
+.gset-eye:hover{border-color:var(--main);color:var(--main);}
+.gset-eye:disabled{opacity:.4;cursor:not-allowed;}
+
+/* 锁定遮罩 */
+.gset-lock-mask{
+  position:absolute;inset:0;
+  background:rgba(246,247,245,.85);
+  display:flex;align-items:center;justify-content:center;
+  z-index:10;
+}
+.gset-lock-mask .lock-content{
+  text-align:center;
+  padding:20px;
+  color:#666;font-size:13px;line-height:1.7;
+}
+.gset-lock-mask .lock-content .lock-icon{
+  font-size:40px;margin-bottom:10px;
+}
+.gset-body{position:relative;}
+
+/* 底部按钮水平排列 */
+.gset-foot{
+  padding:12px 18px;
+  padding-bottom:calc(12px + var(--safe-bottom));
+  border-top:1px solid var(--line);
+  display:flex;
+  gap:10px;
+  justify-content:stretch;
+  background:#fff;
+}
+.gset-btn{
+  flex:1;
+  padding:10px 20px;border-radius:7px;
+  border:1px solid var(--line);background:#fff;color:#555;
+  font-size:14px;cursor:pointer;transition:.15s;
+  min-height:42px;
+  display:inline-flex;align-items:center;justify-content:center;
+  white-space:nowrap;
+}
+.gset-btn.save{
+  border-color:var(--main);
+  background:var(--main);
+  color:#fff;
+}
+.gset-btn.save:hover{opacity:.9;}
+.gset-btn.save:disabled{
+  opacity:.4;cursor:not-allowed;
+  background:#eef0ed;color:#aaa;border-color:var(--line);
+}
+.gset-btn.unlock{
+  border-color:var(--star);
+  background:var(--star);
+  color:#1f2420;
+  font-weight:600;
+}
+.gset-btn.unlock:hover{background:#e5a812;border-color:#e5a812;}
 
 #toast{
   position:fixed;left:50%;bottom:calc(60px + var(--safe-bottom));
