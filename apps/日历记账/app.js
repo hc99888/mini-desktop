@@ -1,6 +1,7 @@
 
 
 
+    /* ================= 常量与数据加载 ================= */
     const STORAGE_KEY = 'ledger_records';
     const ATTENDANCE_KEY = 'attendance_records';
     const CREW_ATTENDANCE_KEY = 'crew_attendance';
@@ -12,6 +13,10 @@
     const DAILY_SALARY_KEY = 'daily_salary_records';
     const OVERTIME_RULE_KEY = 'overtime_rule';
 
+    // Gitee 配置：跟资料库共用同一个 key
+    const GITEE_CFG_KEY = 'my_notes_gitee_cfg';
+    const GITEE_API = 'https://gitee.com/api/v5';
+
     let currentYear, currentMonth;
     let records = [];
     let attendanceRecords = {};
@@ -20,8 +25,8 @@
     let advances = [];
     let salaryPaid = {};
     let loanRecords = [];
-    let dailySalary = {};  // { "A厂": { "2026-05": 260, "2026-06": 300 } }
-    let overtimeRule = {}; // { "A厂": { mode: "half", hours: 3 }, "B厂": { mode: "hourly" } }
+    let dailySalary = {};
+    let overtimeRule = {};
     let selectedDate = null;
     let lastInput = { category: '', note: '' };
     let currentForm = 'expense';
@@ -32,7 +37,7 @@
     let crewLocked = false;
     let attendanceModal = null;
 
-    const STANDARD_HOURS = 9;  // 标准每天9小时（上午4+下午5）
+    const STANDARD_HOURS = 9;
 
     function formatAmount(amount) {
       const absAmount = Math.abs(amount);
@@ -85,77 +90,58 @@
       lastInput = raw ? JSON.parse(raw) : { category: '', note: '' };
     }
 
-    // ===== 获取某项目某月的日薪 =====
+    /* ================= 日薪 / 加班规则 ================= */
     function getMonthlyDailySalary(project, year, month) {
       if (!dailySalary[project]) return 0;
       const key = `${year}-${String(month).padStart(2,'0')}`;
       if (dailySalary[project][key] !== undefined) return dailySalary[project][key];
       const keys = Object.keys(dailySalary[project]).sort();
       let lastRate = 0;
-      for (const k of keys) {
-        if (k <= key) lastRate = dailySalary[project][k];
-      }
+      for (const k of keys) { if (k <= key) lastRate = dailySalary[project][k]; }
       return lastRate;
     }
-
     function getLatestDailySalary(project) {
       if (!dailySalary[project]) return 0;
       const keys = Object.keys(dailySalary[project]).sort();
       if (keys.length === 0) return 0;
       return dailySalary[project][keys[keys.length - 1]];
     }
-
     function setMonthlyDailySalary(project, year, month, salary) {
       if (!dailySalary[project]) dailySalary[project] = {};
       const key = `${year}-${String(month).padStart(2,'0')}`;
       dailySalary[project][key] = salary;
       saveDailySalary();
     }
-
-    // ===== 加班折算规则 =====
     function getOvertimeRule(project) {
       const r = overtimeRule[project];
       if (!r) return { mode: 'hourly', hours: 3 };
       if (r.mode === 'half') return { mode: 'half', hours: r.hours || 3 };
       return { mode: 'hourly', hours: 3 };
     }
-
     function setOvertimeRule(project, mode, hours) {
-      if (mode === 'half') {
-        overtimeRule[project] = { mode: 'half', hours: hours || 3 };
-      } else {
-        overtimeRule[project] = { mode: 'hourly' };
-      }
+      if (mode === 'half') overtimeRule[project] = { mode: 'half', hours: hours || 3 };
+      else overtimeRule[project] = { mode: 'hourly' };
       saveOvertimeRule();
     }
-
-    // 计算加班工资
     function calcOvertimeSalary(project, hours, dailyRate) {
       if (!hours || hours <= 0) return 0;
       if (dailyRate === 0) return 0;
       const hourlyRate = dailyRate / STANDARD_HOURS;
       const rule = getOvertimeRule(project);
-      if (rule.mode === 'hourly') {
-        return hours * hourlyRate;
-      }
-      // 满 N 小时算半天，可叠加
+      if (rule.mode === 'hourly') return hours * hourlyRate;
       const N = rule.hours || 3;
-      const halfDays = Math.floor(hours / N);       // 每满 N 小时算半天
-      const remainHours = hours - halfDays * N;     // 剩余不足 N 小时
+      const halfDays = Math.floor(hours / N);
+      const remainHours = hours - halfDays * N;
       return halfDays * (dailyRate / 2) + remainHours * hourlyRate;
     }
-
-    // ===== 计算某条出勤记录的工资 =====
     function calcAttendanceSalary(att) {
       const project = att.project || '未分类';
       const dateStr = att.date || selectedDate;
       if (!dateStr) return 0;
       const [y, m] = dateStr.split('-').map(Number);
       const dailyRate = getMonthlyDailySalary(project, y, m);
-      
-      if (att.type === 'full') {
-        return dailyRate || att.salary || 0;
-      } else if (att.type === 'morning' || att.type === 'afternoon') {
+      if (att.type === 'full') return dailyRate || att.salary || 0;
+      else if (att.type === 'morning' || att.type === 'afternoon') {
         if (dailyRate === 0) return 0;
         const hourlyRate = dailyRate / STANDARD_HOURS;
         return (att.hours || 0) * hourlyRate;
@@ -164,14 +150,10 @@
       }
       return 0;
     }
-
-    // ===== 出勤天数（用于出勤统计） =====
-    // 注：加班天数按“出勤天数”折算显示
     function getAttendanceDays(att) {
       if (att.type === 'full') return 1;
       if (att.type === 'morning' || att.type === 'afternoon') return 0.5;
       if (att.type === 'overtime') {
-        // 加班按规则折算成出勤天数（0.5 的倍数）
         const project = att.project || '未分类';
         const rule = getOvertimeRule(project);
         if (rule.mode === 'half') {
@@ -181,50 +163,30 @@
       }
       return 0;
     }
-
-    // ===== 单人考勤按项目分组统计 =====
     function getAttendanceStatsByProject(year, month) {
       const prefix = `${year}-${String(month).padStart(2,'0')}`;
       const stats = {};
-      
       Object.entries(attendanceRecords).forEach(([date, att]) => {
         if (date.startsWith(prefix)) {
           const project = att.project || '未分类';
-          if (!stats[project]) {
-            stats[project] = { full: 0, morning: 0, afternoon: 0, overtime: 0, overtimeDays: 0, rest: 0, total: 0, salary: 0 };
-          }
-          
-          if (att.type === 'full') {
-            stats[project].full++;
-            stats[project].total += 1;
-          } else if (att.type === 'morning') {
-            stats[project].morning++;
-            stats[project].total += 0.5;
-          } else if (att.type === 'afternoon') {
-            stats[project].afternoon++;
-            stats[project].total += 0.5;
-          } else if (att.type === 'overtime') {
+          if (!stats[project]) stats[project] = { full: 0, morning: 0, afternoon: 0, overtime: 0, overtimeDays: 0, rest: 0, total: 0, salary: 0 };
+          if (att.type === 'full') { stats[project].full++; stats[project].total += 1; }
+          else if (att.type === 'morning') { stats[project].morning++; stats[project].total += 0.5; }
+          else if (att.type === 'afternoon') { stats[project].afternoon++; stats[project].total += 0.5; }
+          else if (att.type === 'overtime') {
             stats[project].overtime += (att.hours || 0);
             const overtimeDays = getAttendanceDays(att);
             stats[project].overtimeDays += overtimeDays;
             stats[project].total += overtimeDays;
-          } else if (att.type === 'rest') {
-            stats[project].rest++;
-          }
-          
-          const salary = calcAttendanceSalary(att);
-          stats[project].salary += salary;
+          } else if (att.type === 'rest') { stats[project].rest++; }
+          stats[project].salary += calcAttendanceSalary(att);
         }
       });
       return stats;
     }
-
-    // ===== 累计工资 =====
     function getTotalSalary(project) {
-      let totalDays = 0;
-      let totalAmount = 0;
+      let totalDays = 0, totalAmount = 0;
       const monthSet = new Set();
-      
       Object.entries(attendanceRecords).forEach(([date, att]) => {
         if ((att.project || '未分类') === project) {
           const dateStr = att.date || date;
@@ -232,7 +194,6 @@
           monthSet.add(`${y}-${m}`);
         }
       });
-      
       monthSet.forEach(ym => {
         const [y, m] = ym.split('-').map(Number);
         const monthStats = getAttendanceStatsByProject(y, m);
@@ -241,15 +202,12 @@
           totalAmount += monthStats[project].salary;
         }
       });
-      
       return { totalDays, totalAmount };
     }
-
     function getTotalPaid(project) {
       const list = salaryPaid[project] || [];
       return list.reduce((sum, item) => sum + item.amount, 0);
     }
-
     function getPaymentList(project) {
       const list = salaryPaid[project] || [];
       return [...list].sort((a, b) => {
@@ -257,13 +215,10 @@
         return (b.timestamp || 0) - (a.timestamp || 0);
       });
     }
-
     function getLoanStatsByPerson() {
       const personMap = new Map();
       loanRecords.forEach(loan => {
-        if (!personMap.has(loan.person)) {
-          personMap.set(loan.person, { lend: 0, borrow: 0, records: [] });
-        }
+        if (!personMap.has(loan.person)) personMap.set(loan.person, { lend: 0, borrow: 0, records: [] });
         const person = personMap.get(loan.person);
         if (loan.direction === 'lend') person.lend += loan.amount;
         else person.borrow += loan.amount;
@@ -271,25 +226,16 @@
       });
       return personMap;
     }
+    function getTotalLend() { return loanRecords.filter(l => l.direction === 'lend').reduce((sum, l) => sum + l.amount, 0); }
+    function getTotalBorrow() { return loanRecords.filter(l => l.direction === 'borrow').reduce((sum, l) => sum + l.amount, 0); }
 
-    function getTotalLend() {
-      return loanRecords.filter(l => l.direction === 'lend').reduce((sum, l) => sum + l.amount, 0);
-    }
-
-    function getTotalBorrow() {
-      return loanRecords.filter(l => l.direction === 'borrow').reduce((sum, l) => sum + l.amount, 0);
-    }
-
-    // ===== 保存出勤 =====
     window.saveAttendanceHandler = function() {
       if (!selectedDate) { showToast('请先选择日期'); return; }
       const project = document.getElementById('attendanceProject').value.trim() || '未分类';
-      
-      // 保存该项目的加班规则
       const ruleMode = document.getElementById('overtimeRuleMode').value;
       const ruleHours = parseFloat(document.getElementById('overtimeRuleHours').value) || 3;
       setOvertimeRule(project, ruleMode, ruleHours);
-      
+
       if (!selectedAttType || selectedAttType === 'none') {
         if (attendanceRecords[selectedDate]) {
           delete attendanceRecords[selectedDate];
@@ -297,12 +243,9 @@
           if (attendanceModal) attendanceModal.classList.remove('active');
           renderCalendar();
           showToast('✅ 已取消标记');
-        } else {
-          showToast('请选择出勤类型');
-        }
+        } else { showToast('请选择出勤类型'); }
         return;
       }
-      
       if (selectedAttType === 'rest') {
         attendanceRecords[selectedDate] = { type: 'rest', project: project, date: selectedDate };
         saveAttendance();
@@ -311,57 +254,31 @@
         showToast('✅ 已标记休息');
         return;
       }
-      
       if (selectedAttType === 'full') {
         const salaryInput = document.getElementById('fullSalary').value.trim();
         let salary = parseFloat(salaryInput);
-        
         if (isNaN(salary) || salary <= 0) {
           const [y, m] = selectedDate.split('-').map(Number);
           salary = getMonthlyDailySalary(project, y, m);
-          if (salary === 0) {
-            showToast('请输入全天工资');
-            return;
-          }
+          if (salary === 0) { showToast('请输入全天工资'); return; }
         }
-        
         const [y, m] = selectedDate.split('-').map(Number);
         setMonthlyDailySalary(project, y, m, salary);
-        
-        attendanceRecords[selectedDate] = { 
-          type: 'full', 
-          project: project, 
-          salary: salary,
-          date: selectedDate
-        };
+        attendanceRecords[selectedDate] = { type: 'full', project: project, salary: salary, date: selectedDate };
         saveAttendance();
         if (attendanceModal) attendanceModal.classList.remove('active');
         renderCalendar();
         showToast(`✅ 全天已保存 ¥${salary.toFixed(2)}`);
         return;
       }
-      
       if (selectedAttType === 'morning' || selectedAttType === 'afternoon') {
         const hoursInput = document.getElementById(selectedAttType === 'morning' ? 'morningHours' : 'afternoonHours').value.trim();
         const hours = parseFloat(hoursInput);
-        if (isNaN(hours) || hours <= 0) {
-          showToast('请输入有效小时数');
-          return;
-        }
-        
+        if (isNaN(hours) || hours <= 0) { showToast('请输入有效小时数'); return; }
         const [y, m] = selectedDate.split('-').map(Number);
         const dailyRate = getMonthlyDailySalary(project, y, m);
-        if (dailyRate === 0) {
-          showToast('请先输入全天工资，才能计算半天');
-          return;
-        }
-        
-        attendanceRecords[selectedDate] = { 
-          type: selectedAttType, 
-          project: project, 
-          hours: hours,
-          date: selectedDate
-        };
+        if (dailyRate === 0) { showToast('请先输入全天工资，才能计算半天'); return; }
+        attendanceRecords[selectedDate] = { type: selectedAttType, project: project, hours: hours, date: selectedDate };
         saveAttendance();
         if (attendanceModal) attendanceModal.classList.remove('active');
         renderCalendar();
@@ -369,28 +286,14 @@
         showToast(`✅ ${selectedAttType === 'morning' ? '上午' : '下午'} ${hours}小时 = ¥${salary.toFixed(2)}`);
         return;
       }
-      
       if (selectedAttType === 'overtime') {
         const hoursInput = document.getElementById('overtimeHours').value.trim();
         const hours = parseFloat(hoursInput);
-        if (isNaN(hours) || hours <= 0) {
-          showToast('请输入有效加班小时');
-          return;
-        }
-        
+        if (isNaN(hours) || hours <= 0) { showToast('请输入有效加班小时'); return; }
         const [y, m] = selectedDate.split('-').map(Number);
         const dailyRate = getMonthlyDailySalary(project, y, m);
-        if (dailyRate === 0) {
-          showToast('请先输入全天工资，才能计算加班');
-          return;
-        }
-        
-        attendanceRecords[selectedDate] = { 
-          type: 'overtime', 
-          project: project, 
-          hours: hours,
-          date: selectedDate
-        };
+        if (dailyRate === 0) { showToast('请先输入全天工资，才能计算加班'); return; }
+        attendanceRecords[selectedDate] = { type: 'overtime', project: project, hours: hours, date: selectedDate };
         saveAttendance();
         if (attendanceModal) attendanceModal.classList.remove('active');
         renderCalendar();
@@ -406,33 +309,15 @@
       const trimmed = newName.trim();
       if (!trimmed) { showToast('项目名称不能为空'); return; }
       if (trimmed === oldName) { showToast('新名称与旧名称相同'); return; }
-      
       let updated = 0;
       Object.keys(attendanceRecords).forEach(date => {
-        if ((attendanceRecords[date].project || '未分类') === oldName) {
-          attendanceRecords[date].project = trimmed;
-          updated++;
-        }
+        if ((attendanceRecords[date].project || '未分类') === oldName) { attendanceRecords[date].project = trimmed; updated++; }
       });
       if (updated === 0) { showToast('没有找到需要修改的记录'); return; }
-      
-      if (dailySalary[oldName]) {
-        dailySalary[trimmed] = dailySalary[oldName];
-        delete dailySalary[oldName];
-        saveDailySalary();
-      }
-      if (salaryPaid[oldName]) {
-        salaryPaid[trimmed] = salaryPaid[oldName];
-        delete salaryPaid[oldName];
-        saveSalaryPaid();
-      }
-      if (overtimeRule[oldName]) {
-        overtimeRule[trimmed] = overtimeRule[oldName];
-        delete overtimeRule[oldName];
-        saveOvertimeRule();
-      }
-      saveAttendance();
-      renderCalendar();
+      if (dailySalary[oldName]) { dailySalary[trimmed] = dailySalary[oldName]; delete dailySalary[oldName]; saveDailySalary(); }
+      if (salaryPaid[oldName]) { salaryPaid[trimmed] = salaryPaid[oldName]; delete salaryPaid[oldName]; saveSalaryPaid(); }
+      if (overtimeRule[oldName]) { overtimeRule[trimmed] = overtimeRule[oldName]; delete overtimeRule[oldName]; saveOvertimeRule(); }
+      saveAttendance(); renderCalendar();
       showToast(`✅ 已重命名为 "${trimmed}"`);
     };
 
@@ -440,15 +325,9 @@
       const totalSalary = getTotalSalary(project);
       const totalPaid = getTotalPaid(project);
       const remaining = totalSalary.totalAmount - totalPaid;
-      
-      if (totalSalary.totalAmount === 0) {
-        showToast(`${project} 还没有应发工资`);
-        return;
-      }
-      
+      if (totalSalary.totalAmount === 0) { showToast(`${project} 还没有应发工资`); return; }
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-      
       const amountStr = prompt(
         `【${project}】\n累计应发：¥${totalSalary.totalAmount.toFixed(2)}\n已发工资：¥${totalPaid.toFixed(2)}\n剩余未发：¥${remaining.toFixed(2)}\n\n请输入本次收到的工资金额：`,
         remaining > 0 ? remaining.toFixed(2) : ''
@@ -456,27 +335,16 @@
       if (amountStr === null) return;
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return; }
-      
       const dateStr = prompt(
         `请输入收款日期（格式：YYYY-MM-DD）：\n默认今天：${todayStr}\n\n可以修改为其他日期（如补录上个月发的工资）`,
         todayStr
       );
       if (dateStr === null) return;
-      
       let finalDate = dateStr.trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(finalDate)) {
-        showToast('日期格式不正确，使用今天日期');
-        finalDate = todayStr;
-      }
-      
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(finalDate)) { showToast('日期格式不正确，使用今天日期'); finalDate = todayStr; }
       if (!salaryPaid[project]) salaryPaid[project] = [];
-      salaryPaid[project].push({
-        amount: amount,
-        date: finalDate,
-        timestamp: Date.now()
-      });
-      saveSalaryPaid();
-      renderCalendar();
+      salaryPaid[project].push({ amount: amount, date: finalDate, timestamp: Date.now() });
+      saveSalaryPaid(); renderCalendar();
       showToast(`✅ 已记录 ${finalDate} 收到 ¥${amount.toFixed(2)}`);
     };
 
@@ -484,54 +352,35 @@
       if (!salaryPaid[project]) return;
       salaryPaid[project] = salaryPaid[project].filter(item => item.timestamp !== timestamp);
       if (salaryPaid[project].length === 0) delete salaryPaid[project];
-      saveSalaryPaid();
-      renderCalendar();
+      saveSalaryPaid(); renderCalendar();
       showToast('✅ 已删除收款记录');
     };
 
     window.clearProject = function(project) {
       const confirmMsg = `确定清空【${project}】的全部数据？\n\n包括：\n• 所有考勤记录\n• 日薪设置\n• 加班规则\n• 收款记录\n\n此操作不可恢复！`;
       if (!confirm(confirmMsg)) return;
-      
       let deletedCount = 0;
       Object.keys(attendanceRecords).forEach(date => {
-        if ((attendanceRecords[date].project || '未分类') === project) {
-          delete attendanceRecords[date];
-          deletedCount++;
-        }
+        if ((attendanceRecords[date].project || '未分类') === project) { delete attendanceRecords[date]; deletedCount++; }
       });
-      
-      if (dailySalary[project]) {
-        delete dailySalary[project];
-        saveDailySalary();
-      }
-      if (salaryPaid[project]) {
-        delete salaryPaid[project];
-        saveSalaryPaid();
-      }
-      if (overtimeRule[project]) {
-        delete overtimeRule[project];
-        saveOvertimeRule();
-      }
-      
-      saveAttendance();
-      renderCalendar();
+      if (dailySalary[project]) { delete dailySalary[project]; saveDailySalary(); }
+      if (salaryPaid[project]) { delete salaryPaid[project]; saveSalaryPaid(); }
+      if (overtimeRule[project]) { delete overtimeRule[project]; saveOvertimeRule(); }
+      saveAttendance(); renderCalendar();
       showToast(`✅ 已清空【${project}】全部数据（${deletedCount}条考勤）`);
     };
 
     window.deleteLoan = function(id) {
       if (!confirm('确定删除这条借贷记录？')) return;
       loanRecords = loanRecords.filter(l => l.id !== id);
-      saveLoanRecords();
-      renderCalendar();
+      saveLoanRecords(); renderCalendar();
       showToast('✅ 已删除借贷记录');
     };
 
     window.clearPersonLoan = function(person) {
       if (!confirm(`确定清空【${person}】的所有借贷记录？`)) return;
       loanRecords = loanRecords.filter(l => l.person !== person);
-      saveLoanRecords();
-      renderCalendar();
+      saveLoanRecords(); renderCalendar();
       showToast(`✅ 已清空【${person}】借贷记录`);
     };
 
@@ -541,20 +390,16 @@
       const trimmed = newName.trim();
       if (!trimmed) { showToast('项目名称不能为空'); return; }
       if (trimmed === oldName) { showToast('新名称与旧名称相同'); return; }
-      
       let updated = 0;
       Object.keys(crewAttendance).forEach(date => {
         Object.keys(crewAttendance[date]).forEach(name => {
           if ((crewAttendance[date][name].project || '未分类') === oldName) {
-            crewAttendance[date][name].project = trimmed;
-            updated++;
+            crewAttendance[date][name].project = trimmed; updated++;
           }
         });
       });
       if (updated === 0) { showToast('没有找到需要修改的记录'); return; }
-      
-      saveCrewAttendance();
-      renderCalendar();
+      saveCrewAttendance(); renderCalendar();
       showToast(`✅ 已重命名为 "${trimmed}"`);
     };
 
@@ -562,7 +407,6 @@
       const monthRecords = getRecordsByMonth(currentYear, currentMonth).filter(r => r.category === cat);
       if (monthRecords.length === 0) { showToast('该分类本月没有记录'); return; }
       if (!confirm(`确定清空本月【${cat}】的 ${monthRecords.length} 条记录？\n\n注意：只清空 ${currentYear}年${currentMonth}月 的记录，其他月份不受影响。`)) return;
-      
       const ids = new Set(monthRecords.map(r => r.id));
       monthRecords.forEach(r => {
         if (r.advancePerson && r.advancePerson !== '') {
@@ -571,10 +415,7 @@
         }
       });
       records = records.filter(r => !ids.has(r.id));
-      saveRecords();
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
-      renderCalendar();
+      saveRecords(); updateAdvanceSelect(); updateIncomeAdvanceSelect(); renderCalendar();
       showToast(`✅ 已清空【${cat}】本月记录`);
     };
 
@@ -582,12 +423,8 @@
       const personAdvances = advances.filter(adv => adv.name === name);
       if (personAdvances.length === 0) return;
       if (!confirm(`确定清空【${name}】的所有预付款记录？\n\n包括：\n• 所有预付款到账记录\n• 余额信息\n\n此操作不可恢复！`)) return;
-      
       advances = advances.filter(adv => adv.name !== name);
-      saveAdvances();
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
-      renderCalendar();
+      saveAdvances(); updateAdvanceSelect(); updateIncomeAdvanceSelect(); renderCalendar();
       showToast(`✅ 已清空【${name}】预付款记录`);
     };
 
@@ -596,17 +433,14 @@
       Object.keys(crewAttendance).forEach(date => {
         Object.keys(crewAttendance[date]).forEach(name => {
           if ((crewAttendance[date][name].project || '未分类') === project) {
-            delete crewAttendance[date][name];
-            deletedCount++;
+            delete crewAttendance[date][name]; deletedCount++;
           }
         });
         if (Object.keys(crewAttendance[date]).length === 0) delete crewAttendance[date];
       });
       if (deletedCount === 0) { showToast('没有找到该项目的记录'); return; }
       if (!confirm(`确定清空【${project}】的所有多人考勤记录？\n\n共 ${deletedCount} 条记录，此操作不可恢复！`)) return;
-      
-      saveCrewAttendance();
-      renderCalendar();
+      saveCrewAttendance(); renderCalendar();
       showToast(`✅ 已清空【${project}】多人考勤（${deletedCount}条）`);
     };
 
@@ -615,10 +449,7 @@
       select.innerHTML = '';
       const balanceMap = new Map();
       advances.forEach(adv => {
-        if (adv.balance > 0) {
-          const current = balanceMap.get(adv.name) || 0;
-          balanceMap.set(adv.name, current + adv.balance);
-        }
+        if (adv.balance > 0) { balanceMap.set(adv.name, (balanceMap.get(adv.name) || 0) + adv.balance); }
       });
       const sortedEntries = Array.from(balanceMap.entries()).sort((a, b) => b[1] - a[1]);
       for (const [name, totalBalance] of sortedEntries) {
@@ -655,28 +486,21 @@
 
     function getPersonTotalBalance(name) {
       let total = 0;
-      advances.forEach(adv => {
-        if (adv.name === name && adv.balance > 0) total += adv.balance;
-      });
+      advances.forEach(adv => { if (adv.name === name && adv.balance > 0) total += adv.balance; });
       return total;
     }
-
     function deductFromPersonPartial(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name && adv.balance > 0)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
-      let remaining = amount;
-      let deducted = 0;
+      let remaining = amount, deducted = 0;
       for (let adv of personAdvances) {
         if (remaining <= 0) break;
         const deduct = Math.min(adv.balance, remaining);
-        adv.balance -= deduct;
-        deducted += deduct;
-        remaining -= deduct;
+        adv.balance -= deduct; deducted += deduct; remaining -= deduct;
       }
       saveAdvances();
       return deducted;
     }
-
     function addBackToPerson(name, amount) {
       const personAdvances = advances.filter(adv => adv.name === name)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -684,8 +508,7 @@
       for (let adv of personAdvances) {
         if (remaining <= 0) break;
         const addBack = Math.min(adv.amount - adv.balance, remaining);
-        adv.balance += addBack;
-        remaining -= addBack;
+        adv.balance += addBack; remaining -= addBack;
       }
       saveAdvances();
       return remaining === 0;
@@ -712,7 +535,6 @@
       });
       return stats;
     }
-
     function getCrewCountByProject(dateStr, project) {
       const dayData = crewAttendance[dateStr];
       if (!dayData) return 0;
@@ -725,13 +547,11 @@
       });
       return count;
     }
-
     function getSingleAttendanceInfo(dateStr) {
       const att = attendanceRecords[dateStr];
       if (!att) return null;
       return { type: att.type };
     }
-
     function hasCrewAttendance(dateStr) {
       const dayData = crewAttendance[dateStr];
       if (!dayData) return false;
@@ -741,11 +561,9 @@
         return type !== 'rest' && type !== 'none';
       });
     }
-
     function deleteCrewMember(name) {
       if (confirm(`确定要删除人员 "${name}" 吗？该人员的所有出勤记录也会被删除。`)) {
-        crewList = crewList.filter(n => n !== name);
-        saveCrewList();
+        crewList = crewList.filter(n => n !== name); saveCrewList();
         Object.keys(crewAttendance).forEach(date => {
           if (crewAttendance[date][name]) {
             delete crewAttendance[date][name];
@@ -754,12 +572,10 @@
         });
         saveCrewAttendance();
         if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable();
-        resetCrewLock();
-        renderCalendar();
+        resetCrewLock(); renderCalendar();
         showToast(`✅ 已删除 ${name}`);
       }
     }
-
     function editCrewMember(oldName) {
       const newName = prompt('请输入新的姓名：', oldName);
       if (newName && newName.trim() && newName.trim() !== oldName) {
@@ -776,33 +592,26 @@
             newCrewAttendance[date][newNameKey] = val;
           });
         });
-        crewAttendance = newCrewAttendance;
-        saveCrewAttendance();
+        crewAttendance = newCrewAttendance; saveCrewAttendance();
         if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable();
-        resetCrewLock();
-        renderCalendar();
+        resetCrewLock(); renderCalendar();
         showToast(`✅ 已重命名为 ${newNameTrimmed}`);
       }
     }
-
     function openPersonMenu(name) {
       currentSelectedPerson = name;
       document.getElementById('personMenuName').textContent = name;
       document.getElementById('personMenuModal').classList.add('active');
     }
-
     function closePersonMenu() {
       document.getElementById('personMenuModal').classList.remove('active');
       currentSelectedPerson = null;
     }
-
     function getAdvancesByDate(dateStr) { return advances.filter(adv => adv.date === dateStr); }
-
     function getRecordsByDate(dateStr) { return records.filter(r => r.date === dateStr); }
     function getRecordsByMonth(year, month) { const prefix = `${year}-${String(month).padStart(2,'0')}`; return records.filter(r => r.date.startsWith(prefix)); }
     function getDayTotal(dateStr) { return getRecordsByDate(dateStr).reduce((sum, r) => sum + r.amount, 0); }
     function getAttendanceByDate(dateStr) { return attendanceRecords[dateStr] || null; }
-
     function getDetailedSummary(year, month) {
       const monthRecords = getRecordsByMonth(year, month);
       const summary = {};
@@ -815,17 +624,14 @@
       Object.values(summary).forEach(cat => cat.records.sort((a, b) => a.day - b.day));
       return summary;
     }
-
     function renameCategory(oldName, newName) {
       newName = newName.trim();
       if (!newName) return alert('分类名不能为空');
       if (oldName === newName) return;
       if (getRecordsByMonth(currentYear, currentMonth).some(r => r.category === newName)) return alert(`"${newName}" 已存在`);
       records.forEach(r => { if (r.category === oldName) r.category = newName; });
-      saveRecords();
-      renderCalendar();
+      saveRecords(); renderCalendar();
     }
-
     function isFutureDate(dateStr) {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
@@ -858,7 +664,6 @@
           cell.className = 'day-cell';
           if (locked) cell.classList.add('locked');
           const content = document.createElement('div'); content.className = 'cell-content';
-          
           if (locked) {
             const dateSpan = document.createElement('span');
             dateSpan.textContent = cellDate.getDate();
@@ -892,14 +697,12 @@
               placeholder.style.height = '12px';
               content.appendChild(placeholder);
             }
-            
             const dateSpan = document.createElement('span');
             dateSpan.textContent = cellDate.getDate();
             dateSpan.style.fontWeight = '500';
             dateSpan.style.lineHeight = '1.1';
             content.appendChild(dateSpan);
             if (dateStr === todayStr) cell.classList.add('today');
-            
             const total = getDayTotal(dateStr);
             if (total !== 0) {
               cell.classList.add('has-record');
@@ -912,7 +715,6 @@
               amtSpan.style.lineHeight = '1.1';
               content.appendChild(amtSpan);
             }
-            
             cell.appendChild(content);
             cell.addEventListener('click', () => openModal(dateStr));
           }
@@ -943,7 +745,6 @@
         let grandDisplay = grandTotal < 0 ? `-¥${Math.abs(grandTotal).toFixed(2)}` : `+¥${grandTotal.toFixed(2)}`;
         html += `<div class="summary-total"><span>本月合计</span><span>${grandDisplay}</span></div>`;
       }
-
       if (advances.length > 0) {
         const personMap = new Map();
         let totalOriginalAll = 0;
@@ -951,9 +752,7 @@
           if (!personMap.has(adv.name)) personMap.set(adv.name, { records: [], totalBalance: 0, totalOriginal: 0 });
           const person = personMap.get(adv.name);
           person.records.push({ date: adv.date, amount: adv.amount, balance: adv.balance });
-          person.totalBalance += adv.balance;
-          person.totalOriginal += adv.amount;
-          totalOriginalAll += adv.amount;
+          person.totalBalance += adv.balance; person.totalOriginal += adv.amount; totalOriginalAll += adv.amount;
         });
         html += `<div class="advance-card"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>💰 预付款余额</h4><span style="font-weight:bold; color:#e65100;">¥${totalOriginalAll.toFixed(2)}</span></div>`;
         for (const [name, person] of personMap) {
@@ -965,56 +764,36 @@
         }
         html += `</div>`;
       }
-
       if (loanRecords.length > 0) {
         const personMap = getLoanStatsByPerson();
         const totalLend = getTotalLend();
         const totalBorrow = getTotalBorrow();
         const netTotal = totalLend - totalBorrow;
-        
         html += `<div class="loan-card"><div style="display:flex; justify-content:space-between; align-items:center;"><h4>💳 借贷统计</h4><span style="font-weight:bold; color:#e67e22;">净借出 ¥${netTotal.toFixed(2)}</span></div>`;
-        
         for (const [person, data] of personMap) {
           const net = data.lend - data.borrow;
-          let statusText = '';
-          let statusColor = '';
+          let statusText = '', statusColor = '';
           if (net > 0) { statusText = `⚠️ 欠我 ¥${net.toFixed(2)}`; statusColor = '#e67e22'; }
           else if (net < 0) { statusText = `📥 我欠 ¥${Math.abs(net).toFixed(2)}`; statusColor = '#3498db'; }
           else { statusText = `✅ 已结清`; statusColor = '#28a745'; }
-          
-          html += `<div style="margin-top:10px;padding:8px;background:#fff5e6;border-radius:6px;">
-            <div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-              <span>【${person}】<span style="color:${statusColor};font-size:0.85rem;margin-left:6px;">${statusText}</span></span>
-              <button class="btn-card-clear" onclick="window.clearPersonLoan('${person}')" title="清空该人借贷">🗑️</button>
-            </div>`;
-          
+          html += `<div style="margin-top:10px;padding:8px;background:#fff5e6;border-radius:6px;"><div style="font-weight:bold;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span>【${person}】<span style="color:${statusColor};font-size:0.85rem;margin-left:6px;">${statusText}</span></span><button class="btn-card-clear" onclick="window.clearPersonLoan('${person}')" title="清空该人借贷">🗑️</button></div>`;
           const sortedRecords = [...data.records].sort((a, b) => b.date.localeCompare(a.date));
           sortedRecords.forEach(loan => {
             const isLend = loan.direction === 'lend';
             const typeText = isLend ? '💸 借出' : '📥 借入';
             const amountClass = isLend ? 'out' : 'in';
-            html += `<div class="loan-row">
-              <div class="loan-info">
-                <span class="loan-type">${typeText}</span>
-                <span class="loan-date">${loan.date}${loan.note ? ' · ' + loan.note : ''}</span>
-              </div>
-              <span class="loan-amount ${amountClass}">¥${loan.amount.toFixed(2)}</span>
-              <button class="loan-delete" onclick="window.deleteLoan(${loan.id})">×</button>
-            </div>`;
+            html += `<div class="loan-row"><div class="loan-info"><span class="loan-type">${typeText}</span> <span class="loan-date">${loan.date}${loan.note ? ' · ' + loan.note : ''}</span></div><span class="loan-amount ${amountClass}">¥${loan.amount.toFixed(2)}</span><button class="loan-delete" onclick="window.deleteLoan(${loan.id})">×</button></div>`;
           });
-          
           html += `</div>`;
         }
         html += `</div>`;
       }
-
       const projectStats = getAttendanceStatsByProject(currentYear, currentMonth);
       const projectNames = Object.keys(projectStats);
       let hasSingleData = projectNames.some(name => {
         const s = projectStats[name];
         return s.total > 0 || s.rest > 0 || s.overtime > 0;
       });
-
       if (hasSingleData) {
         html += `<div class="attendance-stats"><h4><span>📅 本月出勤统计（单人）</span></h4>`;
         projectNames.forEach(name => {
@@ -1027,59 +806,37 @@
             const [y, m] = [currentYear, currentMonth];
             const dailyRate = getMonthlyDailySalary(name, y, m);
             const rule = getOvertimeRule(name);
-            const ruleText = rule.mode === 'half'
-              ? `满${rule.hours}小时算半天`
-              : '按小时';
-            
-            html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
-              <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
-                <span>【${name}】日薪 ¥${dailyRate}</span>
-                <div>
-                  <button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名</button>
-                </div>
-              </div>
-              <div class="stat-row"><span>加班折算</span><span>${ruleText}</span></div>
-              <div class="stat-row"><span>🔵 全天</span><span>${s.full} 次</span></div>
-              <div class="stat-row"><span>🟠 上午</span><span>${s.morning} 次</span></div>
-              <div class="stat-row"><span>🟠 下午</span><span>${s.afternoon} 次</span></div>
-              <div class="stat-row"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 小时${s.overtimeDays > 0 ? '（折' + s.overtimeDays.toFixed(1) + '天）' : ''}</span></div>
-              <div class="stat-row"><span>🟢 休息</span><span>${s.rest} 天</span></div>
-              <div class="stat-row" style="font-weight:bold;border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;"><span>📌 本月出勤</span><span>${s.total.toFixed(1)} 天</span></div>
-              <div class="stat-row" style="font-weight:bold;"><span>💰 本月应发</span><span>¥${s.salary.toFixed(2)}</span></div>
-              <div style="margin-top:6px;padding-top:6px;border-top:2px solid #007aff;">
-                <div class="stat-row" style="font-weight:bold;"><span>📌 累计出勤</span><span>${totalSalary.totalDays.toFixed(1)} 天</span></div>
-                <div class="stat-row" style="font-weight:bold;"><span>💰 累计应发</span><span>¥${totalSalary.totalAmount.toFixed(2)}</span></div>
-                <div class="stat-row received"><span>✅ 已发工资</span><span>¥${totalPaid.toFixed(2)}</span></div>
-                <div class="stat-row remaining"><span>⚠️ 剩余未发</span><span>¥${remaining.toFixed(2)}</span></div>
-              </div>`;
-            
+            const ruleText = rule.mode === 'half' ? `满${rule.hours}小时算半天` : '按小时';
+            html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;"><div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;"><span>【${name}】日薪 ¥${dailyRate}</span><div><button class="btn-sm btn-edit" onclick="window.renameSingleProject('${name}')" style="font-size:0.7rem;">✏️ 改名</button></div></div>`;
+            html += `<div class="stat-row"><span>加班折算</span><span>${ruleText}</span></div>`;
+            html += `<div class="stat-row"><span>🔵 全天</span><span>${s.full} 次</span></div>`;
+            html += `<div class="stat-row"><span>🟠 上午</span><span>${s.morning} 次</span></div>`;
+            html += `<div class="stat-row"><span>🟠 下午</span><span>${s.afternoon} 次</span></div>`;
+            html += `<div class="stat-row"><span>🔴 加班</span><span>${s.overtime.toFixed(1)} 小时${s.overtimeDays > 0 ? '（折' + s.overtimeDays.toFixed(1) + '天）' : ''}</span></div>`;
+            html += `<div class="stat-row"><span>🟢 休息</span><span>${s.rest} 天</span></div>`;
+            html += `<div class="stat-row" style="font-weight:bold;border-top:1px dashed #ccc;padding-top:4px;margin-top:4px;"><span>📌 本月出勤</span><span>${s.total.toFixed(1)} 天</span></div>`;
+            html += `<div class="stat-row" style="font-weight:bold;"><span>💰 本月应发</span><span>¥${s.salary.toFixed(2)}</span></div>`;
+            html += `<div style="margin-top:6px;padding-top:6px;border-top:2px solid #007aff;">`;
+            html += `<div class="stat-row" style="font-weight:bold;"><span>📌 累计出勤</span><span>${totalSalary.totalDays.toFixed(1)} 天</span></div>`;
+            html += `<div class="stat-row" style="font-weight:bold;"><span>💰 累计应发</span><span>¥${totalSalary.totalAmount.toFixed(2)}</span></div>`;
+            html += `<div class="stat-row received"><span>✅ 已发工资</span><span>¥${totalPaid.toFixed(2)}</span></div>`;
+            html += `<div class="stat-row remaining"><span>⚠️ 剩余未发</span><span>¥${remaining.toFixed(2)}</span></div>`;
+            html += `</div>`;
             if (paymentList.length > 0) {
-              html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;">
-                <div style="font-size:0.75rem;color:#666;margin-bottom:3px;">📋 收款记录（${paymentList.length}条）</div>`;
+              html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;"><div style="font-size:0.75rem;color:#666;margin-bottom:3px;">📋 收款记录（${paymentList.length}条）</div>`;
               paymentList.forEach(p => {
-                html += `<div class="payment-record">
-                  <span class="payment-date">${p.date}</span>
-                  <span class="payment-amount">+¥${p.amount.toFixed(2)}</span>
-                  <button class="payment-delete" onclick="window.deletePayment('${name}', ${p.timestamp})">×</button>
-                </div>`;
+                html += `<div class="payment-record"><span class="payment-date">${p.date}</span><span class="payment-amount">+¥${p.amount.toFixed(2)}</span><button class="payment-delete" onclick="window.deletePayment('${name}', ${p.timestamp})">×</button></div>`;
               });
               html += `</div>`;
             }
-            
-            html += `<div style="margin-top:6px;text-align:right;">
-                <button class="btn-sm btn-salary-paid" onclick="window.markSalaryPaid('${name}')" style="font-size:0.7rem;">💰 收到工资</button>
-                <button class="btn-sm btn-salary-clear" onclick="window.clearProject('${name}')" style="font-size:0.7rem;">🗑️ 清空</button>
-              </div>
-            </div>`;
+            html += `<div style="margin-top:6px;text-align:right;"><button class="btn-sm btn-salary-paid" onclick="window.markSalaryPaid('${name}')" style="font-size:0.7rem;">💰 收到工资</button> <button class="btn-sm btn-salary-clear" onclick="window.clearProject('${name}')" style="font-size:0.7rem;">🗑️ 清空</button></div></div>`;
           }
         });
         html += `</div>`;
       }
-
       const crewStatsByProject = getCrewStatsByProject(currentYear, currentMonth);
       const crewProjectNames = Object.keys(crewStatsByProject);
       const hasCrewData = crewProjectNames.length > 0 && crewList.length > 0;
-
       if (hasCrewData || crewList.length > 0) {
         html += `<div class="attendance-stats" style="background:#e3f2fd;"><h4>👥 多人出勤统计 <span class="attendance-dot crew" style="display:inline-block; width:10px; height:10px; vertical-align:middle;"></span></h4>`;
         if (hasCrewData) {
@@ -1090,17 +847,9 @@
             if (memberNames.length > 0) {
               let projectTotal = 0;
               const todayCrewCount = getCrewCountByProject(todayStr, project);
-              html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;">
-                <div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;">
-                  <span>【${project}】</span>
-                  <div>
-                    <button class="btn-sm btn-edit" onclick="window.renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名</button>
-                    <button class="btn-card-clear" onclick="window.clearCrewProject('${project}')" title="清空该项目多人考勤">🗑️</button>
-                  </div>
-                </div>`;
+              html += `<div style="margin-top:8px;padding:8px;background:#f0f4ff;border-radius:6px;"><div style="font-weight:bold;color:#007aff;display:flex;justify-content:space-between;align-items:center;"><span>【${project}】</span><div><button class="btn-sm btn-edit" onclick="window.renameCrewProject('${project}')" style="font-size:0.7rem;">✏️ 改名</button> <button class="btn-card-clear" onclick="window.clearCrewProject('${project}')" title="清空该项目多人考勤">🗑️</button></div></div>`;
               memberNames.forEach(name => {
-                const s = members[name];
-                projectTotal += s.total;
+                const s = members[name]; projectTotal += s.total;
                 html += `<div class="stat-row"><span>${name}</span><span>🔵${s.full}天 🟠${(s.half/2).toFixed(1)}天 🔴${s.overtime.toFixed(1)}天 合计${s.total.toFixed(1)}天</span></div>`;
               });
               html += `<div class="stat-row" style="font-weight:bold;border-top:1px solid #ccc;padding-top:4px;"><span>📌 今天出勤</span><span>👥 ${todayCrewCount} 人</span></div>`;
@@ -1127,17 +876,12 @@
       document.getElementById('switchIncome').classList.toggle('active', form === 'income');
       document.getElementById('switchLoan').classList.toggle('active', form === 'loan');
     }
-
     function openModal(dateStr) {
-      if (isFutureDate(dateStr)) {
-        showToast('未来日期暂不可记账');
-        return;
-      }
+      if (isFutureDate(dateStr)) { showToast('未来日期暂不可记账'); return; }
       selectedDate = dateStr;
       document.getElementById('modalDate').textContent = `📅 ${dateStr}`;
       renderAllRecords();
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
+      updateAdvanceSelect(); updateIncomeAdvanceSelect();
       document.getElementById('advanceDate').value = dateStr;
       document.getElementById('category').value = lastInput.category || '';
       document.getElementById('note').value = lastInput.note || '';
@@ -1146,13 +890,11 @@
       document.getElementById('modal').classList.add('active');
       document.getElementById('modalContent').scrollTop = 0;
     }
-
     function closeModal() {
       document.getElementById('modal').classList.remove('active');
       document.body.classList.remove('modal-open');
       selectedDate = null;
     }
-
     function renderAllRecords() {
       const container = document.getElementById('modalRecords');
       const dayRecs = getRecordsByDate(selectedDate);
@@ -1160,20 +902,16 @@
       const dayLoans = loanRecords.filter(l => l.date === selectedDate);
       const dayIncomes = dayRecs.filter(r => r.amount > 0);
       const dayExpenses = dayRecs.filter(r => r.amount < 0);
-      
       const allItems = [
         ...dayAdvances.map(adv => ({ type: 'advance', data: adv, timestamp: adv.id })),
         ...dayLoans.map(loan => ({ type: 'loan', data: loan, timestamp: loan.id })),
         ...dayIncomes.map(inc => ({ type: 'income', data: inc, timestamp: inc.id })),
         ...dayExpenses.map(exp => ({ type: 'expense', data: exp, timestamp: exp.id }))
       ].sort((a, b) => b.timestamp - a.timestamp);
-      
       if (allItems.length === 0) { container.innerHTML = '<p style="color:#888;text-align:center;padding:10px;">当天暂无记录</p>'; return; }
-      
       container.innerHTML = allItems.map(item => {
         if (item.type === 'advance') {
-          const adv = item.data;
-          const used = adv.amount - adv.balance;
+          const adv = item.data; const used = adv.amount - adv.balance;
           return `<div class="record-item"><div class="info"><strong>💰 预支 - ${adv.name}</strong><small>总额 ¥${adv.amount.toFixed(2)} | 已用 ¥${used.toFixed(2)} | 余额 ¥${adv.balance.toFixed(2)}</small></div><span class="amount-text advance">+¥${adv.amount.toFixed(2)}</span><button class="delete-btn" data-id="${adv.id}" data-type="advance">×</button></div>`;
         } else if (item.type === 'loan') {
           const loan = item.data;
@@ -1193,9 +931,8 @@
           return `<div class="record-item"><div class="info"><strong>💸 ${r.category}</strong>${r.note ? `<small>${r.note}</small>` : ''}${extraInfo}</div><span class="amount-text ${cls}">${disp}</span><button class="delete-btn" data-id="${r.id}" data-type="expense">×</button></div>`;
         }
       }).join('');
-      
       container.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
           const id = parseInt(btn.dataset.id);
           const type = btn.dataset.type;
           if (type === 'expense') {
@@ -1204,26 +941,19 @@
               if (record.amount > 0) { deductFromPersonPartial(record.advancePerson, Math.abs(record.amount)); }
               else { addBackToPerson(record.advancePerson, Math.abs(record.amount)); }
             }
-            records = records.filter(r => r.id !== id);
-            saveRecords();
-            updateAdvanceSelect();
-            updateIncomeAdvanceSelect();
+            records = records.filter(r => r.id !== id); saveRecords();
+            updateAdvanceSelect(); updateIncomeAdvanceSelect();
           } else if (type === 'advance') {
-            advances = advances.filter(a => a.id !== id);
-            saveAdvances();
-            updateAdvanceSelect();
-            updateIncomeAdvanceSelect();
+            advances = advances.filter(a => a.id !== id); saveAdvances();
+            updateAdvanceSelect(); updateIncomeAdvanceSelect();
           } else if (type === 'loan') {
-            loanRecords = loanRecords.filter(l => l.id !== id);
-            saveLoanRecords();
+            loanRecords = loanRecords.filter(l => l.id !== id); saveLoanRecords();
           }
-          renderAllRecords();
-          renderCalendar();
+          renderAllRecords(); renderCalendar();
           showToast('✅ 已删除');
         });
       });
     }
-
     function clearAllForms() {
       document.getElementById('category').value = '';
       document.getElementById('amount').value = '';
@@ -1240,43 +970,27 @@
       lastInput = { category: '', note: '' };
       localStorage.setItem(LAST_INPUT_KEY, JSON.stringify(lastInput));
     }
-
     function openAttendance() {
       if (!selectedDate) return;
       document.getElementById('attendanceDateTitle').textContent = `出勤设置 - ${selectedDate}`;
       const cur = getAttendanceByDate(selectedDate);
       selectedAttType = cur ? cur.type : null;
-      
-      // 恢复项目
-      if (cur && cur.project) {
-        document.getElementById('attendanceProject').value = cur.project;
-      } else {
-        document.getElementById('attendanceProject').value = '';
-      }
-      
-      // 恢复该项目的加班规则
+      if (cur && cur.project) document.getElementById('attendanceProject').value = cur.project;
+      else document.getElementById('attendanceProject').value = '';
       const projectForRule = document.getElementById('attendanceProject').value.trim() || '未分类';
       const rule = getOvertimeRule(projectForRule);
       document.getElementById('overtimeRuleMode').value = rule.mode;
       document.getElementById('overtimeRuleHours').value = rule.hours || 3;
       toggleOvertimeHoursVisibility();
-      
-      // 恢复各项输入
       document.getElementById('fullSalary').value = '260';
       document.getElementById('morningHours').value = '4.5';
       document.getElementById('afternoonHours').value = '4.5';
       document.getElementById('overtimeHours').value = '';
-      
       if (cur) {
-        if (cur.type === 'full' && cur.salary) {
-          document.getElementById('fullSalary').value = cur.salary;
-        } else if (cur.type === 'morning' && cur.hours) {
-          document.getElementById('morningHours').value = cur.hours;
-        } else if (cur.type === 'afternoon' && cur.hours) {
-          document.getElementById('afternoonHours').value = cur.hours;
-        } else if (cur.type === 'overtime' && cur.hours) {
-          document.getElementById('overtimeHours').value = cur.hours;
-        }
+        if (cur.type === 'full' && cur.salary) document.getElementById('fullSalary').value = cur.salary;
+        else if (cur.type === 'morning' && cur.hours) document.getElementById('morningHours').value = cur.hours;
+        else if (cur.type === 'afternoon' && cur.hours) document.getElementById('afternoonHours').value = cur.hours;
+        else if (cur.type === 'overtime' && cur.hours) document.getElementById('overtimeHours').value = cur.hours;
       } else {
         const project = document.getElementById('attendanceProject').value.trim();
         if (project) {
@@ -1285,7 +999,6 @@
           if (rate > 0) document.getElementById('fullSalary').value = rate;
         }
       }
-      
       updateAttUI();
       crewMode = 'single';
       document.getElementById('singleMode').style.display = 'block';
@@ -1295,20 +1008,16 @@
       unlockCrew();
       if (attendanceModal) attendanceModal.classList.add('active');
     }
-
     function addExpense() {
       if (!selectedDate) return;
       const category = document.getElementById('category').value.trim();
       let amount = parseFloat(document.getElementById('amount').value);
       const note = document.getElementById('note').value.trim();
       const advancePerson = document.getElementById('advanceSelect').value;
-      
       if (!category) return alert('请输入分类名称');
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
-      
       saveLastInput(category, note);
       const recordsToAdd = [];
-      
       if (advancePerson && advancePerson !== '') {
         const totalBalance = getPersonTotalBalance(advancePerson);
         if (totalBalance > 0) {
@@ -1316,25 +1025,19 @@
           if (deducted > 0) {
             recordsToAdd.push({ id: Date.now(), date: selectedDate, category, amount: -deducted, note: note + (deducted < amount ? ` (使用预付款¥${deducted.toFixed(2)})` : ''), advancePerson: advancePerson, splitAmount: deducted });
             amount -= deducted;
-            if (amount > 0) { showToast(`预付款不足，剩余 ¥${amount.toFixed(2)} 使用现金支付`, 3000); }
+            if (amount > 0) showToast(`预付款不足，剩余 ¥${amount.toFixed(2)} 使用现金支付`, 3000);
           }
         }
       }
-      
       if (amount > 0) {
         recordsToAdd.push({ id: Date.now() + 1, date: selectedDate, category, amount: -amount, note: note + (advancePerson ? ` (现金支付¥${amount.toFixed(2)})` : ''), advancePerson: null, splitAmount: null });
       }
-      
-      records.push(...recordsToAdd);
-      saveRecords();
+      records.push(...recordsToAdd); saveRecords();
       document.getElementById('amount').value = '';
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
-      renderAllRecords();
-      renderCalendar();
+      updateAdvanceSelect(); updateIncomeAdvanceSelect();
+      renderAllRecords(); renderCalendar();
       showToast('✅ 记账已保存');
     }
-
     function addAdvance() {
       if (!selectedDate) return;
       const name = document.getElementById('advanceName').value.trim();
@@ -1346,107 +1049,74 @@
       saveAdvances();
       document.getElementById('advanceName').value = '';
       document.getElementById('advanceAmount').value = '';
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
-      renderAllRecords();
-      renderCalendar();
+      updateAdvanceSelect(); updateIncomeAdvanceSelect();
+      renderAllRecords(); renderCalendar();
       showToast('✅ 预支已添加');
     }
-
     function addIncome() {
       if (!selectedDate) return;
       const advancePerson = document.getElementById('incomeAdvanceSelect').value;
       const amount = parseFloat(document.getElementById('incomeAmount').value);
       const note = document.getElementById('incomeNote').value.trim();
-      
       if (!advancePerson) return alert('请选择要退款的预付款');
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
-      
       const personAdvances = advances.filter(adv => adv.name === advancePerson);
-      if (personAdvances.length === 0) { return alert(`没有找到 "${advancePerson}" 的预付款记录`); }
-      
+      if (personAdvances.length === 0) return alert(`没有找到 "${advancePerson}" 的预付款记录`);
       const totalOriginal = personAdvances.reduce((sum, adv) => sum + adv.amount, 0);
       const totalBalance = personAdvances.reduce((sum, adv) => sum + adv.balance, 0);
       const usedAmount = totalOriginal - totalBalance;
-      
-      if (amount > usedAmount) { return alert(`只能退回最多 ¥${usedAmount.toFixed(2)}`); }
-      
+      if (amount > usedAmount) return alert(`只能退回最多 ¥${usedAmount.toFixed(2)}`);
       const success = addBackToPerson(advancePerson, amount);
-      if (!success) { return alert('退款失败，请稍后重试'); }
-      
+      if (!success) return alert('退款失败，请稍后重试');
       records.push({ id: Date.now(), date: selectedDate, category: `退款-${advancePerson}`, amount: Math.abs(amount), note: note || `退款到 ${advancePerson}`, advancePerson: advancePerson, splitAmount: null });
       saveRecords();
-      
       document.getElementById('incomeAmount').value = '';
       document.getElementById('incomeNote').value = '';
-      updateAdvanceSelect();
-      updateIncomeAdvanceSelect();
-      renderAllRecords();
-      renderCalendar();
+      updateAdvanceSelect(); updateIncomeAdvanceSelect();
+      renderAllRecords(); renderCalendar();
       showToast(`✅ 已退款 ¥${amount.toFixed(2)}`);
     }
-
     function addLoan() {
       if (!selectedDate) return;
       const direction = document.getElementById('loanDirection').value;
       const person = document.getElementById('loanPerson').value.trim();
       const amount = parseFloat(document.getElementById('loanAmount').value);
       const note = document.getElementById('loanNote').value.trim();
-      
       if (!person) return alert('请输入对方姓名');
       if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
-      
-      loanRecords.push({
-        id: Date.now(),
-        person: person,
-        direction: direction,
-        amount: amount,
-        date: selectedDate,
-        note: note
-      });
+      loanRecords.push({ id: Date.now(), person, direction, amount, date: selectedDate, note });
       saveLoanRecords();
-      
       document.getElementById('loanPerson').value = '';
       document.getElementById('loanAmount').value = '';
       document.getElementById('loanNote').value = '';
-      renderAllRecords();
-      renderCalendar();
+      renderAllRecords(); renderCalendar();
       showToast(direction === 'lend' ? `✅ 已记录借出给 ${person} ¥${amount.toFixed(2)}` : `✅ 已记录向 ${person} 借入 ¥${amount.toFixed(2)}`);
     }
-
     function updateAttUI() {
       document.querySelectorAll('#attendanceOptions .attendance-option').forEach(o => {
         o.classList.toggle('selected', o.dataset.type === selectedAttType);
       });
     }
-
     function toggleOvertimeHoursVisibility() {
       const mode = document.getElementById('overtimeRuleMode').value;
       const hoursInput = document.getElementById('overtimeRuleHours');
-      if (mode === 'half') {
-        hoursInput.style.display = 'block';
-      } else {
-        hoursInput.style.display = 'none';
-      }
+      hoursInput.style.display = mode === 'half' ? 'block' : 'none';
     }
-
     function setCrewAttendanceSimple(name, type, project) {
       if (!crewAttendance[selectedDate]) crewAttendance[selectedDate] = {};
-      if (type === 'none') { 
-        delete crewAttendance[selectedDate][name]; 
+      if (type === 'none') {
+        delete crewAttendance[selectedDate][name];
         if (Object.keys(crewAttendance[selectedDate]).length === 0) delete crewAttendance[selectedDate];
-      } else { 
-        crewAttendance[selectedDate][name] = { type: type, project: project || '未分类' }; 
+      } else {
+        crewAttendance[selectedDate][name] = { type: type, project: project || '未分类' };
       }
       saveCrewAttendance();
     }
-
     function setCrewAttendanceOvertime(name, days, project) {
       if (!crewAttendance[selectedDate]) crewAttendance[selectedDate] = {};
       crewAttendance[selectedDate][name] = { type: 'overtime', days: days, project: project || '未分类' };
       saveCrewAttendance();
     }
-
     function renderCrewTable() {
       const tbody = document.getElementById('crewTableBody');
       const dayData = crewAttendance[selectedDate] || {};
@@ -1459,20 +1129,12 @@
         let type = null, overtimeDays = null;
         if (currentVal) {
           if (typeof currentVal === 'object') { type = currentVal.type; overtimeDays = currentVal.days; }
-          else { type = currentVal; }
+          else type = currentVal;
         }
         const fullSelected = type === 'full', halfSelected = type === 'half', overtimeSelected = type === 'overtime', restSelected = type === 'rest';
         const overtimeDisplay = overtimeSelected && overtimeDays ? overtimeDays.toFixed(1) : '';
-        return `<tr>
-          <td class="check-col"><input type="checkbox" class="crew-check" data-name="${name}"></td>
-          <td class="name-col" data-name="${name}">${name}</td>
-          <td class="clickable ${fullSelected ? 'selected' : ''}" data-type="full" data-name="${name}">${fullSelected ? '●' : ''}</td>
-          <td class="clickable ${halfSelected ? 'selected' : ''}" data-type="half" data-name="${name}">${halfSelected ? '●' : ''}</td>
-          <td class="overtime-cell ${overtimeSelected ? 'selected' : ''}" data-type="overtime" data-name="${name}">${overtimeDisplay}</td>
-          <td class="clickable ${restSelected ? 'selected' : ''}" data-type="rest" data-name="${name}">${restSelected ? '●' : ''}</td>
-        </tr>`;
+        return `<tr><td class="check-col"><input type="checkbox" class="crew-check" data-name="${name}"></td><td class="name-col" data-name="${name}">${name}</td><td class="clickable ${fullSelected ? 'selected' : ''}" data-type="full" data-name="${name}">${fullSelected ? '●' : ''}</td><td class="clickable ${halfSelected ? 'selected' : ''}" data-type="half" data-name="${name}">${halfSelected ? '●' : ''}</td><td class="overtime-cell ${overtimeSelected ? 'selected' : ''}" data-type="overtime" data-name="${name}">${overtimeDisplay}</td><td class="clickable ${restSelected ? 'selected' : ''}" data-type="rest" data-name="${name}">${restSelected ? '●' : ''}</td></tr>`;
       }).join('');
-      
       tbody.querySelectorAll('.name-col').forEach(cell => {
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1480,7 +1142,6 @@
           openPersonMenu(cell.dataset.name);
         });
       });
-      
       tbody.querySelectorAll('.clickable').forEach(cell => {
         const type = cell.dataset.type;
         if (!type) return;
@@ -1490,12 +1151,9 @@
           const name = cell.dataset.name;
           const project = document.getElementById('crewProject').value.trim() || '未分类';
           setCrewAttendanceSimple(name, type, project);
-          renderCrewTable();
-          resetCrewLock();
-          renderCalendar();
+          renderCrewTable(); resetCrewLock(); renderCalendar();
         });
       });
-      
       tbody.querySelectorAll('.overtime-cell').forEach(cell => {
         cell.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1510,14 +1168,11 @@
             const days = parseFloat(newDays);
             if (isNaN(days) || days <= 0) { alert('请输入有效的正数天数'); return; }
             setCrewAttendanceOvertime(name, days, project);
-            renderCrewTable();
-            resetCrewLock();
-            renderCalendar();
+            renderCrewTable(); resetCrewLock(); renderCalendar();
           }
         });
       });
     }
-
     function batchSetCrew(type) {
       if (crewLocked) return;
       const checks = document.querySelectorAll('#crewTable .crew-check:checked');
@@ -1529,11 +1184,8 @@
         else setCrewAttendanceSimple(name, type, project);
       });
       saveCrewAttendance();
-      renderCrewTable();
-      resetCrewLock();
-      renderCalendar();
+      renderCrewTable(); resetCrewLock(); renderCalendar();
     }
-
     function resetCrewLock() {
       if (crewLockTimer) clearTimeout(crewLockTimer);
       document.getElementById('lockStatus').textContent = '⏳ 5秒后自动锁定...';
@@ -1545,14 +1197,12 @@
         document.getElementById('lockStatus').textContent = '🔒 已锁定（点此解锁可编辑）';
       }, 5000);
     }
-
     function unlockCrew() {
       if (crewLockTimer) clearTimeout(crewLockTimer);
       crewLocked = false;
       document.getElementById('crewTable').classList.remove('crew-locked');
       document.getElementById('lockStatus').textContent = '';
     }
-
     function getAvailableMonths() {
       const months = new Set();
       records.forEach(r => { const p = r.date.split('-'); if (p.length >= 2) months.add(`${p[0]}-${p[1]}`); });
@@ -1563,7 +1213,6 @@
       if (months.size === 0) { const y = new Date().getFullYear(); for (let m = 1; m <= 12; m++) months.add(`${y}-${String(m).padStart(2,'0')}`); }
       return Array.from(months).sort();
     }
-
     function exportSelectedMonths(selectedMonths) {
       if (!selectedMonths.length) return alert('请选择月份');
       const fRecords = records.filter(r => selectedMonths.includes(`${r.date.split('-')[0]}-${r.date.split('-')[1]}`));
@@ -1580,7 +1229,6 @@
       setTimeout(() => { document.body.removeChild(a); }, 200);
       showToast(`✅ 已导出 ${fRecords.length} 条记录`);
     }
-
     function importData(file) {
       const reader = new FileReader();
       reader.onload = function(e) {
@@ -1615,7 +1263,6 @@
       };
       reader.readAsText(file);
     }
-
     async function exportCategoryToImage(cat) {
       const data = getDetailedSummary(currentYear, currentMonth)[cat];
       if (!data) return alert('无记录');
@@ -1636,6 +1283,479 @@
       document.getElementById('loadingOverlay').classList.remove('active');
     }
 
+    /* ================= Gitee 配置与工具 ================= */
+    function getGiteeCfg() {
+      try { return JSON.parse(localStorage.getItem(GITEE_CFG_KEY)) || {}; }
+      catch (e) { return {}; }
+    }
+    function saveGiteeCfg(cfg) { localStorage.setItem(GITEE_CFG_KEY, JSON.stringify(cfg)); }
+    function ledgerFilePath() {
+      const cfg = getGiteeCfg();
+      return cfg.ledgerFilePath || '我的数据库/日历记账.json';
+    }
+    function ledgerDirPath() {
+      const p = ledgerFilePath();
+      const i = p.lastIndexOf('/');
+      return i >= 0 ? p.slice(0, i) : '';
+    }
+    function encodeGiteePath(path) {
+      return path.split('/').map(s => encodeURIComponent(s)).join('/');
+    }
+    async function giteeGet(path) {
+      const cfg = getGiteeCfg();
+      const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}?access_token=${encodeURIComponent(cfg.token)}`;
+      return fetch(url);
+    }
+    async function giteePut(path, contentBase64, message, sha) {
+      const cfg = getGiteeCfg();
+      const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}`;
+      const body = { access_token: cfg.token, content: contentBase64, message: message || `同步 ${new Date().toLocaleString()}` };
+      if (sha) body.sha = sha;
+      return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    async function giteeDelete(path, sha, message) {
+      const cfg = getGiteeCfg();
+      const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}`;
+      const body = { access_token: cfg.token, sha: sha, message: message || `删除 ${new Date().toLocaleString()}` };
+      return fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    async function giteeListDir(dirPath) {
+      const cfg = getGiteeCfg();
+      const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(dirPath)}?access_token=${encodeURIComponent(cfg.token)}`;
+      const r = await fetch(url);
+      if (!r.ok) return null;
+      return await r.json();
+    }
+
+    function buildLedgerPayload() {
+      return {
+        _version: 8,
+        _exportedAt: new Date().toISOString(),
+        records: records,
+        attendance: attendanceRecords,
+        crewAttendance: crewAttendance,
+        crewList: crewList,
+        advances: advances,
+        salaryPaid: salaryPaid,
+        loanRecords: loanRecords,
+        dailySalary: dailySalary,
+        overtimeRule: overtimeRule
+      };
+    }
+    function applyLedgerPayload(payload) {
+      if (!payload) return false;
+      records = payload.records || [];
+      attendanceRecords = payload.attendance || {};
+      crewAttendance = payload.crewAttendance || {};
+      crewList = payload.crewList || [];
+      advances = payload.advances || [];
+      salaryPaid = payload.salaryPaid || {};
+      loanRecords = payload.loanRecords || [];
+      dailySalary = payload.dailySalary || {};
+      overtimeRule = payload.overtimeRule || {};
+      saveRecords(); saveAttendance(); saveCrewAttendance(); saveCrewList();
+      saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary(); saveOvertimeRule();
+      renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
+      return true;
+    }
+    function getLedgerLastId() {
+      let max = 0;
+      records.forEach(r => { if (r.id && r.id > max) max = r.id; });
+      advances.forEach(a => { if (a.id && a.id > max) max = a.id; });
+      loanRecords.forEach(l => { if (l.id && l.id > max) max = l.id; });
+      return max;
+    }
+    function getTodayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    /* ================= Gitee 设置弹窗（带锁） ================= */
+    let gsetLocked = true;
+    let gsetLockTimer = null;
+    const GSET_LOCK_TIMEOUT = 5000;
+
+    function setGsetLocked(locked) {
+      gsetLocked = locked;
+      const mask = document.getElementById('gsetLockMask');
+      const saveBtn = document.getElementById('gsetSave');
+      const unlockBtn = document.getElementById('gsetUnlock');
+      const lockIcon = document.getElementById('gsetLockIcon');
+      const inputs = document.querySelectorAll('#giteeSet .gset-body input');
+      if (locked) {
+        mask.style.display = 'flex';
+        saveBtn.disabled = true;
+        unlockBtn.textContent = '● 开启';
+        lockIcon.textContent = '🔒';
+        inputs.forEach(inp => { inp.disabled = true; });
+        if (gsetLockTimer) { clearTimeout(gsetLockTimer); gsetLockTimer = null; }
+        const pass = document.getElementById('gsetPass');
+        if (pass) pass.type = 'password';
+        updateTokenEye();
+      } else {
+        mask.style.display = 'none';
+        saveBtn.disabled = false;
+        unlockBtn.textContent = '🔓 已解锁';
+        lockIcon.textContent = '🔓';
+        inputs.forEach(inp => { inp.disabled = false; });
+      }
+    }
+    function scheduleAutoLock() {
+      if (gsetLockTimer) clearTimeout(gsetLockTimer);
+      if (gsetLocked) return;
+      gsetLockTimer = setTimeout(() => setGsetLocked(true), GSET_LOCK_TIMEOUT);
+    }
+    function updateTokenEye() {
+      const eye = document.getElementById('gsetPassEye');
+      const pass = document.getElementById('gsetPass');
+      if (!eye || !pass) return;
+      if (pass.type === 'password') { eye.textContent = '👁'; eye.title = '显示 Token'; }
+      else { eye.textContent = '🙈'; eye.title = '隐藏 Token'; }
+    }
+    function openGiteeSet() {
+      const cfg = getGiteeCfg();
+      document.getElementById('gsetUser').value = cfg.owner || '';
+      document.getElementById('gsetPass').value = cfg.token || '';
+      document.getElementById('gsetRepo').value = cfg.repo || '';
+      document.getElementById('gsetPath').value = cfg.ledgerFilePath || '我的数据库/日历记账.json';
+      document.getElementById('gsetMsg').textContent = '';
+      document.getElementById('gsetMsg').classList.remove('err');
+      document.getElementById('gsetPass').type = 'password';
+      updateTokenEye();
+      setGsetLocked(true);
+      document.getElementById('giteeSet').classList.add('show');
+    }
+    function closeGiteeSet() {
+      document.getElementById('giteeSet').classList.remove('show');
+      if (gsetLockTimer) { clearTimeout(gsetLockTimer); gsetLockTimer = null; }
+      setGsetLocked(true);
+    }
+    function gsetMsg(msg, isErr) {
+      const el = document.getElementById('gsetMsg');
+      el.textContent = msg;
+      el.classList.toggle('err', !!isErr);
+    }
+
+    /* ================= Gitee 同步弹窗 ================= */
+    function openSyncPanel() {
+      const cfg = getGiteeCfg();
+      if (!cfg.owner || !cfg.token || !cfg.repo) { showToast('请先在 ⌘ 面板 → Gitee 设置'); return; }
+      document.getElementById('syncInfo').innerHTML = `
+        账号：<b>${escapeHtml(cfg.owner)}</b><br>
+        仓库：<b>${escapeHtml(cfg.repo)}</b><br>
+        文件：<b>${escapeHtml(cfg.ledgerFilePath || '我的数据库/日历记账.json')}</b>
+      `;
+      document.getElementById('syncMsg').textContent = '';
+      document.getElementById('syncMsg').classList.remove('err');
+      document.getElementById('syncFileListWrap').style.display = 'none';
+      document.getElementById('syncFileList').innerHTML = '';
+      document.getElementById('syncPanel').classList.add('show');
+    }
+    function closeSyncPanel() { document.getElementById('syncPanel').classList.remove('show'); }
+    function syncMsg(msg, isErr) {
+      const el = document.getElementById('syncMsg');
+      el.textContent = msg;
+      el.classList.toggle('err', !!isErr);
+    }
+
+    async function doSyncUpload() {
+      const cfg = getGiteeCfg();
+      if (!cfg.owner || !cfg.token || !cfg.repo) { syncMsg('请先保存设置', true); return; }
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+        const prefix = prompt('请输入文件名前缀（比如 A厂、日历记账）：', '');
+        if (!prefix) { syncMsg('已取消上传', true); return; }
+        const trimmedPrefix = prefix.trim();
+        if (!trimmedPrefix) { syncMsg('文件名前缀不能为空', true); return; }
+        const btn = document.getElementById('syncUpload');
+        btn.disabled = true;
+        syncMsg('⏳ 正在读取文件…');
+        try {
+          const text = await file.text();
+          try { JSON.parse(text); } catch (e) { throw new Error('文件不是有效 JSON'); }
+          const dir = ledgerDirPath();
+          const dateStr = getTodayStr();
+          syncMsg('⏳ 正在检查远端文件…');
+          let existingNames = [];
+          const list = await giteeListDir(dir);
+          if (Array.isArray(list)) existingNames = list.map(x => x.name);
+          let num = 1;
+          let fileName;
+          while (true) {
+            fileName = `${trimmedPrefix}-${dateStr}T${num}.json`;
+            if (!existingNames.includes(fileName)) break;
+            num++;
+          }
+          const fullPath = dir ? `${dir}/${fileName}` : fileName;
+          syncMsg(`⏳ 正在上传：${fileName}…`);
+          const contentB64 = btoa(unescape(encodeURIComponent(text)));
+          const r = await giteePut(fullPath, contentB64, `上传 ${fileName}`);
+          if (r.ok) {
+            syncMsg(`✅ 上传成功\n文件名：${fileName}\n大小：${(text.length/1024).toFixed(1)} KB`);
+          } else {
+            const err = await r.text();
+            syncMsg(`❌ 上传失败：${r.status}\n${err}`, true);
+          }
+        } catch (e) {
+          syncMsg('❌ 出错：' + e.message, true);
+        }
+        btn.disabled = false;
+      };
+      input.click();
+    }
+
+    async function doSyncDownload() {
+      const cfg = getGiteeCfg();
+      if (!cfg.owner || !cfg.token || !cfg.repo) { syncMsg('请先保存设置', true); return; }
+      const btn = document.getElementById('syncDownload');
+      btn.disabled = true;
+      syncMsg('⏳ 正在读取远端文件列表…');
+      try {
+        const dir = ledgerDirPath();
+        const list = await giteeListDir(dir);
+        if (!list || !Array.isArray(list)) {
+          syncMsg('❌ 无法列出目录（可能目录为空或路径不对）', true);
+          btn.disabled = false;
+          return;
+        }
+        const files = list
+          .filter(x => x.type === 'file' && /\.json$/i.test(x.name))
+          .sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        if (!files.length) {
+          syncMsg('ℹ️ 目录里还没有 JSON 文件');
+          btn.disabled = false;
+          return;
+        }
+        syncMsg(`📂 共 ${files.length} 个文件，点选要下载的：`);
+        document.getElementById('syncFileListWrap').style.display = 'block';
+        const listEl = document.getElementById('syncFileList');
+        listEl.innerHTML = files.map((f, i) => {
+          const size = f.size ? `${(f.size/1024).toFixed(1)} KB` : '';
+          return `<div class="file-item" data-fi="${i}"><span class="fi-name">${escapeHtml(f.name)}</span><span class="fi-meta">${size}</span></div>`;
+        }).join('');
+        listEl._files = files;
+        listEl._dir = dir;
+      } catch (e) {
+        syncMsg('❌ 出错：' + e.message, true);
+      }
+      btn.disabled = false;
+    }
+
+    let dlTargetFile = null;
+    let dlTargetDir = '';
+
+    function openDownloadChoice(file, dir) {
+      dlTargetFile = file;
+      dlTargetDir = dir;
+      document.getElementById('dlName').textContent = file.name;
+      document.getElementById('dlMeta').textContent = file.size ? `${(file.size/1024).toFixed(1)} KB` : '';
+      document.getElementById('dlChoice').classList.add('show');
+    }
+    function closeDownloadChoice() {
+      document.getElementById('dlChoice').classList.remove('show');
+      dlTargetFile = null;
+      dlTargetDir = '';
+    }
+
+    async function downloadFileToPhone() {
+      if (!dlTargetFile) return;
+      const file = dlTargetFile;
+      const dir = dlTargetDir;
+      closeDownloadChoice();
+      syncMsg('⏳ 正在下载文件…');
+      try {
+        const cfg = getGiteeCfg();
+        const fullPath = dir ? `${dir}/${file.name}` : file.name;
+        const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(fullPath)}?access_token=${encodeURIComponent(cfg.token)}`;
+        const r = await fetch(url);
+        if (!r.ok) { syncMsg(`❌ 下载失败：${r.status}`, true); return; }
+        const data = await r.json();
+        let text = '';
+        try { text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))); } catch (e) { text = ''; }
+        const blob = new Blob([text], {type: 'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        syncMsg(`✅ 已下载到手机：${file.name}`);
+      } catch (e) {
+        syncMsg('❌ 下载出错：' + e.message, true);
+      }
+    }
+
+    async function importFileToLedger() {
+      if (!dlTargetFile) return;
+      const file = dlTargetFile;
+      const dir = dlTargetDir;
+      if (!confirm(`确定用「${file.name}」覆盖当前日历记账数据？\n\n当前记录会被替换。`)) return;
+      closeDownloadChoice();
+      syncMsg('⏳ 正在读取文件…');
+      try {
+        const cfg = getGiteeCfg();
+        const fullPath = dir ? `${dir}/${file.name}` : file.name;
+        const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(fullPath)}?access_token=${encodeURIComponent(cfg.token)}`;
+        const r = await fetch(url);
+        if (!r.ok) { syncMsg(`❌ 读取失败：${r.status}`, true); return; }
+        const data = await r.json();
+        let text = '';
+        try { text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))); } catch (e) { text = ''; }
+        const payload = JSON.parse(text);
+        if (!payload) { syncMsg('❌ 文件格式错误', true); return; }
+        applyLedgerPayload(payload);
+        syncMsg(`✅ 已导入（${records.length} 条记账）`);
+        showToast('✅ 已导入日历记账');
+      } catch (e) {
+        syncMsg('❌ 导入出错：' + e.message, true);
+      }
+    }
+
+    async function doSyncNow() {
+      const cfg = getGiteeCfg();
+      if (!cfg.owner || !cfg.token || !cfg.repo) { syncMsg('请先保存设置', true); return; }
+      const btn = document.getElementById('syncNow');
+      btn.disabled = true;
+      syncMsg('⏳ 正在检查远端…');
+      try {
+        const path = ledgerFilePath();
+        const url = `${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(path)}?access_token=${encodeURIComponent(cfg.token)}`;
+        let remote = null;
+        try {
+          const r = await fetch(url);
+          if (r.ok) {
+            const data = await r.json();
+            let text = '';
+            try { text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))); } catch (e) { text = ''; }
+            const trimmed = (text || '').trim();
+            if (trimmed && trimmed !== '{}' && trimmed !== '') {
+              try { remote = JSON.parse(text); } catch (e) { remote = null; }
+            }
+          }
+        } catch (e) {}
+        if (!remote || !Array.isArray(remote.records)) {
+          syncMsg('远端没有有效数据，正在新建备份…');
+          btn.disabled = false;
+          await doSyncNowUpload(true);
+          return;
+        }
+        const localLastId = getLedgerLastId();
+        const remoteLastId = (() => {
+          let max = 0;
+          (remote.records || []).forEach(r => { if (r.id && r.id > max) max = r.id; });
+          (remote.advances || []).forEach(a => { if (a.id && a.id > max) max = a.id; });
+          (remote.loanRecords || []).forEach(l => { if (l.id && l.id > max) max = l.id; });
+          return max;
+        })();
+        if (remoteLastId > localLastId) {
+          const use = confirm(
+            `远端数据较新：\n本地最新记录 id: ${localLastId}\n远端最新记录 id: ${remoteLastId}\n\n` +
+            `点「确定」= 用远端覆盖本地\n` +
+            `点「取消」= 用本地覆盖远端（会再问一次）`
+          );
+          if (use) {
+            applyLedgerPayload(remote);
+            syncMsg(`✅ 已下载远端数据（${records.length} 条）`);
+            showToast('✅ 已同步');
+          } else {
+            btn.disabled = false;
+            await doSyncNowUpload(false);
+            return;
+          }
+        } else {
+          btn.disabled = false;
+          await doSyncNowUpload(false);
+          return;
+        }
+      } catch (e) {
+        syncMsg('❌ 同步出错：' + e.message, true);
+      }
+      btn.disabled = false;
+    }
+
+    async function doSyncNowUpload(skipConfirm) {
+      const cfg = getGiteeCfg();
+      if (!cfg.owner || !cfg.token || !cfg.repo) { syncMsg('请先保存设置', true); return; }
+      const path = ledgerFilePath();
+      let sha = null;
+      try {
+        const r1 = await giteeGet(path);
+        if (r1.ok) { const data = await r1.json(); sha = data.sha; }
+      } catch (e) {}
+      if (sha && !skipConfirm) {
+        const tmpText = JSON.stringify(buildLedgerPayload(), null, 2);
+        const ok = confirm(
+          `远端已存在文件：\n${path}\n\n` +
+          `本地当前 ${records.length} 条记账\n` +
+          `本次将上传大小约 ${(tmpText.length/1024).toFixed(1)} KB\n\n` +
+          `是否覆盖远端？`
+        );
+        if (!ok) { syncMsg('已取消上传'); return; }
+      }
+      if (sha) {
+        syncMsg('⏳ 正在删除旧文件…');
+        const rd = await giteeDelete(path, sha);
+        if (!rd.ok) {
+          const err = await rd.text();
+          syncMsg(`❌ 删除旧文件失败：${rd.status}\n${err}`, true);
+          return;
+        }
+      }
+      syncMsg('⏳ 正在上传新文件…');
+      const text = JSON.stringify(buildLedgerPayload(), null, 2);
+      const content = btoa(unescape(encodeURIComponent(text)));
+      const r2 = await giteePut(path, content, `同步 ${new Date().toLocaleString()}`);
+      if (r2.ok) {
+        syncMsg(`✅ 上传成功（${sha ? '已覆盖' : '新建'}）\n路径：${path}\n大小：${(text.length/1024).toFixed(1)} KB`);
+        showToast('✅ 已同步到 Gitee');
+      } else {
+        const err = await r2.text();
+        syncMsg(`❌ 上传失败：${r2.status}\n${err}`, true);
+      }
+    }
+
+    function openCmd() { document.getElementById('cmdPanel').classList.add('show'); }
+    function closeCmd() { document.getElementById('cmdPanel').classList.remove('show'); }
+
+    function openClearData() {
+      closeCmd();
+      setTimeout(() => {
+        const input = prompt(
+          `⚠️ 清空全部数据？\n\n` +
+          `将删除：\n` +
+          `· ${records.length} 条记账\n` +
+          `· ${Object.keys(attendanceRecords).length} 条考勤\n` +
+          `· ${advances.length} 条预支\n` +
+          `· ${loanRecords.length} 条借贷\n\n` +
+          `此操作不可撤销！\n` +
+          `如果确定，请输入「清空」两个字：`
+        );
+        if (input === null) return;
+        if (input.trim() !== '清空') { showToast('已取消'); return; }
+        if (!confirm('最后确认：清空所有数据？\n\n确定后不可恢复。')) return;
+        records = [];
+        attendanceRecords = {};
+        crewAttendance = {};
+        advances = [];
+        salaryPaid = {};
+        loanRecords = [];
+        dailySalary = {};
+        overtimeRule = {};
+        saveRecords(); saveAttendance(); saveCrewAttendance();
+        saveAdvances(); saveSalaryPaid(); saveLoanRecords();
+        saveDailySalary(); saveOvertimeRule();
+        renderCalendar(); updateAdvanceSelect(); updateIncomeAdvanceSelect();
+        showToast('✅ 已清空全部数据');
+      }, 100);
+    }
+
+    /* ================= 初始化与事件绑定 ================= */
     document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
     document.getElementById('addAdvanceBtn').addEventListener('click', addAdvance);
     document.getElementById('addIncomeBtn').addEventListener('click', addIncome);
@@ -1665,20 +1785,18 @@
     document.getElementById('selectAllCrew').addEventListener('change', (e) => { document.querySelectorAll('#crewTable .crew-check').forEach(cb => cb.checked = e.target.checked); });
     document.getElementById('addCrewMemberBtn').addEventListener('click', () => {
       const name = prompt('请输入人员姓名：');
-      if (name && name.trim()) { 
+      if (name && name.trim()) {
         if (crewList.includes(name.trim())) { alert('该人员已存在！'); return; }
-        crewList.push(name.trim()); 
-        saveCrewList(); 
-        if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable(); 
+        crewList.push(name.trim()); saveCrewList();
+        if (document.getElementById('crewMode').style.display !== 'none') renderCrewTable();
         renderCalendar();
-        showToast('✅ 已添加 ' + name); 
+        showToast('✅ 已添加 ' + name);
       }
     });
     document.getElementById('closeAttendanceModal').addEventListener('click', () => attendanceModal.classList.remove('active'));
     attendanceModal.addEventListener('click', e => { if (e.target === attendanceModal) attendanceModal.classList.remove('active'); });
     document.getElementById('lockStatus').addEventListener('click', () => { if (crewLocked) unlockCrew(); });
 
-    // 出勤选项点击事件
     document.getElementById('attendanceOptions').addEventListener('click', e => {
       const opt = e.target.closest('.attendance-option');
       if (!opt) return;
@@ -1690,22 +1808,13 @@
       selectedAttType = opt.dataset.type;
       updateAttUI();
     });
-
-    // 输入框获得焦点时自动选中该选项
     document.querySelectorAll('.attendance-option .opt-input').forEach(input => {
       input.addEventListener('focus', (e) => {
         const opt = e.target.closest('.attendance-option');
-        if (opt) {
-          selectedAttType = opt.dataset.type;
-          updateAttUI();
-        }
+        if (opt) { selectedAttType = opt.dataset.type; updateAttUI(); }
       });
     });
-
-    // 加班规则下拉切换
     document.getElementById('overtimeRuleMode').addEventListener('change', toggleOvertimeHoursVisibility);
-
-    // 项目输入框变化时，自动带出该项目的加班规则
     document.getElementById('attendanceProject').addEventListener('change', () => {
       const project = document.getElementById('attendanceProject').value.trim() || '未分类';
       const rule = getOvertimeRule(project);
@@ -1720,7 +1829,6 @@
       document.getElementById('overtimeRuleHours').value = rule.hours || 3;
       toggleOvertimeHoursVisibility();
     });
-
     document.getElementById('switchSingle').addEventListener('click', () => {
       crewMode = 'single';
       document.getElementById('singleMode').style.display = 'block';
@@ -1734,10 +1842,8 @@
       document.getElementById('crewMode').style.display = 'block';
       document.getElementById('switchSingle').classList.remove('active');
       document.getElementById('switchCrew').classList.add('active');
-      renderCrewTable();
-      unlockCrew();
+      renderCrewTable(); unlockCrew();
     });
-
     document.getElementById('personMenuEdit').addEventListener('click', () => {
       if (currentSelectedPerson) editCrewMember(currentSelectedPerson);
       closePersonMenu();
@@ -1751,10 +1857,10 @@
       if (e.target === document.getElementById('personMenuModal')) closePersonMenu();
     });
 
-    document.getElementById('exportDataBtn').addEventListener('click', () => {
-      document.getElementById('monthList').innerHTML = getAvailableMonths().map(m => { const [y, mo] = m.split('-'); return `<div class="month-item"><input type="checkbox" id="chk_${m}" value="${m}" checked><label for="chk_${m}">${y}年${mo}月</label></div>`; }).join('');
-      document.getElementById('monthSelectModal').classList.add('active');
-    });
+    // 导出/导入/清空
+    document.getElementById('importFileInput').addEventListener('change', e => { if (e.target.files[0]) { importData(e.target.files[0]); e.target.value = ''; } });
+
+    // 月份选择弹窗
     document.getElementById('closeMonthSelect').addEventListener('click', () => document.getElementById('monthSelectModal').classList.remove('active'));
     document.getElementById('selectAllMonths').addEventListener('click', () => document.querySelectorAll('#monthList input[type="checkbox"]').forEach(cb => cb.checked = true));
     document.getElementById('deselectAllMonths').addEventListener('click', () => document.querySelectorAll('#monthList input[type="checkbox"]').forEach(cb => cb.checked = false));
@@ -1764,17 +1870,113 @@
       exportSelectedMonths(checked);
     });
 
-    document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
-    document.getElementById('importFileInput').addEventListener('change', e => { if (e.target.files[0]) { importData(e.target.files[0]); e.target.value = ''; } });
-
-    let confirmCb = null;
-    document.getElementById('clearAllBtn').addEventListener('click', () => {
-      document.getElementById('confirmMessage').textContent = '确定清空所有数据？';
-      confirmCb = () => { records = []; attendanceRecords = {}; crewAttendance = {}; advances = []; salaryPaid = {}; loanRecords = []; dailySalary = {}; overtimeRule = {}; saveRecords(); saveAttendance(); saveCrewAttendance(); saveAdvances(); saveSalaryPaid(); saveLoanRecords(); saveDailySalary(); saveOvertimeRule(); renderCalendar(); showToast('🗑️ 已清空'); };
-      document.getElementById('confirmDialog').classList.add('active');
+    // Gitee / 命令面板
+    document.getElementById('giteeBtn').addEventListener('click', openSyncPanel);
+    document.getElementById('cmdBtn').addEventListener('click', openCmd);
+    document.getElementById('cmdClose').addEventListener('click', closeCmd);
+    document.getElementById('cmdPanel').addEventListener('click', e => {
+      if (e.target === document.getElementById('cmdPanel')) closeCmd();
     });
-    document.getElementById('confirmCancel').addEventListener('click', () => document.getElementById('confirmDialog').classList.remove('active'));
-    document.getElementById('confirmOk').addEventListener('click', () => { document.getElementById('confirmDialog').classList.remove('active'); if (confirmCb) confirmCb(); });
+    document.getElementById('cmdExport').addEventListener('click', () => {
+      closeCmd();
+      document.getElementById('monthList').innerHTML = getAvailableMonths().map(m => {
+        const [y, mo] = m.split('-');
+        return `<div class="month-item"><input type="checkbox" id="chk_${m}" value="${m}" checked><label for="chk_${m}">${y}年${mo}月</label></div>`;
+      }).join('');
+      document.getElementById('monthSelectModal').classList.add('active');
+    });
+    document.getElementById('cmdImport').addEventListener('click', () => {
+      closeCmd();
+      document.getElementById('importFileInput').click();
+    });
+    document.getElementById('cmdGiteeSync').addEventListener('click', () => {
+      closeCmd();
+      openSyncPanel();
+    });
+    document.getElementById('cmdGiteeSet').addEventListener('click', () => {
+      closeCmd();
+      openGiteeSet();
+    });
+    document.getElementById('cmdClear').addEventListener('click', openClearData);
+
+    // 同步弹窗
+    document.getElementById('syncClose').addEventListener('click', closeSyncPanel);
+    document.getElementById('syncPanel').addEventListener('click', e => {
+      if (e.target === document.getElementById('syncPanel')) closeSyncPanel();
+    });
+    document.getElementById('syncNow').addEventListener('click', () => {
+      document.getElementById('syncFileListWrap').style.display = 'none';
+      doSyncNow();
+    });
+    document.getElementById('syncUpload').addEventListener('click', () => {
+      document.getElementById('syncFileListWrap').style.display = 'none';
+      doSyncUpload();
+    });
+    document.getElementById('syncDownload').addEventListener('click', () => {
+      document.getElementById('syncFileListWrap').style.display = 'none';
+      doSyncDownload();
+    });
+    document.getElementById('syncFileList').addEventListener('click', e => {
+      const item = e.target.closest('.file-item');
+      if (!item) return;
+      const listEl = document.getElementById('syncFileList');
+      const i = parseInt(item.dataset.fi, 10);
+      const f = (listEl._files || [])[i];
+      if (!f) return;
+      openDownloadChoice(f, listEl._dir || '');
+    });
+
+    // 下载选择
+    document.getElementById('dlCancel').addEventListener('click', closeDownloadChoice);
+    document.getElementById('dlChoice').addEventListener('click', e => {
+      if (e.target === document.getElementById('dlChoice')) closeDownloadChoice();
+    });
+    document.getElementById('dlToPhone').addEventListener('click', downloadFileToPhone);
+    document.getElementById('dlToLib').addEventListener('click', importFileToLedger);
+
+    // 设置弹窗
+    document.getElementById('gsetClose').addEventListener('click', closeGiteeSet);
+    document.getElementById('giteeSet').addEventListener('click', e => {
+      if (e.target === document.getElementById('giteeSet')) closeGiteeSet();
+    });
+    document.getElementById('gsetUnlock').addEventListener('click', () => {
+      if (gsetLocked) { setGsetLocked(false); scheduleAutoLock(); }
+      else setGsetLocked(true);
+    });
+    document.getElementById('gsetPassEye').addEventListener('click', () => {
+      if (gsetLocked) return;
+      const pass = document.getElementById('gsetPass');
+      if (pass.type === 'password') { pass.type = 'text'; updateTokenEye(); scheduleAutoLock(); }
+      else { pass.type = 'password'; updateTokenEye(); scheduleAutoLock(); }
+    });
+    document.querySelectorAll('#giteeSet .gset-body input').forEach(inp => {
+      inp.addEventListener('input', () => { if (!gsetLocked) scheduleAutoLock(); });
+      inp.addEventListener('focus', () => { if (!gsetLocked) scheduleAutoLock(); });
+    });
+    document.getElementById('gsetSave').addEventListener('click', () => {
+      if (gsetLocked) { gsetMsg('请先点「● 开启」解锁', true); return; }
+      const owner = document.getElementById('gsetUser').value.trim();
+      const token = document.getElementById('gsetPass').value.trim();
+      const repo = document.getElementById('gsetRepo').value.trim();
+      const filePath = document.getElementById('gsetPath').value.trim() || '我的数据库/日历记账.json';
+      if (!owner) { gsetMsg('请填写 Gitee 用户名', true); return; }
+      if (!token) { gsetMsg('请填写私人令牌', true); return; }
+      if (!repo) { gsetMsg('请填写仓库名', true); return; }
+      const cfg = getGiteeCfg();
+      saveGiteeCfg({ ...cfg, owner, token, repo, ledgerFilePath: filePath });
+      gsetMsg('✅ 已保存设置');
+      scheduleAutoLock();
+    });
+
+    // 快捷键
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('cmdPanel').classList.contains('show')) closeCmd();
+        if (document.getElementById('syncPanel').classList.contains('show')) closeSyncPanel();
+        if (document.getElementById('giteeSet').classList.contains('show')) closeGiteeSet();
+        if (document.getElementById('dlChoice').classList.contains('show')) closeDownloadChoice();
+      }
+    });
 
     document.getElementById('prevMonth').addEventListener('click', () => { if (currentMonth===1) { currentMonth=12; currentYear--; } else currentMonth--; renderCalendar(); });
     document.getElementById('nextMonth').addEventListener('click', () => { if (currentMonth===12) { currentMonth=1; currentYear++; } else currentMonth++; renderCalendar(); });
@@ -1784,19 +1986,12 @@
     window.confirmRename = (old, i) => renameCategory(old, document.getElementById(`editInput_${i}`).value);
     window.exportCategoryToImage = exportCategoryToImage;
 
+    // 启动
     const now = new Date();
     currentYear = now.getFullYear();
     currentMonth = now.getMonth() + 1;
-    loadRecords();
-    loadAttendance();
-    loadCrewList();
-    loadCrewAttendance();
-    loadAdvances();
-    loadSalaryPaid();
-    loadLoanRecords();
-    loadDailySalary();
-    loadOvertimeRule();
-    loadLastInput();
+    loadRecords(); loadAttendance(); loadCrewList(); loadCrewAttendance();
+    loadAdvances(); loadSalaryPaid(); loadLoanRecords(); loadDailySalary(); loadOvertimeRule(); loadLastInput();
     renderCalendar();
     updateAdvanceSelect();
     updateIncomeAdvanceSelect();
