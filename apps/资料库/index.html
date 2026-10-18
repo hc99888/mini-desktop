@@ -1400,6 +1400,68 @@ function similarContent(a, b){
   return jaccard(tokenize(a), tokenize(b));
 }
 
+/* ---------- 历史去重（导出/同步用） ---------- */
+function stableStringify(obj){
+  if(obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+  if(Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']';
+  const keys = Object.keys(obj).sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
+}
+
+function historySignature(h){
+  return stableStringify({
+    title: h?.title ?? '',
+    category: h?.category ?? '',
+    tags: h?.tags ?? [],
+    fields: h?.fields ?? {},
+    content: h?.content ?? '',
+    images: h?.images ?? []
+  });
+}
+
+function noteSignature(n){
+  return historySignature(n);
+}
+
+function dedupeHistoryOfNote(note, options = {}){
+  const { dropEmpty = true, dropSameAsCurrent = true } = options;
+  const history = Array.isArray(note.history) ? note.history : [];
+  if(!history.length) return note;
+
+  const curSig = noteSignature(note);
+  const map = new Map();
+
+  for(const h of history){
+    if(!h || typeof h !== 'object') continue;
+
+    if(dropEmpty){
+      const isEmpty =
+        !h.content &&
+        (!h.fields || Object.keys(h.fields).length === 0) &&
+        (!h.images || h.images.length === 0);
+      if(isEmpty) continue;
+    }
+
+    const sig = historySignature(h);
+    if(dropSameAsCurrent && sig === curSig) continue;
+
+    const prev = map.get(sig);
+    if(!prev || String(h.updatedAt || '') >= String(prev.updatedAt || '')){
+      map.set(sig, h);
+    }
+  }
+
+  const deduped = Array.from(map.values()).sort((a, b) =>
+    String(a.updatedAt || '').localeCompare(String(b.updatedAt || ''))
+  );
+
+  return { ...note, history: deduped };
+}
+
+function dedupeNotesHistory(notesArr, options = {}){
+  return notesArr.map(n => dedupeHistoryOfNote(n, options));
+}
+
 /* ================= 分类下拉重建 ================= */
 function rebuildCategorySelect(selected){
   const sel = document.getElementById('fCategory');
@@ -2728,11 +2790,16 @@ jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 
 /* ================= 导入导出 ================= */
 function exportJSON(){
+  const cleanNotes = dedupeNotesHistory(notes, {
+    dropEmpty: true,
+    dropSameAsCurrent: true
+  });
+
   const payload = {
     _version: 5,
     _exportedAt: new Date().toISOString(),
     categories: categories,
-    notes: notes
+    notes: cleanNotes
   };
   const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -2740,7 +2807,7 @@ function exportJSON(){
   a.download = `notes_${today()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`已导出 ${notes.length} 条（含图片和分类）`);
+  toast(`已导出 ${cleanNotes.length} 条（含图片和分类，历史已去重）`);
 }
 
 function importJSON(){
@@ -2778,7 +2845,14 @@ function importJSON(){
         let added = 0;
         data.forEach(n=>{
           if(!n.id) n.id = uid();
-          if(!ids.has(n.id)){ notes.push(n); added++; }
+          if(!ids.has(n.id)){
+            const cleaned = dedupeHistoryOfNote(n, {
+              dropEmpty: true,
+              dropSameAsCurrent: true
+            });
+            notes.push(cleaned);
+            added++;
+          }
         });
         saveLocal(); renderAll(); rebuildCategorySelect();
         toast(`导入成功，新增 ${added} 条`);
@@ -2840,7 +2914,10 @@ function buildSyncPayload(){
     _version: 5,
     _exportedAt: new Date().toISOString(),
     categories: categories,
-    notes: notes
+    notes: dedupeNotesHistory(notes, {
+      dropEmpty: true,
+      dropSameAsCurrent: true
+    })
   };
 }
 
@@ -3291,7 +3368,10 @@ document.getElementById('dlToLib').onclick = async ()=>{
       syncMsg('❌ 文件格式错误（没有 notes 字段）', true);
       return;
     }
-    notes = payload.notes;
+    notes = dedupeNotesHistory(payload.notes, {
+      dropEmpty: true,
+      dropSameAsCurrent: true
+    });
     if(Array.isArray(payload.categories)){
       categories = payload.categories;
       saveCats();
@@ -3353,7 +3433,10 @@ async function doSyncNow(){
         `点「取消」= 用本地覆盖远端（会再问一次）`
       );
       if(use){
-        notes = remote.notes;
+        notes = dedupeNotesHistory(remote.notes, {
+          dropEmpty: true,
+          dropSameAsCurrent: true
+        });
         if(Array.isArray(remote.categories)){
           categories = remote.categories;
           saveCats();
