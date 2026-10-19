@@ -38,25 +38,28 @@ function getCatFields(name){
 }
 
 /* ================= 数据层 ================= */
-const STORE_KEY = 'my_notes_v5';  // 升版本，避免旧数据里的 history 带入
+const STORE_KEY = 'my_notes_v6';
 
 let notes = [];
-let filter = { category: '', tag: '', keyword: '' };
+let filter = { category: '', tag: '', keyword: '', star: false };
 let currentData = [];
 let currentIndex = 0;
 let viewMode = localStorage.getItem('my_notes_view') || 'card';
 let splitPercent = parseInt(localStorage.getItem('my_notes_split'), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
-/* ★ 核心：清理 note 里的 history 字段（旧数据可能有） */
 function sanitizeNote(n){
   if(!n || typeof n !== 'object') return null;
+  let type = n.type === 'note' ? 'note' : 'material';
+  const fields = (n.fields && typeof n.fields === 'object') ? n.fields : {};
+  // 老数据没有 type：fields 为空且正文有内容 → 推断为笔记？保守起见仍按 material 处理
   return {
     id: n.id || uid(),
+    type: type,
     title: String(n.title ?? ''),
     category: String(n.category ?? ''),
     tags: Array.isArray(n.tags) ? n.tags.map(t=>String(t||'')).filter(Boolean) : [],
-    fields: (n.fields && typeof n.fields === 'object') ? n.fields : {},
+    fields: fields,
     content: String(n.content ?? ''),
     images: Array.isArray(n.images) ? n.images.map(x=>String(x||'')) : [],
     createdAt: n.createdAt || today(),
@@ -73,15 +76,18 @@ function loadLocal(){
       return;
     }
   }catch(e){}
-  // 兼容旧 key：读旧数据，清理后迁移到新 key
-  try{
-    const old = JSON.parse(localStorage.getItem('my_notes_v4'));
-    if(Array.isArray(old)){
-      notes = old.map(sanitizeNote).filter(Boolean);
-      localStorage.setItem(STORE_KEY, JSON.stringify(notes));
-      return;
-    }
-  }catch(e){}
+  // 兼容旧 key 迁移
+  const oldKeys = ['my_notes_v5','my_notes_v4'];
+  for(const k of oldKeys){
+    try{
+      const old = JSON.parse(localStorage.getItem(k));
+      if(Array.isArray(old)){
+        notes = old.map(sanitizeNote).filter(Boolean);
+        localStorage.setItem(STORE_KEY, JSON.stringify(notes));
+        return;
+      }
+    }catch(e){}
+  }
   notes = [];
 }
 function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(notes)); }
@@ -164,7 +170,6 @@ function similarContent(a, b){
   return jaccard(tokenize(a), tokenize(b));
 }
 
-/* ================= 标题去重（导出/导入时用） ================= */
 function dedupeNotesByTitle(notesArr){
   const titleMap = new Map();
   const noTitleList = [];
@@ -203,6 +208,7 @@ const sidebarEl = document.getElementById('sidebar');
 const overlayEl = document.getElementById('overlay');
 const catListEl = document.getElementById('catList');
 const tagCloudEl = document.getElementById('tagCloud');
+const starListEl = document.getElementById('starList');
 
 function openSidebar(){ sidebarEl.classList.add('open'); overlayEl.classList.add('show'); }
 function closeSidebar(){ sidebarEl.classList.remove('open'); overlayEl.classList.remove('show'); }
@@ -216,7 +222,7 @@ function renderSidebar(){
     catMap[c] = (catMap[c]||0)+1;
   });
   const cats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  let html = `<div class="nav-item ${!filter.category?'active':''}" data-cat="">
+  let html = `<div class="nav-item ${!filter.category && !filter.star?'active':''}" data-cat="">
       <span>全部</span><span class="count">${notes.length}</span></div>`;
   cats.forEach(([c,n])=>{
     html += `<div class="nav-item ${filter.category===c?'active':''}" data-cat="${esc(c)}">
@@ -230,11 +236,20 @@ function renderSidebar(){
   tagCloudEl.innerHTML = tags.length
     ? tags.map(([t,n])=>`<span class="tag-chip ${filter.tag===t?'active':''}" data-tag="${esc(t)}">${esc(t)}<span class="n">${n}</span></span>`).join('')
     : `<span style="color:#aaa;font-size:12px;padding:4px 8px;">暂无标签</span>`;
+
+  const stars = notes.filter(n=>n.star)
+    .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  starListEl.innerHTML = stars.length
+    ? stars.map(n=>`<div class="nav-item ${filter.star && filter.keyword===('__star__'+n.id)?'active':''}" data-star-id="${n.id}">
+        <span>★ ${esc(n.title||'（无标题）')}</span>
+      </div>`).join('')
+    : `<div style="color:#aaa;font-size:12px;padding:8px;">暂无收藏</div>`;
 }
 
 catListEl.addEventListener('click', e=>{
   const item = e.target.closest('.nav-item'); if(!item) return;
   filter.category = item.dataset.cat;
+  filter.star = false;
   currentIndex = 0;
   renderAll();
   closeSidebar();
@@ -242,8 +257,25 @@ catListEl.addEventListener('click', e=>{
 tagCloudEl.addEventListener('click', e=>{
   const chip = e.target.closest('.tag-chip'); if(!chip) return;
   filter.tag = filter.tag === chip.dataset.tag ? '' : chip.dataset.tag;
+  filter.star = false;
   currentIndex = 0;
   renderAll();
+  closeSidebar();
+});
+starListEl.addEventListener('click', e=>{
+  const item = e.target.closest('[data-star-id]'); if(!item) return;
+  const id = item.dataset.starId;
+  const n = notes.find(x=>x.id===id);
+  if(!n) return;
+  filter = { category:'', tag:'', keyword:'', star:false };
+  currentIndex = 0;
+  // 直接定位到这条
+  const idxAll = notes.findIndex(x=>x.id===id);
+  renderAll();
+  setTimeout(()=>{
+    const idx = currentData.findIndex(x=>x.id===id);
+    if(idx >= 0) goTo(idx);
+  }, 60);
   closeSidebar();
 });
 
@@ -265,6 +297,7 @@ function matchKw(n, kw){
 function getFiltered(){
   const kw = filter.keyword.trim().toLowerCase();
   let data = notes.filter(n=>{
+    if(filter.star && !n.star) return false;
     if(filter.category && (n.category||'未分类') !== filter.category) return false;
     if(filter.tag && !(n.tags||[]).includes(filter.tag)) return false;
     return matchKw(n, kw);
@@ -308,11 +341,13 @@ function getLocalImgs(n){
 }
 
 function cardHTML(n, kw){
+  const isNote = n.type === 'note';
   const titleHTML = `<h3 class="card-title">${hl(esc(n.title||'（无标题）'), kw)}</h3>`;
   const catHTML = n.category ? `<span class="card-cat">${esc(n.category)}</span>` : '';
+  const typeHTML = isNote ? `<span class="card-type-note">📝 笔记</span>` : '';
   const tagsHTML = (n.tags||[]).map(t=>`<span class="card-tag">${esc(t)}</span>`).join('');
-  const metaHTML = (catHTML || tagsHTML)
-    ? `<div class="card-meta">${catHTML}${tagsHTML}</div>` : '';
+  const metaHTML = (catHTML || tagsHTML || typeHTML)
+    ? `<div class="card-meta">${catHTML}${typeHTML}${tagsHTML}</div>` : '';
 
   const linkImg = getLinkImg(n);
   const localImgs = getLocalImgs(n);
@@ -324,7 +359,7 @@ function cardHTML(n, kw){
     ? `<button class="card-imgs-badge" data-act="imgs" data-id="${n.id}" title="查看本地图片">🖼 ${localImgs.length}</button>`
     : '';
 
-  const fieldRows = Object.entries(n.fields||{})
+  const fieldRows = isNote ? '' : Object.entries(n.fields||{})
     .filter(([k,v])=>k||v)
     .map(([k,v])=>
       `<div class="field-row">
@@ -332,7 +367,8 @@ function cardHTML(n, kw){
          <span class="fv">${hl(esc(v), kw)}</span>
        </div>`
     ).join('');
-  const fieldsHTML = fieldRows ? `<div class="card-fields">${fieldRows}</div>` : '';
+  const hasFields = !!fieldRows;
+  const fieldsHTML = hasFields ? `<div class="card-fields">${fieldRows}</div>` : '';
 
   const contentHTML = n.content
     ? `<div class="content">${md(hl(n.content, kw))}</div>`
@@ -358,6 +394,20 @@ function cardHTML(n, kw){
     relationsHTML += `</div>`;
   }
 
+  // 笔记：不渲染 upper 和 split-handle，正文直接占满
+  const splitInner = isNote
+    ? `<div class="card-lower" style="flex:1;">${contentHTML}</div>`
+    : `<div class="card-upper">${fieldsHTML}</div>
+       <div class="split-handle" data-split-handle title="上下拖动调整比例">
+         <span class="sh-label">
+           <span class="sh-grip"><i></i><i></i></span>
+           <span class="sh-text">正文</span>
+           <span class="sh-num">0 / 0</span>
+           <span class="sh-grip"><i></i><i></i></span>
+         </span>
+       </div>
+       <div class="card-lower">${contentHTML}</div>`;
+
   return `
   <div class="card" data-id="${n.id}">
     <div class="card-body">
@@ -371,27 +421,10 @@ function cardHTML(n, kw){
       </div>
       ${metaHTML}
       <div class="card-split">
-        <div class="card-upper">
-          ${fieldsHTML}
-        </div>
-        <div class="split-handle" data-split-handle title="上下拖动调整比例">
-          <span class="sh-label">
-            <span class="sh-grip"><i></i><i></i></span>
-            <span class="sh-text">正文</span>
-            <span class="sh-num">0 / 0</span>
-            <span class="sh-grip"><i></i><i></i></span>
-          </span>
-        </div>
-        <div class="card-lower">
-          ${contentHTML}
-        </div>
+        ${splitInner}
       </div>
     </div>
     ${relationsHTML}
-    <div class="card-time">
-      <span>创建：${n.createdAt||''}</span>
-      <span>更新：${n.updatedAt||''}</span>
-    </div>
     <div class="ops">
       <button data-act="edit">编辑</button>
       <button data-act="copy">复制</button>
@@ -401,7 +434,9 @@ function cardHTML(n, kw){
 }
 
 function listItemHTML(n){
+  const isNote = n.type === 'note';
   const cat = n.category ? `<span class="lc">${esc(n.category)}</span>` : '';
+  const typeTag = isNote ? `<span class="lc" style="background:#fdf3e0;color:#8a6d3b;">📝 笔记</span>` : '';
   const tags = (n.tags||[]).slice(0,3).map(t=>`<span class="tag-mini">${esc(t)}</span>`).join('');
   const localCount = getLocalImgs(n).length;
   const hasLink = !!getLinkImg(n);
@@ -409,16 +444,18 @@ function listItemHTML(n){
   if(localCount) imgBadge += `<span class="img-badge">🖼 ${localCount}</span>`;
   if(hasLink) imgBadge += `<span class="img-badge">📋 链接</span>`;
   let summary = '';
-  const firstField = Object.entries(n.fields||{})[0];
-  if(firstField) summary = `${firstField[0]} ${firstField[1]}`;
-  else if(n.content) summary = String(n.content).replace(/\[\[|\]\]/g,'').slice(0,60);
+  if(!isNote){
+    const firstField = Object.entries(n.fields||{})[0];
+    if(firstField) summary = `${firstField[0]} ${firstField[1]}`;
+  }
+  if(!summary && n.content) summary = String(n.content).replace(/\[\[|\]\]/g,'').slice(0,60);
   return `
   <div class="list-item" data-id="${n.id}">
     <div class="row1">
       <span class="lt">${esc(n.title||'（无标题）')}</span>
       <span class="ls ${n.star?'on':''}">${n.star?'★':'☆'}</span>
     </div>
-    <div class="row2">${cat}${tags}${imgBadge}
+    <div class="row2">${cat}${typeTag}${tags}${imgBadge}
       ${summary?`<span style="margin-left:6px;color:#888;">${esc(summary)}</span>`:''}
     </div>
   </div>`;
@@ -431,10 +468,10 @@ function renderAll(){
   if(!currentData.length){
     const emptyHTML = `<div class="empty-slide">
       <div class="big">🗂️</div>
-      <div>${filter.category || filter.tag || kw ? '没有匹配的结果' : '还没有资料，点「＋ 新建」开始吧'}</div>
+      <div>${filter.category || filter.tag || filter.star || kw ? '没有匹配的结果' : '还没有资料，点「＋ 新建」开始吧'}</div>
     </div>`;
     swiperEl.innerHTML = emptyHTML;
-    listviewEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#888;">${filter.category || filter.tag || kw ? '没有匹配的结果' : '还没有资料'}</div>`;
+    listviewEl.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#888;">${filter.category || filter.tag || filter.star || kw ? '没有匹配的结果' : '还没有资料'}</div>`;
     updateCounter();
     renderSidebar();
     return;
@@ -473,7 +510,10 @@ function applyViewMode(){
 function updateCounter(){
   const total = currentData.length;
   const idx = total ? currentIndex + 1 : 0;
-  const catLabel = filter.category || (filter.tag ? '#'+filter.tag : '全部');
+  let catLabel = '全部';
+  if(filter.star) catLabel = '★ 收藏';
+  else if(filter.category) catLabel = filter.category;
+  else if(filter.tag) catLabel = '#' + filter.tag;
 
   if(!total){
     counterEl.innerHTML = `<span class="cat">${esc(catLabel)}</span>
@@ -551,7 +591,7 @@ function jumpToTitle(title){
   if(idx >= 0){ goTo(idx); return; }
   const idxAll = notes.findIndex(n=>String(n.title||'').trim() === String(title).trim());
   if(idxAll >= 0){
-    filter = {category:'',tag:'',keyword:''};
+    filter = {category:'',tag:'',keyword:'',star:false};
     viewMode = 'card';
     renderAll();
     setTimeout(()=>goTo(idxAll), 80);
@@ -722,10 +762,12 @@ function copyNote(n){
   parts.push(`【${n.title || '（无标题）'}】`);
   if(n.category) parts.push(`分类：${n.category}`);
   if(n.tags && n.tags.length) parts.push(`标签：${n.tags.join(', ')}`);
-  const fields = Object.entries(n.fields||{}).filter(([k,v])=>k||v);
-  if(fields.length){
-    parts.push('');
-    fields.forEach(([k,v])=>parts.push(`${k}：${v}`));
+  if(n.type !== 'note'){
+    const fields = Object.entries(n.fields||{}).filter(([k,v])=>k||v);
+    if(fields.length){
+      parts.push('');
+      fields.forEach(([k,v])=>parts.push(`${k}：${v}`));
+    }
   }
   if(n.content){
     parts.push('');
@@ -751,23 +793,76 @@ function fallbackCopy(text, okMsg){
   document.body.removeChild(ta);
 }
 
-/* ================= 编辑面板（无历史版本） ================= */
+/* ================= 编辑面板（资料/笔记 Tab） ================= */
 const editor = document.getElementById('editor');
 let editingId = null;
 let editingImages = [];
+let editingType = 'material';
 let pendingCategory = '';
+let pendingCategoryOld = '';
+
+function setEditorType(type){
+  editingType = type === 'note' ? 'note' : 'material';
+  const tabs = document.querySelectorAll('#typeTabs .type-tab');
+  tabs.forEach(t=>t.classList.toggle('active', t.dataset.type === editingType));
+  const fieldBlock = document.getElementById('fieldBlock');
+  if(editingType === 'note'){
+    fieldBlock.classList.add('hide');
+  }else{
+    fieldBlock.classList.remove('hide');
+  }
+}
+
+document.getElementById('typeTabs').addEventListener('click', e=>{
+  const tab = e.target.closest('.type-tab');
+  if(!tab) return;
+  const newType = tab.dataset.type;
+  if(newType === editingType) return;
+
+  // 资料→笔记：字段框可能有内容，确认
+  if(editingType === 'material' && newType === 'note'){
+    if(fieldsHaveValues()){
+      if(!confirm('切换到「笔记」会清空当前结构化字段，继续？')){
+        return;
+      }
+    }
+    document.getElementById('fFields').value = '';
+    setEditorType('note');
+    return;
+  }
+
+  // 笔记→资料：按当前分类填字段模板
+  if(editingType === 'note' && newType === 'material'){
+    if(!confirm('切换为「资料」后将出现结构化字段，按分类模板填充，继续？')){
+      return;
+    }
+    setEditorType('material');
+    const cat = document.getElementById('fCategory').value;
+    const tmpl = getCatFields(cat);
+    if(tmpl.length){
+      document.getElementById('fFields').value = tmpl.map(f=>`${f}=`).join('\n');
+    }else{
+      document.getElementById('fFields').value = '';
+    }
+    return;
+  }
+});
 
 function openEditor(note){
   editingId = note ? note.id : null;
   editingImages = note && note.images ? note.images.slice() : [];
-  document.getElementById('editorTitle').textContent = note ? '编辑资料' : '新建资料';
+  editingType = note && note.type === 'note' ? 'note' : 'material';
+
+  document.getElementById('editorTitle').textContent = note ? '编辑' : '新建';
   document.getElementById('fTitle').value = note?.title || '';
   document.getElementById('fTags').value = (note?.tags||[]).join(',');
   document.getElementById('fFields').value = Object.entries(note?.fields||{})
       .map(([k,v])=>`${k}=${v}`).join('\n');
   document.getElementById('fContent').value = note?.content || '';
   rebuildCategorySelect(note?.category || '');
+  setEditorType(editingType);
   renderImgEdit();
+
   editor.classList.add('show');
   document.body.style.overflow = 'hidden';
   setTimeout(()=>document.getElementById('fTitle').focus(), 100);
@@ -777,6 +872,7 @@ function closeEditor(){
   document.body.style.overflow = '';
   editingId = null;
   editingImages = [];
+  editingType = 'material';
 }
 
 function fieldsHaveValues(){
@@ -840,6 +936,9 @@ function applyTemplateReplace(catName){
 }
 
 document.getElementById('fCategory').addEventListener('change', e=>{
+  // 笔记模式不触发字段模板逻辑
+  if(editingType === 'note') return;
+
   const newCat = e.target.value;
   const oldText = document.getElementById('fFields').value;
 
@@ -888,7 +987,6 @@ document.getElementById('switchReplace').onclick = ()=>{
   rebuildCategorySelect(pendingCategory);
 };
 
-let pendingCategoryOld = '';
 document.getElementById('fCategory').addEventListener('focus', e=>{
   pendingCategoryOld = e.target.value;
 });
@@ -1233,20 +1331,21 @@ function compressImage(file, maxSize, cb){
 document.getElementById('btnNew').onclick = ()=>openEditor(null);
 document.getElementById('btnCancel').onclick = closeEditor;
 
-/* ★ 保存：不再写 history，直接覆盖当前内容 */
 document.getElementById('btnSave').onclick = ()=>{
   const title = document.getElementById('fTitle').value.trim();
   if(!title){ alert('请填写标题'); return; }
 
   const fields = {};
-  document.getElementById('fFields').value.split('\n').forEach(line=>{
-    const i = line.indexOf('=');
-    if(i>0){
-      const k = line.slice(0,i).trim();
-      const v = line.slice(i+1).trim();
-      if(k) fields[k]=v;
-    }
-  });
+  if(editingType !== 'note'){
+    document.getElementById('fFields').value.split('\n').forEach(line=>{
+      const i = line.indexOf('=');
+      if(i>0){
+        const k = line.slice(0,i).trim();
+        const v = line.slice(i+1).trim();
+        if(k) fields[k]=v;
+      }
+    });
+  }
 
   const tags = document.getElementById('fTags').value
       .split(/[,，]/).map(s=>s.trim()).filter(Boolean);
@@ -1277,7 +1376,7 @@ document.getElementById('btnSave').onclick = ()=>{
   if(editingId){
     const n = notes.find(x=>x.id===editingId);
     if(n){
-      // 直接覆盖，不存历史
+      n.type = editingType;
       n.title = title;
       n.category = category.trim();
       n.tags = tags;
@@ -1285,17 +1384,15 @@ document.getElementById('btnSave').onclick = ()=>{
       n.content = content;
       n.images = editingImages.slice();
       n.updatedAt = now;
-      // 清掉可能残留的 history
       delete n.history;
     }
   }else{
     notes.unshift({
-      id: uid(), title,
+      id: uid(), type: editingType, title,
       category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
       createdAt: now, updatedAt: now, star: false
-      // 不写 history
     });
     currentIndex = 0;
   }
@@ -1388,7 +1485,7 @@ function renderCmd(q){
       toast('已重置 45 / 55');
     }},
     {name:'清除筛选（显示全部）', run:()=>{
-      filter = {category:'',tag:'',keyword:''};
+      filter = {category:'',tag:'',keyword:'',star:false};
       currentIndex = 0; renderAll();
     }},
     {name:'⚠️ 清空数据', danger:true, run:()=>openClearData()},
@@ -1405,12 +1502,12 @@ function renderCmd(q){
     });
     [...cats].filter(c=>c.toLowerCase().includes(q)).slice(0,4).forEach(c=>{
       items.push({type:'cmd', name:`筛选分类：${c}`, run:()=>{
-        filter.category=c; filter.tag=''; filter.keyword=''; currentIndex=0; renderAll();
+        filter={category:c,tag:'',keyword:'',star:false}; currentIndex=0; renderAll();
       }});
     });
     [...tags].filter(t=>t.toLowerCase().includes(q)).slice(0,4).forEach(t=>{
       items.push({type:'cmd', name:`筛选标签：#${t}`, run:()=>{
-        filter.tag=t; filter.category=''; filter.keyword=''; currentIndex=0; renderAll();
+        filter={category:'',tag:t,keyword:'',star:false}; currentIndex=0; renderAll();
       }});
     });
   }
@@ -1492,11 +1589,11 @@ jumpList.addEventListener('click', e=>{
 jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 
 /* ================= 导入导出 ================= */
-/* 导出：标题去重 + 强制清空 history */
 function buildCleanNotes(){
   const arr = dedupeNotesByTitle(notes);
   return arr.map(n => ({
     id: n.id,
+    type: n.type === 'note' ? 'note' : 'material',
     title: n.title,
     category: n.category,
     tags: Array.isArray(n.tags) ? n.tags : [],
@@ -1506,24 +1603,13 @@ function buildCleanNotes(){
     createdAt: n.createdAt || '',
     updatedAt: n.updatedAt || '',
     star: !!n.star
-    // 不写 history
   }));
 }
 
 function exportJSON(){
   const cleanNotes = buildCleanNotes();
-
-  try{
-    console.log('===== 导出诊断 =====');
-    console.log('原始 notes 数量：', notes.length);
-    console.log('去重后数量：', cleanNotes.length);
-    cleanNotes.forEach(n=>{
-      console.log(`[${n.title}] content 长度: ${(n.content||'').length}, history 字段: ${n.history ? '存在' : '无 ✓'}`);
-    });
-  }catch(e){}
-
   const payload = {
-    _version: 6,
+    _version: 7,
     _exportedAt: new Date().toISOString(),
     categories: categories,
     notes: cleanNotes
@@ -1534,7 +1620,7 @@ function exportJSON(){
   a.download = `notes_${today()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`已导出 ${cleanNotes.length} 条（仅当前内容）`);
+  toast(`已导出 ${cleanNotes.length} 条`);
 }
 
 function importJSON(){
@@ -1572,11 +1658,11 @@ function importJSON(){
         const titles = new Set(notes.map(n=>String(n.title||'').trim()).filter(Boolean));
         let added = 0;
         data.forEach(raw=>{
-          const n = sanitizeNote(raw);   // ★ 清理掉 history
+          const n = sanitizeNote(raw);
           if(!n) return;
           if(ids.has(n.id)) return;
           const title = String(n.title||'').trim();
-          if(title && titles.has(title)) return;   // 标题判重
+          if(title && titles.has(title)) return;
           notes.push(n);
           ids.add(n.id);
           if(title) titles.add(title);
@@ -1628,7 +1714,7 @@ function openClearData(){
     notes = [];
     saveLocal();
     currentIndex = 0;
-    filter = {category:'',tag:'',keyword:''};
+    filter = {category:'',tag:'',keyword:'',star:false};
     renderAll();
     toast(`已清空 ${total} 条资料`);
   }, 100);
@@ -1639,7 +1725,7 @@ const SYNC_KEY = 'my_notes_gitee_cfg';
 
 function buildSyncPayload(){
   return {
-    _version: 6,
+    _version: 7,
     _exportedAt: new Date().toISOString(),
     categories: categories,
     notes: buildCleanNotes()
@@ -1884,7 +1970,6 @@ function syncMsg(msg, isErr){
   syncMsgEl.classList.toggle('err', !!isErr);
 }
 
-/* ================= 上传（先选文件 → 再填名字） ================= */
 async function doSyncUpload(){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
@@ -1951,7 +2036,6 @@ async function doSyncUpload(){
   input.click();
 }
 
-/* ================= 下载（列出 Gitee 文件） ================= */
 async function doSyncDownload(){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
@@ -2004,7 +2088,6 @@ syncFileListEl.addEventListener('click', e=>{
   openDownloadChoice(f, syncFileListEl._dir || '');
 });
 
-/* ================= 下载选项弹窗 ================= */
 const dlChoice = document.getElementById('dlChoice');
 const dlNameEl = document.getElementById('dlName');
 const dlMetaEl = document.getElementById('dlMeta');
@@ -2108,7 +2191,6 @@ document.getElementById('dlToLib').onclick = async ()=>{
   }
 };
 
-/* ================= 一键同步 ================= */
 async function doSyncNow(){
   const cfg = getSyncCfg();
   if(!cfg.owner || !cfg.token || !cfg.repo){ syncMsg('请先保存设置', true); return; }
