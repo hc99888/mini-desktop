@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2f6f4f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>我的资料库</title>
+<title>资料库</title>
 <style>
 :root{
   --bg:#f6f7f5; --card:#fff; --line:#e4e6e2;
@@ -71,24 +71,35 @@ input,textarea,select{font-family:inherit;}
 #overlay.show{display:block;}
 
 header{
-  display:flex;gap:8px;align-items:center;
-  padding:10px 14px;
-  padding-top:calc(10px + var(--safe-top));
+  display:flex;gap:6px;align-items:center;
+  padding:8px 10px;
+  padding-top:calc(8px + var(--safe-top));
   background:#fff;border-bottom:1px solid var(--line);
   flex-shrink:0;
+  flex-wrap:nowrap;
 }
-header .brand{font-weight:700;color:var(--main);font-size:15px;flex:1;white-space:nowrap;}
+header .brand{font-weight:700;color:var(--main);font-size:14px;white-space:nowrap;flex-shrink:0;}
 header button{
   background:#fff;border:1px solid var(--line);color:#333;
-  padding:8px 12px;border-radius:7px;font-size:13px;transition:.15s;
-  min-height:36px;display:inline-flex;align-items:center;justify-content:center;
-  white-space:nowrap;
+  padding:7px 10px;border-radius:7px;font-size:13px;transition:.15s;
+  min-height:34px;display:inline-flex;align-items:center;justify-content:center;
+  white-space:nowrap;flex-shrink:0;
 }
 header button:hover{border-color:var(--main);color:var(--main);}
 header button.primary{background:var(--main);color:#fff;border-color:var(--main);}
 header button.primary:hover{opacity:.9;color:#fff;}
-header button.icon-btn{padding:8px 10px;min-width:38px;font-size:16px;}
-#btnMenu{font-size:18px;padding:6px 10px;min-width:40px;}
+header button.icon-btn{padding:7px 8px;min-width:34px;font-size:15px;}
+#btnMenu{font-size:17px;padding:5px 9px;min-width:36px;flex-shrink:0;}
+
+header .hdr-right{
+  display:flex;gap:6px;align-items:center;
+  margin-left:auto;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+header .hdr-right::-webkit-scrollbar{display:none;}
 
 #stage{flex:1;min-height:0;position:relative;}
 
@@ -1009,9 +1020,15 @@ body.dragging *{
   .img-link-row{height:56px;padding:0 10px;}
   .img-link-row .lk-url{max-width:120px;}
 }
+@media (max-width: 480px){
+  header{padding:8px 8px;gap:5px;}
+  header button{padding:6px 8px;font-size:12px;min-height:32px;}
+  header button.icon-btn{padding:6px 7px;min-width:32px;font-size:14px;}
+  #btnMenu{font-size:16px;padding:5px 8px;min-width:34px;}
+  header .brand{display:none;}
+}
 @media (max-width: 380px){
-  header button{padding:7px 10px;font-size:12px;}
-  header .brand{font-size:14px;}
+  header button{padding:6px 7px;font-size:11.5px;}
 }
 </style>
 </head>
@@ -1029,11 +1046,14 @@ body.dragging *{
 <div id="app">
   <header>
     <button id="btnMenu" title="分类">☰</button>
-    <span class="brand">📚 资料库</span>
+    <span class="brand">资料库</span>
     <button id="btnNew" class="primary">＋ 新建</button>
-    <button id="btnGitee" title="Gitee 同步">Gitee</button>
-    <button id="btnView" class="icon-btn" title="切换视图">▤</button>
-    <button id="btnCmd" class="icon-btn" title="Ctrl+K">⌘</button>
+    <div class="hdr-right">
+      <button id="btnGitee" title="Gitee 同步">Gitee</button>
+      <button id="btnView" class="icon-btn" title="切换视图">▤</button>
+      <button id="btnCmd" class="icon-btn" title="Ctrl+K">⌘</button>
+      <button id="btnRefresh" class="icon-btn" title="刷新">🔄</button>
+    </div>
   </header>
 
   <div id="stage">
@@ -1304,21 +1324,51 @@ function getCatFields(name){
 }
 
 /* ================= 数据层 ================= */
-const STORE_KEY = 'my_notes_v4';
-const VIEW_KEY = 'my_notes_view';
-const SPLIT_KEY = 'my_notes_split';
+const STORE_KEY = 'my_notes_v5';  // 升版本，避免旧数据里的 history 带入
 
 let notes = [];
 let filter = { category: '', tag: '', keyword: '' };
 let currentData = [];
 let currentIndex = 0;
-let viewMode = localStorage.getItem(VIEW_KEY) || 'card';
-let splitPercent = parseInt(localStorage.getItem(SPLIT_KEY), 10);
+let viewMode = localStorage.getItem('my_notes_view') || 'card';
+let splitPercent = parseInt(localStorage.getItem('my_notes_split'), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
+/* ★ 核心：清理 note 里的 history 字段（旧数据可能有） */
+function sanitizeNote(n){
+  if(!n || typeof n !== 'object') return null;
+  return {
+    id: n.id || uid(),
+    title: String(n.title ?? ''),
+    category: String(n.category ?? ''),
+    tags: Array.isArray(n.tags) ? n.tags.map(t=>String(t||'')).filter(Boolean) : [],
+    fields: (n.fields && typeof n.fields === 'object') ? n.fields : {},
+    content: String(n.content ?? ''),
+    images: Array.isArray(n.images) ? n.images.map(x=>String(x||'')) : [],
+    createdAt: n.createdAt || today(),
+    updatedAt: n.updatedAt || today(),
+    star: !!n.star
+  };
+}
+
 function loadLocal(){
-  try{ notes = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
-  catch(e){ notes = []; }
+  try{
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY));
+    if(Array.isArray(raw)){
+      notes = raw.map(sanitizeNote).filter(Boolean);
+      return;
+    }
+  }catch(e){}
+  // 兼容旧 key：读旧数据，清理后迁移到新 key
+  try{
+    const old = JSON.parse(localStorage.getItem('my_notes_v4'));
+    if(Array.isArray(old)){
+      notes = old.map(sanitizeNote).filter(Boolean);
+      localStorage.setItem(STORE_KEY, JSON.stringify(notes));
+      return;
+    }
+  }catch(e){}
+  notes = [];
 }
 function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(notes)); }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -1400,66 +1450,22 @@ function similarContent(a, b){
   return jaccard(tokenize(a), tokenize(b));
 }
 
-/* ---------- 历史去重（导出/同步用） ---------- */
-function stableStringify(obj){
-  if(obj === null || typeof obj !== 'object') return JSON.stringify(obj);
-  if(Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']';
-  const keys = Object.keys(obj).sort();
-  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
-}
-
-function historySignature(h){
-  return stableStringify({
-    title: h?.title ?? '',
-    category: h?.category ?? '',
-    tags: h?.tags ?? [],
-    fields: h?.fields ?? {},
-    content: h?.content ?? '',
-    images: h?.images ?? []
-  });
-}
-
-function noteSignature(n){
-  return historySignature(n);
-}
-
-function dedupeHistoryOfNote(note, options = {}){
-  const { dropEmpty = true, dropSameAsCurrent = true } = options;
-  const history = Array.isArray(note.history) ? note.history : [];
-  if(!history.length) return note;
-
-  const curSig = noteSignature(note);
-  const map = new Map();
-
-  for(const h of history){
-    if(!h || typeof h !== 'object') continue;
-
-    if(dropEmpty){
-      const isEmpty =
-        !h.content &&
-        (!h.fields || Object.keys(h.fields).length === 0) &&
-        (!h.images || h.images.length === 0);
-      if(isEmpty) continue;
-    }
-
-    const sig = historySignature(h);
-    if(dropSameAsCurrent && sig === curSig) continue;
-
-    const prev = map.get(sig);
-    if(!prev || String(h.updatedAt || '') >= String(prev.updatedAt || '')){
-      map.set(sig, h);
+/* ================= 标题去重（导出/导入时用） ================= */
+function dedupeNotesByTitle(notesArr){
+  const titleMap = new Map();
+  const noTitleList = [];
+  for(const n of notesArr){
+    if(!n || typeof n !== 'object') continue;
+    const title = String(n.title || '').trim();
+    if(!title){ noTitleList.push(n); continue; }
+    const prev = titleMap.get(title);
+    const curTime = String(n.updatedAt || '');
+    const prevTime = prev ? String(prev.updatedAt || '') : '';
+    if(!prev || curTime > prevTime){
+      titleMap.set(title, n);
     }
   }
-
-  const deduped = Array.from(map.values()).sort((a, b) =>
-    String(a.updatedAt || '').localeCompare(String(b.updatedAt || ''))
-  );
-
-  return { ...note, history: deduped };
-}
-
-function dedupeNotesHistory(notesArr, options = {}){
-  return notesArr.map(n => dedupeHistoryOfNote(n, options));
+  return [...titleMap.values(), ...noTitleList];
 }
 
 /* ================= 分类下拉重建 ================= */
@@ -1675,7 +1681,6 @@ function cardHTML(n, kw){
     <div class="ops">
       <button data-act="edit">编辑</button>
       <button data-act="copy">复制</button>
-      <button data-act="history">历史</button>
       <button data-act="del" class="danger">删除</button>
     </div>
   </div>`;
@@ -1895,7 +1900,6 @@ function handleCardClick(e){
       renderAll();
     }
   }
-  if(act==='history') showHistory(note);
   if(act==='imgs'){
     const local = getLocalImgs(note);
     if(local.length) openGallery(local, 0);
@@ -1909,7 +1913,7 @@ listviewEl.addEventListener('click', e=>{
   const idx = currentData.findIndex(n=>n.id===id);
   if(idx >= 0){
     viewMode = 'card';
-    localStorage.setItem(VIEW_KEY, 'card');
+    localStorage.setItem('my_notes_view', 'card');
     applyViewMode();
     currentIndex = idx;
     renderAll();
@@ -1918,12 +1922,18 @@ listviewEl.addEventListener('click', e=>{
 
 document.getElementById('btnView').onclick = ()=>{
   viewMode = viewMode === 'card' ? 'list' : 'card';
-  localStorage.setItem(VIEW_KEY, viewMode);
+  localStorage.setItem('my_notes_view', viewMode);
   applyViewMode();
   if(viewMode === 'card'){
     requestAnimationFrame(()=>{
       swiperEl.scrollLeft = currentIndex * swiperEl.clientWidth;
     });
+  }
+};
+
+document.getElementById('btnRefresh').onclick = ()=>{
+  if(confirm('刷新页面？\n（会重新加载最新代码，本地数据不丢）')){
+    location.reload(true);
   }
 };
 
@@ -1969,7 +1979,7 @@ function endDrag(){
   handle.classList.remove('active');
   document.body.classList.remove('dragging');
   dragState = null;
-  localStorage.setItem(SPLIT_KEY, String(splitPercent));
+  localStorage.setItem('my_notes_split', String(splitPercent));
 }
 function getEventY(e){
   if(e.touches && e.touches.length) return e.touches[0].clientY;
@@ -2027,29 +2037,7 @@ function fallbackCopy(text, okMsg){
   document.body.removeChild(ta);
 }
 
-/* ================= 历史 ================= */
-function showHistory(note){
-  if(!note.history || !note.history.length){ alert('暂无历史版本'); return; }
-  const list = note.history.map((h,i)=>
-    `${i+1}. [${h.updatedAt||''}] ${h.title}`
-  ).join('\n');
-  const pick = prompt(`历史版本（输入序号回滚）：\n\n${list}`);
-  if(!pick) return;
-  const idx = parseInt(pick,10) - 1;
-  if(idx<0 || idx>=note.history.length) return;
-  const old = note.history[idx];
-  if(!confirm(`确定回滚到「${old.title}」？当前版本会存入历史`)) return;
-  note.history.unshift({
-    title: note.title, category: note.category, tags: note.tags,
-    fields: note.fields, content: note.content, images: note.images || [],
-    updatedAt: note.updatedAt
-  });
-  note.history = note.history.slice(0, 10);
-  Object.assign(note, old, { updatedAt: today() });
-  saveLocal(); renderAll();
-}
-
-/* ================= 编辑面板 ================= */
+/* ================= 编辑面板（无历史版本） ================= */
 const editor = document.getElementById('editor');
 let editingId = null;
 let editingImages = [];
@@ -2531,6 +2519,7 @@ function compressImage(file, maxSize, cb){
 document.getElementById('btnNew').onclick = ()=>openEditor(null);
 document.getElementById('btnCancel').onclick = closeEditor;
 
+/* ★ 保存：不再写 history，直接覆盖当前内容 */
 document.getElementById('btnSave').onclick = ()=>{
   const title = document.getElementById('fTitle').value.trim();
   if(!title){ alert('请填写标题'); return; }
@@ -2573,26 +2562,26 @@ document.getElementById('btnSave').onclick = ()=>{
 
   if(editingId){
     const n = notes.find(x=>x.id===editingId);
-    n.history = n.history || [];
-    n.history.unshift({
-      title: n.title, category: n.category, tags: n.tags,
-      fields: n.fields, content: n.content, images: n.images || [],
-      updatedAt: n.updatedAt
-    });
-    n.history = n.history.slice(0, 10);
-    Object.assign(n, {
-      title, category: category.trim(),
-      tags, fields, content,
-      images: editingImages.slice(),
-      updatedAt: now
-    });
+    if(n){
+      // 直接覆盖，不存历史
+      n.title = title;
+      n.category = category.trim();
+      n.tags = tags;
+      n.fields = fields;
+      n.content = content;
+      n.images = editingImages.slice();
+      n.updatedAt = now;
+      // 清掉可能残留的 history
+      delete n.history;
+    }
   }else{
     notes.unshift({
       id: uid(), title,
       category: category.trim(),
       tags, fields, content,
       images: editingImages.slice(),
-      createdAt: now, updatedAt: now, star: false, history: []
+      createdAt: now, updatedAt: now, star: false
+      // 不写 history
     });
     currentIndex = 0;
   }
@@ -2680,7 +2669,7 @@ function renderCmd(q){
     {name:'切换视图（卡片/列表）', run:()=>document.getElementById('btnView').click()},
     {name:'重置字段/正文比例', run:()=>{
       splitPercent = 45;
-      localStorage.setItem(SPLIT_KEY, '45');
+      localStorage.setItem('my_notes_split', '45');
       updateSplitDisplay(45);
       toast('已重置 45 / 55');
     }},
@@ -2718,7 +2707,7 @@ function renderCmd(q){
       const idx = currentData.findIndex(x=>x.id===n.id);
       items.push({type:'note', name:n.title || '（无标题）', run:()=>{
         if(idx >= 0){
-          viewMode = 'card'; localStorage.setItem(VIEW_KEY, 'card');
+          viewMode = 'card'; localStorage.setItem('my_notes_view', 'card');
           applyViewMode(); goTo(idx);
         }else{
           filter.keyword = n.title; currentIndex=0; renderAll();
@@ -2782,21 +2771,45 @@ jumpList.addEventListener('click', e=>{
   const i = parseInt(item.dataset.i, 10);
   closeJump();
   if(viewMode !== 'card'){
-    viewMode = 'card'; localStorage.setItem(VIEW_KEY, 'card'); applyViewMode();
+    viewMode = 'card'; localStorage.setItem('my_notes_view', 'card'); applyViewMode();
   }
   requestAnimationFrame(()=>goTo(i));
 });
 jump.addEventListener('click', e=>{ if(e.target===jump) closeJump(); });
 
 /* ================= 导入导出 ================= */
+/* 导出：标题去重 + 强制清空 history */
+function buildCleanNotes(){
+  const arr = dedupeNotesByTitle(notes);
+  return arr.map(n => ({
+    id: n.id,
+    title: n.title,
+    category: n.category,
+    tags: Array.isArray(n.tags) ? n.tags : [],
+    fields: n.fields || {},
+    content: n.content || '',
+    images: Array.isArray(n.images) ? n.images : [],
+    createdAt: n.createdAt || '',
+    updatedAt: n.updatedAt || '',
+    star: !!n.star
+    // 不写 history
+  }));
+}
+
 function exportJSON(){
-  const cleanNotes = dedupeNotesHistory(notes, {
-    dropEmpty: true,
-    dropSameAsCurrent: true
-  });
+  const cleanNotes = buildCleanNotes();
+
+  try{
+    console.log('===== 导出诊断 =====');
+    console.log('原始 notes 数量：', notes.length);
+    console.log('去重后数量：', cleanNotes.length);
+    cleanNotes.forEach(n=>{
+      console.log(`[${n.title}] content 长度: ${(n.content||'').length}, history 字段: ${n.history ? '存在' : '无 ✓'}`);
+    });
+  }catch(e){}
 
   const payload = {
-    _version: 5,
+    _version: 6,
     _exportedAt: new Date().toISOString(),
     categories: categories,
     notes: cleanNotes
@@ -2807,7 +2820,7 @@ function exportJSON(){
   a.download = `notes_${today()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`已导出 ${cleanNotes.length} 条（含图片和分类，历史已去重）`);
+  toast(`已导出 ${cleanNotes.length} 条（仅当前内容）`);
 }
 
 function importJSON(){
@@ -2842,17 +2855,18 @@ function importJSON(){
           saveCats();
         }
         const ids = new Set(notes.map(n=>n.id));
+        const titles = new Set(notes.map(n=>String(n.title||'').trim()).filter(Boolean));
         let added = 0;
-        data.forEach(n=>{
-          if(!n.id) n.id = uid();
-          if(!ids.has(n.id)){
-            const cleaned = dedupeHistoryOfNote(n, {
-              dropEmpty: true,
-              dropSameAsCurrent: true
-            });
-            notes.push(cleaned);
-            added++;
-          }
+        data.forEach(raw=>{
+          const n = sanitizeNote(raw);   // ★ 清理掉 history
+          if(!n) return;
+          if(ids.has(n.id)) return;
+          const title = String(n.title||'').trim();
+          if(title && titles.has(title)) return;   // 标题判重
+          notes.push(n);
+          ids.add(n.id);
+          if(title) titles.add(title);
+          added++;
         });
         saveLocal(); renderAll(); rebuildCategorySelect();
         toast(`导入成功，新增 ${added} 条`);
@@ -2911,13 +2925,10 @@ const SYNC_KEY = 'my_notes_gitee_cfg';
 
 function buildSyncPayload(){
   return {
-    _version: 5,
+    _version: 6,
     _exportedAt: new Date().toISOString(),
     categories: categories,
-    notes: dedupeNotesHistory(notes, {
-      dropEmpty: true,
-      dropSameAsCurrent: true
-    })
+    notes: buildCleanNotes()
   };
 }
 
@@ -3368,10 +3379,8 @@ document.getElementById('dlToLib').onclick = async ()=>{
       syncMsg('❌ 文件格式错误（没有 notes 字段）', true);
       return;
     }
-    notes = dedupeNotesHistory(payload.notes, {
-      dropEmpty: true,
-      dropSameAsCurrent: true
-    });
+    notes = payload.notes.map(sanitizeNote).filter(Boolean);
+    notes = dedupeNotesByTitle(notes);
     if(Array.isArray(payload.categories)){
       categories = payload.categories;
       saveCats();
@@ -3433,10 +3442,8 @@ async function doSyncNow(){
         `点「取消」= 用本地覆盖远端（会再问一次）`
       );
       if(use){
-        notes = dedupeNotesHistory(remote.notes, {
-          dropEmpty: true,
-          dropSameAsCurrent: true
-        });
+        notes = remote.notes.map(sanitizeNote).filter(Boolean);
+        notes = dedupeNotesByTitle(notes);
         if(Array.isArray(remote.categories)){
           categories = remote.categories;
           saveCats();
