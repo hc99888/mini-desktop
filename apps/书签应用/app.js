@@ -385,7 +385,7 @@ function openGiteeSync(){
   const cfg=getSyncCfg();
   gsInfo.innerHTML=`<b>账号：</b>${escapeHtml(cfg.owner||"（未配置）")}<br>
     <b>仓库：</b>${escapeHtml(cfg.repo||"（未配置）")}<br>
-    <b>主文件：</b>${escapeHtml(cfg.filePath||"我的数据库/资料库.json")}`;
+    <b>主文件：</b>${escapeHtml(cfg.filePath||"我的数据库/xxx.json")}`;
   gsClearMsg();
   gsFileList.style.display="none";
   gsFileList.innerHTML="";
