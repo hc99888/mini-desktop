@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>迷你桌面</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#020617">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#020617;color:#fff;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+
+#desktop{position:fixed;inset:0;overflow:hidden;
+  background:
+    radial-gradient(circle at 30% 10%,rgba(59,130,246,.18),transparent 55%),
+    radial-gradient(circle at 80% 90%,rgba(168,85,247,.16),transparent 55%),
+    #020617;}
+.pages-track{display:flex;height:100%;width:100%;will-change:transform}
+.page{flex:0 0 100%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:28px 14px 96px;scrollbar-width:none;-ms-overflow-style:none}
+.page::-webkit-scrollbar{display:none}
+
+.icon-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 6px;
+  justify-items:center;align-items:start;min-height:100%;align-content:start}
+@media(min-width:480px){.icon-grid{grid-template-columns:repeat(5,1fr);gap:26px 10px}}
+
+.app-icon{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;
+  position:relative;cursor:pointer;touch-action:pan-y;
+  transition:transform .18s ease,opacity .18s ease;will-change:transform}
+.app-icon img{width:58px;height:58px;border-radius:16px;object-fit:cover;background:#1e293b;
+  box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none;-webkit-user-drag:none}
+@media(min-width:480px){.app-icon img{width:64px;height:64px;border-radius:18px}}
+.app-icon span{font-size:11.5px;color:#e2e8f0;text-align:center;line-height:1.25;
+  max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;word-break:break-all;pointer-events:none}
+.app-icon.placeholder{opacity:0;pointer-events:none}
+
+.drag-ghost{position:fixed;z-index:9999;pointer-events:none;display:flex;flex-direction:column;
+  align-items:center;gap:7px;transform:scale(1.12);
+  filter:drop-shadow(0 14px 24px rgba(0,0,0,.6))}
+.drag-ghost img{width:58px;height:58px;border-radius:16px;object-fit:cover;background:#1e293b}
+@media(min-width:480px){.drag-ghost img{width:64px;height:64px;border-radius:18px}}
+.drag-ghost span{font-size:11.5px;color:#e2e8f0;text-align:center;max-width:80px;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}
+body.dragging-active .page{overflow:hidden}
+
+#dock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);
+  padding:6px 18px;border-radius:999px;background:rgba(15,23,42,.75);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(148,163,184,.18);font-size:12px;color:#cbd5e1;
+  letter-spacing:1px;pointer-events:none;z-index:50}
+
+#dots{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:50;pointer-events:none}
+#dots .dot{width:7px;height:7px;border-radius:50%;background:rgba(226,232,240,.3);
+  transition:background .25s,transform .25s}
+#dots .dot.active{background:#e2e8f0;transform:scale(1.25)}
+
+#loading,#error{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#94a3b8;background:#020617;z-index:100}
+#error{color:#f87171}
+.hidden{display:none!important}
+
+/* ===== 新版本提示条 ===== */
+#update-bar{position:fixed;left:50%;top:14px;
+  transform:translateX(-50%) translateY(-160%);
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+  color:#fff;padding:9px 18px;border-radius:999px;
+  font-size:12.5px;font-weight:500;
+  box-shadow:0 8px 24px rgba(59,130,246,.5);
+  z-index:200;
+  transition:transform .4s cubic-bezier(.22,.61,.36,1);
+  cursor:pointer;white-space:nowrap;
+  user-select:none;-webkit-tap-highlight-color:transparent}
+#update-bar.show{transform:translateX(-50%) translateY(0)}
+#update-bar:active{transform:translateX(-50%) translateY(0) scale(.96)}
+
+img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none}
+</style>
+</head>
+<body>
+
+<div id="desktop"></div>
+<div id="dots"></div>
+<div id="dock"><span>迷你桌面</span></div>
+<div id="loading">正在加载应用列表...</div>
+<div id="error" class="hidden">应用列表加载失败</div>
+<div id="update-bar" class="hidden" onclick="doForceRefresh()">🎉 发现新版本，点击刷新</div>
+
+<script>
+/* =========================================================
+   ★★★ 配置区：发版只改这里 ★★★
+========================================================= */
+const BUILD = '2025-10-20-v1';   // ← 每次发版改这个（日期-vN）
+
+const APPS = [
+  { "name": "订阅推送", "icon": "apps/订阅推送/icon.webp", "url": "apps/订阅推送/" },
+  { "name": "仓库资源", "icon": "apps/仓库资源/icon.webp", "url": "apps/仓库资源/" },
+  { "name": "测试00",   "icon": "apps/测试00/logo.png",    "url": "apps/测试00/"   },
+  { "name": "测试11",   "icon": "apps/测试11/logo.png",    "url": "apps/测试11/"   },
+  { "name": "3D福彩",   "icon": "apps/3D福彩/logo.png",    "url": "apps/3D福彩/"   },
+  { "name": "编辑AI",   "icon": "apps/编辑AI/logo.webp",   "url": "apps/编辑AI/"   },
+  { "name": "年龄查询", "icon": "apps/年龄查询/logo.webp", "url": "apps/年龄查询/" },
+  { "name": "手指画画", "icon": "apps/手指画画/logo.webp", "url": "apps/手指画画/" },
+  { "name": "缺不缺",   "icon": "apps/缺不缺/logo.webp",   "url": "apps/缺不缺/"   },
+  { "name": "超级工厂", "icon": "apps/超级工厂/logo.webp", "url": "apps/超级工厂/" },
+  { "name": "日历记账", "icon": "apps/日历记账/logo.jpg",  "url": "apps/日历记账/" },
+  { "name": "资料库",   "icon": "apps/资料库/logo.webp",   "url": "apps/资料库/"   },
+  { "name": "书签应用", "icon": "apps/书签应用/logo.webp", "url": "apps/书签应用/" },
+];
+
+const DEFAULT_ICON = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+  '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+  '<stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#8b5cf6"/>' +
+  '</linearGradient></defs>' +
+  '<rect width="64" height="64" rx="14" fill="url(#g)"/>' +
+  '<text x="32" y="42" font-size="28" text-anchor="middle" fill="#fff" font-family="sans-serif">◈</text>' +
+  '</svg>'
+);
+
+const STORAGE_KEY = 'mini-desktop-order-v1';
+
+/* =========================================================
+   分页 / 状态
+========================================================= */
+function getPageSize(){ return window.matchMedia('(min-width:480px)').matches ? 25 : 20; }
+
+let allApps = [], pageCount = 0, currentPage = 0, pageSize = getPageSize();
+const desktopEl = document.getElementById('desktop');
+const dotsEl    = document.getElementById('dots');
+const loadingEl = document.getElementById('loading');
+const errorEl   = document.getElementById('error');
+
+/* =========================================================
+   ★ 一次性清理入口：?reset=1
+   —— 用于首次部署本版本时，清除旧 SW / 旧缓存
+   —— 用一次后可以删掉这段，也可以保留（无害）
+========================================================= */
+if (new URLSearchParams(location.search).has('reset')) {
+  (async () => {
+    try {
+      if ('caches' in window){
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+    } catch(e){}
+    // 去掉 ?reset=1，跳回干净路径
+    location.replace(location.pathname + '?v=' + Date.now());
+  })();
+}
+
+/* =========================================================
+   初始化
+========================================================= */
+function init(){
+  try {
+    let apps = APPS.filter(a => a && a.name && a.url);
+    apps = apps.map(a => ({ ...a, icon: a.icon || DEFAULT_ICON }));
+    allApps = applyStoredOrder(apps);
+    render();
+    loadingEl.classList.add('hidden');
+  } catch(e){
+    console.error(e);
+    loadingEl.classList.add('hidden');
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function applyStoredOrder(apps){
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!Array.isArray(saved) || !saved.length) return apps;
+    const map = new Map(apps.map(a => [a.name, a]));
+    const ordered = [];
+    saved.forEach(name => { if (map.has(name)){ ordered.push(map.get(name)); map.delete(name); } });
+    map.forEach(a => ordered.push(a));
+    return ordered;
+  } catch { return apps; }
+}
+function saveOrder(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(allApps.map(a => a.name))); } catch {}
+}
+
+/* =========================================================
+   渲染
+========================================================= */
+function render(){
+  pageSize = getPageSize();
+  pageCount = Math.max(1, Math.ceil(allApps.length / pageSize));
+  if (currentPage >= pageCount) currentPage = pageCount - 1;
+
+  const track = document.createElement('div');
+  track.className = 'pages-track';
+
+  for (let p = 0; p < pageCount; p++){
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.dataset.page = p;
+    const grid = document.createElement('div');
+    grid.className = 'icon-grid';
+    const start = p * pageSize;
+    allApps.slice(start, start + pageSize).forEach((app, i) => {
+      grid.appendChild(createIcon(app, start + i));
+    });
+    page.appendChild(grid);
+    track.appendChild(page);
+  }
+
+  desktopEl.innerHTML = '';
+  desktopEl.appendChild(track);
+  renderDots();
+  setTrackTransform(-currentPage * window.innerWidth, false);
+}
+
+function createIcon(app, globalIndex){
+  const el = document.createElement('div');
+  el.className = 'app-icon';
+  el.dataset.index = globalIndex;
+  el.dataset.name = app.name;
+
+  const img = document.createElement('img');
+  img.src = app.icon;
+  img.alt = app.name;
+  img.draggable = false;
+  img.onerror = () => { img.src = DEFAULT_ICON; };
+
+  const label = document.createElement('span');
+  label.textContent = app.name;
+
+  el.appendChild(img);
+  el.appendChild(label);
+  attachIconEvents(el, app);
+  return el;
+}
+
+function renderDots(){
+  dotsEl.innerHTML = '';
+  if (pageCount <= 1) return;
+  for (let i = 0; i < pageCount; i++){
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === currentPage ? ' active' : '');
+    dotsEl.appendChild(d);
+  }
+}
+function updateDots(){
+  dotsEl.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i === currentPage));
+}
+function setTrackTransform(x, animate = true){
+  const t = desktopEl.querySelector('.pages-track'); if (!t) return;
+  t.style.transition = animate ? 'transform .32s cubic-bezier(.22,.61,.36,1)' : 'none';
+  t.style.transform = `translateX(${x}px)`;
+}
+function goToPage(p, animate = true){
+  currentPage = Math.max(0, Math.min(pageCount - 1, p));
+  setTrackTransform(-currentPage * window.innerWidth, animate);
+  updateDots();
+}
+
+/* =========================================================
+   滑屏
+========================================================= */
+let dragPage = { active:false, startX:0, startY:0, dx:0, dy:0, locked:false, startTime:0 };
+
+function onPointerDown(e){
+  if (dragState.active) return;
+  if (longPressState.timer) return;
+  const t = e.touches ? e.touches[0] : e;
+  dragPage.active = true;
+  dragPage.startX = t.clientX; dragPage.startY = t.clientY;
+  dragPage.dx = 0; dragPage.dy = 0; dragPage.locked = false;
+  dragPage.startTime = Date.now();
+}
+function onPointerMove(e){
+  if (!dragPage.active) return;
+  const t = e.touches ? e.touches[0] : e;
+  const dx = t.clientX - dragPage.startX;
+  const dy = t.clientY - dragPage.startY;
+  dragPage.dx = dx; dragPage.dy = dy;
+  if (!dragPage.locked){
+    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)){ dragPage.locked = true; cancelLongPress(); }
+    else if (Math.abs(dy) > 8){ dragPage.active = false; return; }
+  }
+  if (dragPage.locked){
+    e.preventDefault?.();
+    const base = -currentPage * window.innerWidth;
+    let x = base + dx;
+    if (currentPage === 0 && dx > 0) x = base + dx * 0.35;
+    if (currentPage === pageCount - 1 && dx < 0) x = base + dx * 0.35;
+    setTrackTransform(x, false);
+  }
+}
+function onPointerUp(){
+  if (!dragPage.active) return;
+  dragPage.active = false;
+  if (!dragPage.locked) return;
+  const dx = dragPage.dx;
+  const dt = Date.now() - dragPage.startTime;
+  const v = Math.abs(dx) / dt;
+  const threshold = window.innerWidth * 0.22;
+  const fast = v > 0.45;
+  if (dx < -threshold || (fast && dx < -30)) goToPage(currentPage + 1);
+  else if (dx > threshold || (fast && dx > 30)) goToPage(currentPage - 1);
+  else goToPage(currentPage);
+  dragPage.locked = false;
+}
+desktopEl.addEventListener('touchstart', onPointerDown, { passive: true });
+desktopEl.addEventListener('touchmove',  onPointerMove, { passive: false });
+desktopEl.addEventListener('touchend',   onPointerUp);
+desktopEl.addEventListener('touchcancel',onPointerUp);
+desktopEl.addEventListener('mousedown',  onPointerDown);
+window.addEventListener('mousemove', onPointerMove);
+window.addEventListener('mouseup',   onPointerUp);
+
+/* =========================================================
+   图标：点击 + 长按
+========================================================= */
+const longPressState = { timer:null, startX:0, startY:0 };
+
+function attachIconEvents(el, app){
+  let moved = false, longPressed = false;
+
+  const start = (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    moved = false; longPressed = false; cancelLongPress();
+    longPressState.timer = setTimeout(() => {
+      longPressed = true;
+      enterDragMode(el, app, e);
+    }, 300);
+  };
+  const move = (e) => {
+    if (longPressState.timer){
+      const t = e.touches ? e.touches[0] : e;
+      const dx = Math.abs(t.clientX - longPressState.startX);
+      const dy = Math.abs(t.clientY - longPressState.startY);
+      if (dx > 8 || dy > 8){ moved = true; cancelLongPress(); }
+    }
+  };
+  const end = () => {
+    cancelLongPress();
+    if (longPressed) return;
+    if (!moved) window.open(app.url, '_blank');
+  };
+
+  el.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    longPressState.startX = t.clientX; longPressState.startY = t.clientY;
+    start(e);
+  }, { passive: true });
+  el.addEventListener('touchmove', move, { passive: true });
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', () => cancelLongPress());
+
+  el.addEventListener('mousedown', (e) => {
+    longPressState.startX = e.clientX; longPressState.startY = e.clientY;
+    start(e);
+  });
+  el.addEventListener('mousemove', move);
+  el.addEventListener('mouseup', end);
+  el.addEventListener('mouseleave', () => cancelLongPress());
+}
+function cancelLongPress(){
+  if (longPressState.timer){ clearTimeout(longPressState.timer); longPressState.timer = null; }
+}
+
+/* =========================================================
+   拖拽
+========================================================= */
+const dragState = {
+  active:false, sourceEl:null, ghostEl:null, app:null,
+  pageEl:null, pageIndex:0, currentLocalIndex:0, offsetX:0, offsetY:0
+};
+
+function enterDragMode(el, app, e){
+  if (dragState.active) return;
+  const t = e.touches ? e.touches[0] : e;
+  const rect = el.getBoundingClientRect();
+
+  dragState.active = true;
+  dragState.sourceEl = el;
+  dragState.app = app;
+  dragState.pageEl = el.closest('.page');
+  dragState.pageIndex = parseInt(dragState.pageEl.dataset.page, 10);
+  dragState.offsetX = t.clientX - rect.left;
+  dragState.offsetY = t.clientY - rect.top;
+
+  const grid = dragState.pageEl.querySelector('.icon-grid');
+  dragState.currentLocalIndex = Array.from(grid.children).indexOf(el);
+
+  el.classList.add('placeholder');
+
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  const img = document.createElement('img'); img.src = app.icon;
+  const label = document.createElement('span'); label.textContent = app.name;
+  ghost.appendChild(img); ghost.appendChild(label);
+  ghost.style.left = rect.left + 'px'; ghost.style.top = rect.top + 'px';
+  ghost.style.width = rect.width + 'px'; ghost.style.height = rect.height + 'px';
+  document.body.appendChild(ghost);
+  dragState.ghostEl = ghost;
+
+  document.body.classList.add('dragging-active');
+  if (navigator.vibrate) navigator.vibrate(15);
+
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('touchend', onDragEnd);
+  document.addEventListener('touchcancel', onDragEnd);
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+function onDragMove(e){
+  if (!dragState.active) return;
+  e.preventDefault?.();
+  const t = e.touches ? e.touches[0] : e;
+  const gx = t.clientX - dragState.offsetX;
+  const gy = t.clientY - dragState.offsetY;
+  dragState.ghostEl.style.left = gx + 'px';
+  dragState.ghostEl.style.top = gy + 'px';
+
+  const below = document.elementFromPoint(t.clientX, t.clientY);
+  const target = below?.closest('.app-icon');
+  if (!target || target === dragState.sourceEl) return;
+  if (!dragState.pageEl.contains(target)) return;
+
+  const grid = dragState.pageEl.querySelector('.icon-grid');
+  const nodes = Array.from(grid.children);
+  const targetLocal = nodes.indexOf(target);
+  if (targetLocal === -1 || targetLocal === dragState.currentLocalIndex) return;
+
+  if (targetLocal > dragState.currentLocalIndex) {
+    grid.insertBefore(dragState.sourceEl, nodes[targetLocal].nextSibling);
+  } else {
+    grid.insertBefore(dragState.sourceEl, nodes[targetLocal]);
+  }
+
+  const start = dragState.pageIndex * pageSize;
+  const fromGlobal = start + dragState.currentLocalIndex;
+  const toGlobal = start + targetLocal;
+  if (fromGlobal !== toGlobal && fromGlobal >= 0 && toGlobal >= 0 &&
+      fromGlobal < allApps.length && toGlobal < allApps.length){
+    const [moved] = allApps.splice(fromGlobal, 1);
+    allApps.splice(toGlobal, 0, moved);
+  }
+  dragState.currentLocalIndex = targetLocal;
+
+  Array.from(grid.children).forEach((child, i) => { child.dataset.index = start + i; });
+}
+
+function onDragEnd(){
+  if (!dragState.active) return;
+  dragState.active = false;
+  document.body.classList.remove('dragging-active');
+  if (dragState.ghostEl){ dragState.ghostEl.remove(); dragState.ghostEl = null; }
+  if (dragState.sourceEl){ dragState.sourceEl.classList.remove('placeholder'); dragState.sourceEl.style.transform = ''; }
+  saveOrder();
+  dragState.sourceEl = null; dragState.pageEl = null; dragState.app = null;
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('touchend', onDragEnd);
+  document.removeEventListener('touchcancel', onDragEnd);
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+}
+
+/* =========================================================
+   resize
+========================================================= */
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const oldSize = pageSize, firstVisible = currentPage * oldSize;
+    render();
+    const newSize = getPageSize();
+    currentPage = Math.min(pageCount - 1, Math.floor(firstVisible / newSize));
+    goToPage(currentPage, false);
+  }, 150);
+});
+
+/* =========================================================
+   ★ 版本自检：打开桌面时查一次（零轮询、零耗电）
+========================================================= */
+let versionCheckBusy = false;
+
+async function checkNewVersionOnce(){
+  if (versionCheckBusy) return;
+  versionCheckBusy = true;
+  try {
+    // 带时间戳 + no-store：绕过 HTTP 缓存和 SW 缓存，直接问服务器
+    const res = await fetch(location.pathname + '?v=' + Date.now(), {
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
+    if (!res.ok) return;
+    const html = await res.text();
+
+    const m = html.match(/const\s+BUILD\s*=\s*['"]([^'"]+)['"]/);
+    if (!m) return;
+    const remoteBuild = m[1];
+
+    if (remoteBuild !== BUILD){
+      showUpdateBar();
+    }
+  } catch(e){
+    // 网络异常时静默失败，不打扰用户
+  } finally {
+    versionCheckBusy = false;
+  }
+}
+
+function showUpdateBar(){
+  const bar = document.getElementById('update-bar');
+  if (!bar) return;
+  bar.classList.remove('hidden');
+  requestAnimationFrame(() => bar.classList.add('show'));
+}
+
+/* 点击提示条：清所有缓存 + 硬刷新 */
+async function doForceRefresh(){
+  try {
+    if ('caches' in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // 不注销 SW（注销会让下次打开需要重新安装，反而慢），只清缓存
+    // 若要彻底注销，取消下面注释：
+    // if ('serviceWorker' in navigator){
+    //   const regs = await navigator.serviceWorker.getRegistrations();
+    //   await Promise.all(regs.map(r => r.unregister()));
+    // }
+  } catch(e){}
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+
+/* =========================================================
+   SW 注册 + 更新监听
+========================================================= */
+let swReg = null;
+
+async function registerSW(){
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+
+    // 浏览器自身的 SW 更新检查很懒，主动调用一次 update
+    swReg.update().catch(()=>{});
+
+    swReg.addEventListener('updatefound', () => {
+      const nw = swReg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller){
+          // 新 SW 已就绪，但先不打扰用户——只在下次打开时弹
+          // 这里也不强制 reload，避免打断用户
+        }
+      });
+    });
+
+    // 若用户页面已打开很久，切回来时再自检一次
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) checkNewVersionOnce();
+    });
+  } catch(e){
+    console.warn('SW 注册失败：', e);
+  }
+}
+
+/* =========================================================
+   启动
+========================================================= */
+init();
+
+// 页面一加载就做一次版本自检
+checkNewVersionOnce();
+
+// SW 注册放在 load 之后，避免抢资源
+if (document.readyState === 'complete') registerSW();
+else window.addEventListener('load', registerSW);
+</script>
+</body>
+</html>
