@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>分类书签九宫格</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="manifest" href="manifest.json">
-<style>
+  <meta charset="UTF-8">
+  <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#333;padding:10px;}
 h1{text-align:center;font-size:20px;margin-bottom:10px;}
@@ -120,15 +117,19 @@ h1{text-align:center;font-size:20px;margin-bottom:10px;}
 .gitee-set-modal .gset-footer button:disabled{background:#c8c8c8;cursor:not-allowed;}
 .gitee-set-modal .gset-hint{font-size:11px;color:#999;line-height:1.5;}
 </style>
-<script>
-if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}
-</script>
 </head>
 <body>
+<title>分类书签九宫格</title>
+
+<link rel="manifest" href="manifest.json">
+
+
+
+
 
 <h1>分类书签九宫格</h1>
 <div class="toolbar">
-  <button id="addBookmarkBtn">☰ 添加书签</button>
+  <button id="addBookmarkBtn">添加书签</button>
   <button id="openGiteeSyncBtn" class="secondary">⚙️ Gitee</button>
   <button id="openCmdBtn" class="secondary">⌘</button>
   <button id="refreshBtn" class="secondary">🔄</button>
@@ -273,8 +274,11 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}
     </div>
   </div>
 </div>
-
 <script>
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}
+
+
+
 (function(){
 "use strict";
 
@@ -657,7 +661,7 @@ function openGiteeSync(){
   const cfg=getSyncCfg();
   gsInfo.innerHTML=`<b>账号：</b>${escapeHtml(cfg.owner||"（未配置）")}<br>
     <b>仓库：</b>${escapeHtml(cfg.repo||"（未配置）")}<br>
-    <b>主文件：</b>${escapeHtml(cfg.filePath||"我的数据库/资料库.json")}`;
+    <b>主文件：</b>${escapeHtml(cfg.filePath||"我的数据库/xxx.json")}`;
   gsClearMsg();
   gsFileList.style.display="none";
   gsFileList.innerHTML="";
