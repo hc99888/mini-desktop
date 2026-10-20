@@ -8,7 +8,9 @@
 
 ## 📁 目录结构
 ├── index.html ← ★ 主体（配置 / 样式 / 逻辑全内联，发版只改这里）
+
 ├── sw.js ← Service Worker（极少改动）
+
 ├── manifest.json ← PWA 清单（装到桌面用，极少改动）
 ├── icon-192.png ← PWA 图标（必需）
 ├── icon-512.png ← PWA 图标（必需）
