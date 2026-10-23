@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-23T21:12:59.818Z",
+  "updatedAt": "2026-10-23T21:17:24.051Z",
   "apps": {
     "超级工厂": {
       "version": 1792767535575,
@@ -20,6 +20,16 @@
         "apps/缺不缺/style.css",
         "apps/缺不缺/app.js",
         "apps/缺不缺/logo.png"
+      ]
+    },
+    "缺不缺002": {
+      "version": 1792790244489,
+      "updatedAt": "2026-10-23T21:17:24.051Z",
+      "files": [
+        "apps/缺不缺002/index.html",
+        "apps/缺不缺002/style.css",
+        "apps/缺不缺002/app.js",
+        "apps/缺不缺002/logo.png"
       ]
     }
   }
