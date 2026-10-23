@@ -95,7 +95,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none}
 /* =========================================================
    ★★★ 配置区：发版只改这里 ★★★
 ========================================================= */
-const BUILD = '2025-10-20-v1';   // ← 每次发版改这个（日期-vN）
+const BUILD = '2026-10-23-v3';   // 桌面版本号；桌面自身更新时再修改
 
 const APPS = [
   { "name": "订阅推送", "icon": "apps/订阅推送/icon.webp", "url": "apps/订阅推送/" },
@@ -516,6 +516,43 @@ async function checkNewVersionOnce(){
   }
 }
 
+/* =========================================================
+   应用版本清单检查：由超级工厂每次成功上传后更新 version.json
+   只记录应用版本，不强制刷新整个桌面；APP 打开时由 SW 网络优先获取新资源。
+========================================================= */
+let appVersionCheckBusy = false;
+async function checkAppVersionsOnce(){
+  if (appVersionCheckBusy) return;
+  appVersionCheckBusy = true;
+  try {
+    const url = new URL('./version.json', location.href);
+    url.searchParams.set('_check', String(Date.now()));
+    const res = await fetch(url.href, { cache: 'no-store', credentials: 'same-origin' });
+    if (!res.ok) return; // 旧仓库尚未有 version.json 时，静默兼容
+    const manifest = await res.json();
+    if (!manifest || typeof manifest !== 'object' || !manifest.apps || typeof manifest.apps !== 'object') return;
+    const latest = {};
+    for (const [name, item] of Object.entries(manifest.apps)) {
+      if (item && (item.version != null || item.updatedAt)) {
+        latest[name] = String(item.version ?? item.updatedAt);
+      }
+    }
+    const key = 'mini-desktop-app-versions-v1';
+    let previous = {};
+    try { previous = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch(e) {}
+    const changed = Object.keys(latest).filter(name => previous[name] && previous[name] !== latest[name]);
+    // 第一次安装只建立基线，不误报；之后静默记录变化。
+    localStorage.setItem(key, JSON.stringify(latest));
+    if (changed.length) {
+      console.info('[迷你桌面] 检测到应用更新：', changed.join('、'));
+    }
+  } catch(e) {
+    // 网络异常不清空缓存、不阻止桌面启动。
+  } finally {
+    appVersionCheckBusy = false;
+  }
+}
+
 function showUpdateBar(){
   const bar = document.getElementById('update-bar');
   if (!bar) return;
@@ -528,45 +565,55 @@ async function doForceRefresh(){
   try {
     if ('caches' in window){
       const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      await Promise.all(keys.filter(k => k.startsWith('mini-desktop-')).map(k => caches.delete(k)));
     }
-    // 不注销 SW（注销会让下次打开需要重新安装，反而慢），只清缓存
-    // 若要彻底注销，取消下面注释：
-    // if ('serviceWorker' in navigator){
-    //   const regs = await navigator.serviceWorker.getRegistrations();
-    //   await Promise.all(regs.map(r => r.unregister()));
-    // }
+    if ('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg => reg.update().catch(()=>{})));
+    }
   } catch(e){}
-  location.replace(location.pathname + '?v=' + Date.now());
+  location.replace(location.pathname + '?refresh=' + Date.now());
 }
 
 /* =========================================================
    SW 注册 + 更新监听
 ========================================================= */
 let swReg = null;
+let controllerAtRegistration = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+let controllerReloadDone = false;
 
 async function registerSW(){
   if (!('serviceWorker' in navigator)) return;
   try {
-    swReg = await navigator.serviceWorker.register('sw.js', { scope: './' });
-
-    // 浏览器自身的 SW 更新检查很懒，主动调用一次 update
-    swReg.update().catch(()=>{});
+    swReg = await navigator.serviceWorker.register('./sw.js', {
+      scope: './',
+      updateViaCache: 'none'
+    });
+    await swReg.update().catch(()=>{});
 
     swReg.addEventListener('updatefound', () => {
-      const nw = swReg.installing;
-      if (!nw) return;
-      nw.addEventListener('statechange', () => {
-        if (nw.state === 'installed' && navigator.serviceWorker.controller){
-          // 新 SW 已就绪，但先不打扰用户——只在下次打开时弹
-          // 这里也不强制 reload，避免打断用户
+      const worker = swReg.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          // 新版 SW 会在 install 时 skipWaiting，并接管页面。
         }
       });
     });
 
-    // 若用户页面已打开很久，切回来时再自检一次
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!controllerAtRegistration || controllerReloadDone) return;
+      controllerReloadDone = true;
+      // 新 SW 接管旧页面后只重载一次，避免继续使用旧控制器。
+      location.replace(location.pathname + '?swupdate=' + Date.now());
+    });
+
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) checkNewVersionOnce();
+      if (!document.hidden) {
+        swReg?.update().catch(()=>{});
+        checkNewVersionOnce();
+        checkAppVersionsOnce();
+      }
     });
   } catch(e){
     console.warn('SW 注册失败：', e);
@@ -578,8 +625,9 @@ async function registerSW(){
 ========================================================= */
 init();
 
-// 页面一加载就做一次版本自检
+// 每次打开桌面检查桌面版本与应用版本清单；失败时不影响现有桌面
 checkNewVersionOnce();
+checkAppVersionsOnce();
 
 // SW 注册放在 load 之后，避免抢资源
 if (document.readyState === 'complete') registerSW();
