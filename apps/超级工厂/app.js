@@ -743,6 +743,45 @@ ${splitHtml.value}
         return res.json();
       }
 
+
+      // 每次应用代码上传后更新 version.json；桌面据此识别哪个 APP 有新版本。
+      async function updateAppVersionManifest({ user, repo, token, appName, uploadedPaths }) {
+        if (!uploadedPaths || !uploadedPaths.length) {
+          log('⚠️ 没有成功上传的应用文件，跳过版本清单更新');
+          return false;
+        }
+        const now = new Date();
+        const stamp = now.toISOString();
+        let manifest = { schema: 1, updatedAt: stamp, apps: {} };
+        try {
+          const existing = await githubGetFile({ user, repo, token, path: 'version.json' });
+          if (existing?.content) {
+            const parsed = JSON.parse(fromBase64(existing.content));
+            if (parsed && typeof parsed === 'object') {
+              manifest = { schema: 1, updatedAt: stamp, apps: (parsed.apps && typeof parsed.apps === 'object') ? parsed.apps : {} };
+            }
+          }
+        } catch (e) {
+          log(`⚠️ 读取旧 version.json 失败，将尝试新建：${e.message}`);
+        }
+        const old = manifest.apps[appName] || {};
+        const previousVersion = Number(old.version || 0);
+        manifest.apps[appName] = {
+          version: Math.max(Date.now(), previousVersion + 1),
+          updatedAt: stamp,
+          files: Array.from(new Set([...(old.files || []), ...uploadedPaths]))
+        };
+        manifest.updatedAt = stamp;
+        await githubUpload({
+          user, repo, token,
+          path: 'version.json',
+          fileInfo: { content: JSON.stringify(manifest, null, 2), isBinary: false },
+          message: `更新应用版本清单 - ${appName}`
+        });
+        log(`🧾 版本清单已更新：${appName} v${manifest.apps[appName].version}`);
+        return true;
+      }
+
       async function githubDelete({ user, repo, token, path, sha, message }) {
         const { platform } = getConfig();
         const baseUrl = getApiBase(platform);
@@ -876,12 +915,17 @@ ${splitHtml.value}
           Object.keys(files).forEach(path => log(`   📄 ${path.split('/').pop()}`));
 
           log(`📤 [自动链2/4] 上传到 ${platform === 'github' ? 'GitHub' : 'Gitee'} ${gitUser}/${gitRepo}`);
+          const uploadedPaths = [];
           for (const [path, fileInfo] of Object.entries(files)) {
             try {
               await githubUpload({ user: gitUser, repo: gitRepo, token: gitToken, path, fileInfo, message: `上传 ${appName} - ${path.split('/').pop()}` });
+              uploadedPaths.push(path);
               log(`   ✔ 上传: ${path}`);
             } catch (e) { log(`   ❌ 失败: ${path} - ${e.message}`); }
           }
+          try {
+            await updateAppVersionManifest({ user: gitUser, repo: gitRepo, token: gitToken, appName, uploadedPaths });
+          } catch (e) { log(`   ❌ 版本清单更新失败: ${e.message}`); }
 
           log(`🖥 [自动链3/4] 更新 configuration.json`);
           try {
@@ -919,12 +963,17 @@ ${splitHtml.value}
         if (!gitUser || !gitRepo || !gitToken) return log('❌ 缺少认证信息');
         log(`📤 上传到 ${platform === 'github' ? 'GitHub' : 'Gitee'} ${gitUser}/${gitRepo}`);
         const files = await buildAppFiles(appName);
+        const uploadedPaths = [];
         for (const [path, fileInfo] of Object.entries(files)) {
           try {
             await githubUpload({ user: gitUser, repo: gitRepo, token: gitToken, path, fileInfo, message: `上传 ${appName} - ${path.split('/').pop()}` });
+            uploadedPaths.push(path);
             log(`✔ 上传: ${path}`);
           } catch (e) { log(`❌ 失败: ${path} - ${e.message}`); }
         }
+        try {
+          await updateAppVersionManifest({ user: gitUser, repo: gitRepo, token: gitToken, appName, uploadedPaths });
+        } catch (e) { log(`❌ 版本清单更新失败: ${e.message}`); }
         log(`✅ 第2步完成，可更新 configuration.json`);
       });
 
