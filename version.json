@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-10-23T14:58:54.682Z",
+  "apps": {
+    "超级工厂": {
+      "version": 1792767535575,
+      "updatedAt": "2026-10-23T14:58:54.682Z",
+      "files": [
+        "apps/超级工厂/index.html",
+        "apps/超级工厂/style.css",
+        "apps/超级工厂/app.js",
+        "apps/超级工厂/logo.png"
+      ]
+    }
+  }
+}
