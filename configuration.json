@@ -55,13 +55,13 @@
     "url": "apps/日历记账/"
   },
   {
-    "name": "资料库",
-    "icon": "apps/资料库/logo.webp",
-    "url": "apps/资料库/"
-  },
-  {
     "name": "书签应用",
     "icon": "apps/书签应用/logo.webp",
     "url": "apps/书签应用/"
+  },
+  {
+    "name": "资料库",
+    "icon": "apps/资料库/logo.png",
+    "url": "apps/资料库/"
   }
 ]
