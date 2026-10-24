@@ -63,10 +63,5 @@
     "name": "缺不缺",
     "icon": "apps/缺不缺/logo.png",
     "url": "apps/缺不缺/"
-  },
-  {
-    "name": "年龄查询001",
-    "icon": "apps/年龄查询001/logo.png",
-    "url": "apps/年龄查询001/"
   }
 ]
