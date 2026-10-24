@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-24T13:57:11.225Z",
+  "updatedAt": "2026-10-24T14:03:50.333Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -51,6 +51,16 @@
         "apps/缺不缺/app.js",
         "apps/缺不缺/logo.png",
         "apps/缺不缺/logo.webp"
+      ]
+    },
+    "日历记账": {
+      "version": 1792850630880,
+      "updatedAt": "2026-10-24T14:03:50.333Z",
+      "files": [
+        "apps/日历记账/index.html",
+        "apps/日历记账/style.css",
+        "apps/日历记账/app.js",
+        "apps/日历记账/logo.webp"
       ]
     }
   }
