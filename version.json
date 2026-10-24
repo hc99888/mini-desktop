@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-10-24T10:39:30.588Z",
+  "apps": {
+    "年龄查询001": {
+      "version": 1792838372505,
+      "updatedAt": "2026-10-24T10:39:30.588Z",
+      "files": [
+        "apps/年龄查询001/index.html",
+        "apps/年龄查询001/style.css",
+        "apps/年龄查询001/app.js",
+        "apps/年龄查询001/logo.png"
+      ]
+    }
+  }
+}
