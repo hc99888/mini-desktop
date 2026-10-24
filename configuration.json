@@ -68,5 +68,10 @@
     "name": "缺不缺测试",
     "icon": "apps/缺不缺测试/logo.webp",
     "url": "apps/缺不缺测试/"
+  },
+  {
+    "name": "缺不缺测试002",
+    "icon": "apps/缺不缺测试002/logo.png",
+    "url": "apps/缺不缺测试002/"
   }
 ]
