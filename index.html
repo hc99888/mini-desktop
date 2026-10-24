@@ -15,20 +15,12 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 header{display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-bottom:26px;flex-shrink:0}
 .header-right{display:flex;align-items:center;gap:10px}.clock{text-align:right;font-size:13px;color:var(--muted);line-height:1.7}
 
-/* 下拉刷新指示器 */
-.pull-indicator{position:absolute;top:0;left:0;right:0;height:60px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}
-.pull-indicator.visible{opacity:1}
-.pull-indicator .spinner{width:20px;height:20px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* 桌面容器 - 分页 */
 .desktop-container{flex:1;position:relative;overflow:hidden;margin:0 -22px;padding:0 22px}
 .desktop-scroll{display:flex;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;touch-action:pan-x pan-y}
 .desktop-scroll::-webkit-scrollbar{display:none}
 .page{flex:0 0 100%;scroll-snap-align:start;display:grid;gap:13px;align-content:start;padding:4px 0 20px;position:relative;min-height:100%}
 .page-inner{display:grid;gap:13px;width:100%}
 
-/* 应用图标卡片 - 无外围卡片，仅图标+文字 */
 .app{
   min-width:0;text-align:center;position:relative;color:inherit;text-decoration:none;
   display:flex;align-items:center;flex-direction:column;gap:8px;
@@ -46,15 +38,17 @@ header{display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-
 .app-icon img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
 .app-name{font-size:12px;font-weight:500;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;color:var(--text)}
 
-/* 拖拽幽灵元素 */
 .drag-ghost{position:fixed;z-index:9999;pointer-events:none;opacity:0.85;transform:scale(1.08);transition:transform .1s;filter:drop-shadow(0 12px 30px rgba(0,0,0,0.6));will-change:left,top}
 .drag-ghost .app-icon{width:62px;height:62px;border-radius:16px;box-shadow:0 8px 24px #0006}
 
-/* 占位符 - 真正空位 */
 .placeholder{visibility:hidden;pointer-events:none}
 .placeholder .app-icon{visibility:hidden}
 
-/* 分页指示器 */
+.bottom-refresh-bar{display:flex;align-items:center;justify-content:center;gap:8px;height:36px;flex-shrink:0;color:var(--muted);font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.bottom-refresh-bar.visible{opacity:1}
+.bottom-refresh-bar .spinner{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 .page-dots{display:flex;justify-content:center;gap:6px;padding:12px 0 8px;flex-shrink:0}
 .page-dot{width:7px;height:7px;border-radius:50%;background:#3a4d68;transition:background .2s,transform .2s;cursor:pointer;border:none;padding:0}
 .page-dot.active{background:var(--accent);transform:scale(1.2)}
@@ -62,7 +56,6 @@ header{display:flex;align-items:center;justify-content:flex-end;gap:18px;margin-
 .state{border:1px dashed #344863;border-radius:18px;padding:32px 18px;text-align:center;color:var(--muted);line-height:1.8;margin:20px 0}.state strong{display:block;color:var(--text);margin-bottom:6px}.state button{margin-top:12px}
 footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:25px;padding-top:16px;border-top:1px solid #243149;color:#8294ad;font-size:11px;flex-wrap:wrap;flex-shrink:0}.status{display:flex;align-items:center;gap:7px}.dot{width:7px;height:7px;border-radius:50%;background:var(--good)}.dot.offline{background:var(--warn)}.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#1c2a40;border:1px solid #3b506d;padding:11px 16px;border-radius:12px;box-shadow:0 12px 35px #0005;font-size:13px;transition:.2s;z-index:10;max-width:calc(100vw - 32px)}.toast.show{opacity:1;transform:translate(-50%,0)}
 
-/* 小屏 4列 */
 @media(max-width:640px){
   .shell{padding:17px 14px calc(25px + env(safe-area-inset-bottom))}
   header{align-items:flex-start;margin-bottom:20px}
@@ -74,14 +67,12 @@ footer{display:flex;justify-content:space-between;gap:12px;align-items:center;ma
   .app-name{font-size:11px}
   .drag-ghost .app-icon{width:54px;height:54px;border-radius:14px}
 }
-/* 大屏 5列 */
 @media(min-width:641px){
   .page-inner{grid-template-columns:repeat(5,1fr);gap:13px}
   .app{padding:12px 6px;gap:8px}
   .app-icon{width:62px;height:62px;border-radius:16px}
   .app-name{font-size:12px}
 }
-/* 超小屏 */
 @media(max-width:360px){
   .page-inner{grid-template-columns:repeat(4,1fr);gap:4px}
   .app-icon{width:48px;height:48px;border-radius:12px}
@@ -97,12 +88,17 @@ footer{display:flex;justify-content:space-between;gap:12px;align-items:center;ma
 </header>
 
 <div class="desktop-container" id="desktopContainer">
-  <div class="pull-indicator" id="pullIndicator"><span class="spinner" id="pullSpinner" style="display:none"></span><span id="pullText">下拉刷新</span></div>
   <div class="desktop-scroll" id="desktopScroll"></div>
 </div>
+
+<div class="bottom-refresh-bar" id="bottomRefreshBar">
+  <span class="spinner" id="refreshSpinner" style="display:none"></span>
+  <span id="refreshText">下拉刷新</span>
+</div>
+
 <div class="page-dots" id="pageDots"></div>
 
-<div id="empty" class="state" hidden><strong id="emptyTitle">没有找到应用</strong><span id="emptyText">请确认 configuration.json 已上传，且格式正确。</span><br><button class="btn" id="emptyRefresh" type="button">重新加载</button></div>
+<div id="empty" class="state" hidden><strong id="emptyTitle">桌面为空</strong><span id="emptyText">请上传 configuration.json，并填入应用列表；刷新后即可显示。</span><br><button class="btn" id="emptyRefresh" type="button">重新加载</button></div>
 <footer><div class="status"><span class="dot" id="netDot"></span><span id="statusText">准备连接应用配置</span></div><div>版本 <span id="buildText">2026.10.24</span> · 自动检查更新</div></footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -110,38 +106,23 @@ footer{display:flex;justify-content:space-between;gap:12px;align-items:center;ma
 <script>
 (() => {
 'use strict';
-const BUILD = '2026.10.24-v1';
+const BUILD = '2026.10.25-v2';
 const CONFIG_URL = './configuration.json';
 const STORAGE_KEY = 'mini-desktop-apps-v2';
 const ORDER_KEY = 'mini-desktop-order-v2';
 const PAGE_SIZE_SMALL = 20; // 4x5
 const PAGE_SIZE_LARGE = 25; // 5x5
 
-const FALLBACK_APPS = [
- {name:'订阅推送',icon:'apps/订阅推送/icon.webp',url:'apps/订阅推送/'},
- {name:'仓库资源',icon:'apps/仓库资源/icon.webp',url:'apps/仓库资源/'},
- {name:'测试00',icon:'apps/测试00/logo.png',url:'apps/测试00/'},
- {name:'测试11',icon:'apps/测试11/logo.png',url:'apps/测试11/'},
- {name:'3D福彩',icon:'apps/3D福彩/logo.png',url:'apps/3D福彩/'},
- {name:'编辑AI',icon:'apps/编辑AI/logo.webp',url:'apps/编辑AI/'},
- {name:'年龄查询',icon:'apps/年龄查询/logo.webp',url:'apps/年龄查询/'},
- {name:'手指画画',icon:'apps/手指画画/logo.webp',url:'apps/手指画画/'},
- {name:'缺不缺',icon:'apps/缺不缺/logo.webp',url:'apps/缺不缺/'},
- {name:'超级工厂',icon:'apps/超级工厂/logo.webp',url:'apps/超级工厂/'},
- {name:'日历记账',icon:'apps/日历记账/logo.jpg',url:'apps/日历记账/'},
- {name:'资料库',icon:'apps/资料库/logo.webp',url:'apps/资料库/'},
- {name:'书签应用',icon:'apps/书签应用/logo.webp',url:'apps/书签应用/'}
-];
-
+// 不再内置应用列表；桌面完全由 configuration.json 决定
 const $ = id => document.getElementById(id);
 const desktopScroll = $('desktopScroll');
 const pageDots = $('pageDots');
 const empty = $('empty');
-const pullIndicator = $('pullIndicator');
-const pullText = $('pullText');
-const pullSpinner = $('pullSpinner');
+const bottomRefreshBar = $('bottomRefreshBar');
+const refreshText = $('refreshText');
+const refreshSpinner = $('refreshSpinner');
 
-let apps = [], source = 'fallback', lastConfigSignature = '';
+let apps = [], source = 'none', lastConfigSignature = '';
 let currentPage = 0, totalPages = 0, pageSize = PAGE_SIZE_SMALL;
 let draggedItem = null, draggedName = null, dragGhost = null;
 let dragOffsetX = 0, dragOffsetY = 0;
@@ -150,8 +131,8 @@ let isDragging = false, longPressTimer = null;
 let startClientX = 0, startClientY = 0;
 let touchActive = false;
 
-// 下拉刷新状态
-let pullStartY = 0, pullStartX = 0, pullCurrentY = 0, isPulling = false, pullThreshold = 60;
+// 下拉刷新阈值 120
+let pullStartY = 0, pullStartX = 0, pullCurrentY = 0, isPulling = false, pullThreshold = 120;
 let isRefreshing = false;
 
 const svgIcon = `<svg viewBox="0 0 64 64" width="62" height="62" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#63b6ff"/><stop offset="1" stop-color="#8972ff"/></linearGradient></defs><rect width="64" height="64" rx="17" fill="url(#g)"/><rect x="14" y="14" width="15" height="15" rx="4" fill="white" opacity=".95"/><rect x="35" y="14" width="15" height="15" rx="4" fill="white" opacity=".7"/><rect x="14" y="35" width="15" height="15" rx="4" fill="white" opacity=".7"/><rect x="35" y="35" width="15" height="15" rx="4" fill="white" opacity=".95"/></svg>`;
@@ -220,9 +201,14 @@ function render() {
     pageDots.appendChild(dot);
   }
 
+  // 桌面为空时显示空状态；有数据时隐藏
   empty.hidden = sorted.length !== 0;
   desktopScroll.hidden = sorted.length === 0;
   pageDots.hidden = sorted.length === 0;
+  if (sorted.length === 0) {
+    $('emptyTitle').textContent = '桌面为空';
+    $('emptyText').textContent = '请上传 configuration.json，并填入应用列表；刷新后即可显示。';
+  }
 
   scrollToPage(currentPage, false);
 }
@@ -526,9 +512,9 @@ desktopScroll.addEventListener('touchmove', (e) => {
     e.preventDefault();
     pullCurrentY = Math.max(0, dy);
     const progress = Math.min(pullCurrentY / pullThreshold, 1);
-    pullIndicator.style.opacity = progress;
-    pullIndicator.style.transform = `translateY(${Math.min(pullCurrentY * 0.5, 30)}px)`;
-    pullText.textContent = pullCurrentY > pullThreshold ? '释放刷新' : '下拉刷新';
+    bottomRefreshBar.style.opacity = progress;
+    bottomRefreshBar.classList.add('visible');
+    refreshText.textContent = pullCurrentY > pullThreshold ? '释放刷新' : '下拉刷新';
   }
 }, { passive: false });
 
@@ -546,8 +532,10 @@ desktopScroll.addEventListener('touchend', () => {
 
 function triggerRefresh() {
   isRefreshing = true;
-  pullText.textContent = '正在刷新…';
-  pullSpinner.style.display = 'inline-block';
+  refreshText.textContent = '正在刷新…';
+  refreshSpinner.style.display = 'inline-block';
+  bottomRefreshBar.classList.add('visible');
+  bottomRefreshBar.style.opacity = 1;
   loadConfig({ quiet: false }).finally(() => {
     setTimeout(() => {
       resetPull();
@@ -557,10 +545,10 @@ function triggerRefresh() {
 }
 
 function resetPull() {
-  pullIndicator.style.opacity = 0;
-  pullIndicator.style.transform = '';
-  pullText.textContent = '下拉刷新';
-  pullSpinner.style.display = 'none';
+  bottomRefreshBar.style.opacity = 0;
+  bottomRefreshBar.classList.remove('visible');
+  refreshText.textContent = '下拉刷新';
+  refreshSpinner.style.display = 'none';
   pullCurrentY = 0;
 }
 
@@ -587,7 +575,7 @@ async function loadConfig({ quiet = false } = {}) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
     const fresh = normalizeApps(raw);
-    if (!fresh.length) throw new Error('配置文件没有有效应用，已保留上次列表');
+    if (!fresh.length) throw new Error('配置文件没有有效应用');
     const signature = JSON.stringify(fresh);
     const changed = signature !== lastConfigSignature;
     apps = fresh; source = 'remote'; lastConfigSignature = signature;
@@ -597,14 +585,29 @@ async function loadConfig({ quiet = false } = {}) {
     if (changed && quiet) toast('应用列表已自动同步');
     return true;
   } catch(err) {
-    if (source !== 'remote') {
-      let cached = null;
-      try { cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch(_) {}
-      if (cached && Array.isArray(cached.apps) && cached.apps.length) { apps = normalizeApps(cached.apps); source = 'local'; }
-      else { apps = normalizeApps(FALLBACK_APPS); source = 'fallback'; }
+    // 关键改动：不再回退到内置列表；只在有成功缓存且当前没有远程数据时，可显示上次缓存
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch(_) {}
+    const hasCached = cached && Array.isArray(cached.apps) && cached.apps.length;
+
+    if (source !== 'remote' && hasCached) {
+      apps = normalizeApps(cached.apps);
+      source = 'local';
+      render();
+    } else if (source === 'remote') {
+      // 远程已成功过，保留当前列表
+    } else {
+      // 没有配置、也没有有效缓存 → 桌面保持为空
+      apps = [];
+      source = 'none';
       render();
     }
-    const msg = source === 'fallback' ? '配置读取失败，显示内置应用列表' : source === 'local' ? '网络不可用，显示上次成功的应用列表' : '读取失败，保留当前应用列表';
+
+    let msg;
+    if (source === 'local') msg = '网络不可用，显示上次成功的应用列表';
+    else if (source === 'remote') msg = '读取失败，保留当前应用列表';
+    else msg = '未读取到 configuration.json，桌面为空';
+
     setStatus(msg, true);
     if (!quiet) toast(`${msg}（${err.message}）`);
     return false;
