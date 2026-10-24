@@ -50,11 +50,6 @@
     "url": "apps/资料库/"
   },
   {
-    "name": "书签应用",
-    "icon": "apps/书签应用/logo.webp",
-    "url": "apps/书签应用/"
-  },
-  {
     "name": "缺不缺",
     "icon": "apps/缺不缺/logo.webp",
     "url": "apps/缺不缺/"
@@ -63,5 +58,10 @@
     "name": "日历记账",
     "icon": "apps/日历记账/logo.webp",
     "url": "apps/日历记账/"
+  },
+  {
+    "name": "书签应用",
+    "icon": "apps/书签应用/logo.webp",
+    "url": "apps/书签应用/"
   }
 ]
