@@ -8,15 +8,25 @@
 ## 1. 文件结构
 项目根目录/
 ├── index.html # 主页面（本文档对应的文件）
+
 ├── manifest.json # PWA 清单（可选）
+
 ├── sw.js # Service Worker（可选，仅 HTTPS/localhost 生效）
+
 ├── configuration.json # 应用配置文件（必需，否则桌面为空）
+
 └── apps/ # 应用目录（可选，按需存放各应用与图标）
+
 ├── xxx/
+
 │ ├── index.html
+
 │ └── icon.webp
+
 ├── xxx/
+
 │ └── ...
+
 └── ...
 
 **说明：**
