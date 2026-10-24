@@ -63,5 +63,10 @@
     "name": "书签应用",
     "icon": "apps/书签应用/logo.webp",
     "url": "apps/书签应用/"
+  },
+  {
+    "name": "缺不缺测试",
+    "icon": "apps/缺不缺测试/logo.webp",
+    "url": "apps/缺不缺测试/"
   }
 ]
