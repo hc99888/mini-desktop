@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-24T12:34:01.448Z",
+  "updatedAt": "2026-10-24T13:50:38.774Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -40,6 +40,16 @@
         "apps/缺不缺测试002/style.css",
         "apps/缺不缺测试002/app.js",
         "apps/缺不缺测试002/logo.png"
+      ]
+    },
+    "缺不缺": {
+      "version": 1792849839232,
+      "updatedAt": "2026-10-24T13:50:38.774Z",
+      "files": [
+        "apps/缺不缺/index.html",
+        "apps/缺不缺/style.css",
+        "apps/缺不缺/app.js",
+        "apps/缺不缺/logo.png"
       ]
     }
   }
