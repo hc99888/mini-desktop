@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-24T10:39:30.588Z",
+  "updatedAt": "2026-10-24T10:41:45.629Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -10,6 +10,16 @@
         "apps/年龄查询001/style.css",
         "apps/年龄查询001/app.js",
         "apps/年龄查询001/logo.png"
+      ]
+    },
+    "年龄查询8899": {
+      "version": 1792838506136,
+      "updatedAt": "2026-10-24T10:41:45.629Z",
+      "files": [
+        "apps/年龄查询8899/index.html",
+        "apps/年龄查询8899/style.css",
+        "apps/年龄查询8899/app.js",
+        "apps/年龄查询8899/logo.png"
       ]
     }
   }
