@@ -1,0 +1,9 @@
+{
+  "name": "迷你桌面",
+  "short_name": "迷你桌面",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#101827",
+  "description": "统一启动和搜索 Web 应用"
+}
