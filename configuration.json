@@ -68,10 +68,5 @@
     "name": "年龄查询001",
     "icon": "apps/年龄查询001/logo.png",
     "url": "apps/年龄查询001/"
-  },
-  {
-    "name": "年龄查询8899",
-    "icon": "apps/年龄查询8899/logo.png",
-    "url": "apps/年龄查询8899/"
   }
 ]
