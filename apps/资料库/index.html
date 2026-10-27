@@ -199,6 +199,11 @@ header .hdr-right::-webkit-scrollbar{display:none;}
   padding:2px 9px;border-radius:20px;font-size:11px;
   display:inline-flex;align-items:center;gap:2px;
 }
+.card-type-eq{
+  color:#6b4a8a;background:#f3eef8;
+  padding:2px 9px;border-radius:20px;font-size:11px;
+  display:inline-flex;align-items:center;gap:2px;
+}
 
 .card-split{
   flex:1;min-height:0;
@@ -285,6 +290,27 @@ header .hdr-right::-webkit-scrollbar{display:none;}
 .content a{color:var(--main);}
 .content hr{border:none;border-top:1px solid var(--line);margin:10px 0;}
 
+.eq-block{
+  border:1px solid var(--line);border-radius:9px;
+  padding:10px 12px;margin-bottom:10px;background:#fcfdfc;
+}
+.eq-block:last-child{margin-bottom:0;}
+.eq-block .eq-head{
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:600;color:var(--main);
+  margin-bottom:6px;line-height:1.5;
+}
+.eq-block .eq-head .eq-badge{
+  font-size:10px;font-weight:500;
+  background:var(--main-soft);color:var(--main);
+  padding:1px 7px;border-radius:20px;flex-shrink:0;
+}
+.eq-block .eq-text{
+  font-size:13px;color:#444;line-height:1.75;
+  white-space:pre-wrap;word-break:break-word;
+}
+.eq-block.empty .eq-text{color:#bbb;font-style:italic;}
+
 .wikilink{
   color:var(--main);background:var(--main-soft);
   padding:0 4px;border-radius:3px;
@@ -308,7 +334,7 @@ header .hdr-right::-webkit-scrollbar{display:none;}
 .card-relations .rel-item:hover{background:var(--main);color:#fff;}
 
 .ops{
-  display:flex;gap:6px;flex-wrap:wrap;
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
   padding:10px 18px;
   padding-bottom:calc(10px + var(--safe-bottom));
   border-top:1px solid var(--line);
@@ -321,6 +347,12 @@ header .hdr-right::-webkit-scrollbar{display:none;}
 }
 .ops button:hover,.ops button:active{border-color:var(--main);color:var(--main);}
 .ops button.danger:hover{border-color:#c33;color:#c33;}
+.ops .ops-search{
+  margin-left:auto;
+  display:inline-flex;align-items:center;gap:4px;
+  min-width:auto;padding:8px 12px;
+  font-size:13px;
+}
 
 .empty-slide{
   flex:0 0 100%;height:100%;
@@ -386,7 +418,49 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 #counter .num .sep{color:#bbb;margin:0 4px;}
 #counter .num .total{color:#666;}
 
-/* ============ 编辑面板 ============ */
+#searchBar{
+  position:absolute;top:0;left:0;right:0;z-index:15;
+  display:none;
+  background:#fff;border-bottom:1px solid var(--line);
+  padding:8px 10px;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+  gap:8px;align-items:center;
+}
+#searchBar.show{display:flex;}
+#searchInput{
+  flex:1;min-width:0;
+  padding:9px 12px;border:1px solid var(--line);border-radius:8px;
+  font-size:16px;outline:none;transition:.15s;background:#fff;color:#1f2420;
+}
+#searchInput:focus{border-color:var(--main);box-shadow:0 0 0 3px var(--main-soft);}
+#searchInput::placeholder{color:#c8ccc8;}
+#searchClear{
+  flex-shrink:0;width:36px;height:36px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:#666;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:.15s;
+}
+#searchClear:hover{border-color:var(--main);color:var(--main);}
+#searchInfo{
+  position:absolute;left:10px;right:10px;top:100%;
+  background:#fff;border:1px solid var(--line);border-top:none;
+  border-radius:0 0 10px 10px;
+  max-height:50vh;overflow-y:auto;
+  box-shadow:0 8px 20px rgba(0,0,0,.1);
+  display:none;
+}
+#searchInfo.show{display:block;}
+.search-result{
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  cursor:pointer;font-size:13.5px;display:flex;flex-direction:column;gap:2px;
+}
+.search-result:last-child{border-bottom:none;}
+.search-result:hover{background:var(--main-soft);}
+.search-result .sr-title{color:var(--main);font-weight:600;line-height:1.4;}
+.search-result .sr-meta{font-size:11px;color:#999;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.search-empty{padding:16px;text-align:center;color:#aaa;font-size:12.5px;}
+
 #editor{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:flex-start;justify-content:center;z-index:50;padding:24px 16px;
@@ -468,6 +542,19 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
   transition:opacity .15s;
 }
 .field-block.hide{display:none;}
+.field-block.eq-hide{display:none;}
+
+#eqBlock{display:none;}
+#eqBlock.show{display:block;}
+.eq-edit-card{
+  border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;margin-top:10px;background:#fcfdfc;
+}
+.eq-edit-card label{margin-top:8px;}
+.eq-edit-card label:first-of-type{margin-top:0;}
+.eq-edit-card textarea{
+  resize:none;overflow:hidden;min-height:64px;
+}
 
 .img-edit{
   display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;
@@ -522,7 +609,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 
 .img-hint{font-size:11px;color:var(--muted);margin-top:6px;}
 
-/* 命令面板 */
 #cmd{
   position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;
   align-items:flex-start;justify-content:center;padding-top:14vh;z-index:60;
@@ -610,7 +696,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 #gallery .g-next{right:14px;}
 #gallery .g-nav.hide{display:none;}
 
-/* ============ 分类管理 ============ */
 #catMgr{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:center;justify-content:center;z-index:75;
@@ -672,7 +757,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 .catmgr-foot button:hover{border-color:var(--main);background:var(--main-soft);}
 
-/* 分类编辑弹窗 */
 #catEdit{
   position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;
   align-items:center;justify-content:center;z-index:76;
@@ -775,7 +859,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .catedit-foot .btn-cancel{background:#eef0ed;color:#333;border:none;}
 .catedit-foot .btn-cancel:hover{background:#e0e3df;}
 
-/* ============ Gitee 同步弹窗 ============ */
 #syncPanel{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:center;justify-content:center;z-index:79;
@@ -839,7 +922,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .sync-btn.primary:hover{opacity:.9;color:#fff;}
 .sync-btn:disabled{opacity:.5;cursor:not-allowed;}
 
-/* 下载文件列表 */
 .file-list{
   border:1px solid var(--line);border-radius:8px;
   max-height:280px;overflow-y:auto;
@@ -857,7 +939,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 .file-item .fi-meta{font-size:11px;color:var(--muted);flex-shrink:0;}
 .file-empty{padding:20px;text-align:center;color:#aaa;font-size:12.5px;}
 
-/* 下载选项小窗 */
 #dlChoice{
   position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
   align-items:center;justify-content:center;z-index:81;
@@ -894,7 +975,6 @@ mark{background:#fff3a3;color:#333;padding:0 2px;border-radius:3px;}
 }
 .dl-foot button:hover{background:#e0e3df;}
 
-/* ============ Gitee 设置弹窗 ============ */
 #giteeSet{
   position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;
   align-items:center;justify-content:center;z-index:79;
@@ -1038,6 +1118,7 @@ body.dragging *{
   .card-relations{padding:6px 14px 0;font-size:11px;max-height:70px;}
   .ops{padding:9px 14px;padding-bottom:calc(9px + var(--safe-bottom));}
   .ops button{flex:1;justify-content:center;padding:9px 8px;min-width:60px;}
+  .ops .ops-search{flex:0 0 auto;min-width:auto;margin-left:auto;padding:9px 12px;}
   .panel .row{flex-direction:column;gap:0;}
   .split-handle{height:26px;}
   .img-add-btn{height:56px;padding:0 12px;font-size:12.5px;}
@@ -1088,6 +1169,11 @@ body.dragging *{
   <div id="stage">
     <div id="swiper"></div>
     <div id="listview"></div>
+    <div id="searchBar">
+      <input id="searchInput" placeholder="搜索全部关键词…" autocomplete="off">
+      <button id="searchClear" type="button" title="关闭">✕</button>
+      <div id="searchInfo"></div>
+    </div>
   </div>
 
   <div id="counter"></div>
@@ -1100,6 +1186,7 @@ body.dragging *{
       <div class="type-tabs" id="typeTabs">
         <button type="button" class="type-tab active" data-type="material">资料</button>
         <button type="button" class="type-tab" data-type="note">笔记</button>
+        <button type="button" class="type-tab" data-type="eq">情商</button>
       </div>
     </div>
 
@@ -1125,13 +1212,32 @@ body.dragging *{
 用量=每日3-6克"></textarea>
     </div>
 
-    <label>图片（本地图最多 5 张，链接只能 1 条）</label>
-    <div class="img-edit" id="imgEdit"></div>
-    <div class="img-hint" id="imgHint"></div>
+    <div id="eqBlock">
+      <div class="eq-edit-card">
+        <label>小标题</label>
+        <input id="eqSmallTitle" placeholder="小标题" autocomplete="off">
+        <label>内容</label>
+        <textarea id="eqSmallContent" rows="3" placeholder="内容，输入框会随内容自动增高"></textarea>
+      </div>
+      <div class="eq-edit-card">
+        <label>大标题</label>
+        <input id="eqBigTitle" placeholder="大标题" autocomplete="off">
+        <label>内容</label>
+        <textarea id="eqBigContent" rows="4" placeholder="内容，输入框会随内容自动增高"></textarea>
+      </div>
+    </div>
 
-    <label>正文（支持 Markdown、[[双链]]）</label>
-    <textarea id="fContent" rows="6" placeholder="详细笔记…
+    <div class="field-block" id="imgBlock">
+      <label>图片（本地图最多 5 张，链接只能 1 条）</label>
+      <div class="img-edit" id="imgEdit"></div>
+      <div class="img-hint" id="imgHint"></div>
+    </div>
+
+    <div class="field-block" id="contentBlock">
+      <label>正文（支持 Markdown、[[双链]]）</label>
+      <textarea id="fContent" rows="6" placeholder="详细笔记…
 可以用 [[西洋参]] 引用其他资料"></textarea>
+    </div>
 
     <div class="btns">
       <button class="btn-ghost" id="btnCancel">取消</button>
@@ -1140,7 +1246,6 @@ body.dragging *{
   </div>
 </div>
 
-<!-- 分类管理 -->
 <div id="catMgr">
   <div class="catmgr-box">
     <div class="catmgr-head">
@@ -1154,7 +1259,6 @@ body.dragging *{
   </div>
 </div>
 
-<!-- 分类编辑 -->
 <div id="catEdit">
   <div class="catedit-box">
     <div class="catedit-head">
@@ -1179,7 +1283,6 @@ body.dragging *{
   </div>
 </div>
 
-<!-- 切换分类确认 -->
 <div id="switchConfirm">
   <div class="catmgr-box" style="max-width:400px;">
     <div class="catmgr-head">
@@ -1229,7 +1332,6 @@ body.dragging *{
   <button class="g-nav g-next" id="gNext">›</button>
 </div>
 
-<!-- Gitee 同步弹窗 -->
 <div id="syncPanel">
   <div class="sync-box">
     <div class="sync-head">
@@ -1256,7 +1358,6 @@ body.dragging *{
   </div>
 </div>
 
-<!-- 下载选择小窗 -->
 <div id="dlChoice">
   <div class="dl-box">
     <div class="dl-head">
@@ -1273,7 +1374,6 @@ body.dragging *{
   </div>
 </div>
 
-<!-- Gitee 设置弹窗 -->
 <div id="giteeSet">
   <div class="gset-box">
     <div class="gset-head">
@@ -1371,11 +1471,32 @@ let viewMode = localStorage.getItem('my_notes_view') || 'card';
 let splitPercent = parseInt(localStorage.getItem('my_notes_split'), 10);
 if(!splitPercent || splitPercent < 20 || splitPercent > 80) splitPercent = 45;
 
+function emptyEQ(){
+  return {
+    small: { title: '', content: '' },
+    big:   { title: '', content: '' }
+  };
+}
+
 function sanitizeNote(n){
   if(!n || typeof n !== 'object') return null;
-  let type = n.type === 'note' ? 'note' : 'material';
+  let type = 'material';
+  if(n.type === 'note') type = 'note';
+  else if(n.type === 'eq') type = 'eq';
+
   const fields = (n.fields && typeof n.fields === 'object') ? n.fields : {};
-  // 老数据没有 type：fields 为空且正文有内容 → 推断为笔记？保守起见仍按 material 处理
+  let eq = emptyEQ();
+  if(n.eq && typeof n.eq === 'object'){
+    if(n.eq.small && typeof n.eq.small === 'object'){
+      eq.small.title = String(n.eq.small.title ?? '');
+      eq.small.content = String(n.eq.small.content ?? '');
+    }
+    if(n.eq.big && typeof n.eq.big === 'object'){
+      eq.big.title = String(n.eq.big.title ?? '');
+      eq.big.content = String(n.eq.big.content ?? '');
+    }
+  }
+
   return {
     id: n.id || uid(),
     type: type,
@@ -1383,6 +1504,7 @@ function sanitizeNote(n){
     category: String(n.category ?? ''),
     tags: Array.isArray(n.tags) ? n.tags.map(t=>String(t||'')).filter(Boolean) : [],
     fields: fields,
+    eq: eq,
     content: String(n.content ?? ''),
     images: Array.isArray(n.images) ? n.images.map(x=>String(x||'')) : [],
     createdAt: n.createdAt || today(),
@@ -1399,7 +1521,6 @@ function loadLocal(){
       return;
     }
   }catch(e){}
-  // 兼容旧 key 迁移
   const oldKeys = ['my_notes_v5','my_notes_v4'];
   for(const k of oldKeys){
     try{
@@ -1592,8 +1713,6 @@ starListEl.addEventListener('click', e=>{
   if(!n) return;
   filter = { category:'', tag:'', keyword:'', star:false };
   currentIndex = 0;
-  // 直接定位到这条
-  const idxAll = notes.findIndex(x=>x.id===id);
   renderAll();
   setTimeout(()=>{
     const idx = currentData.findIndex(x=>x.id===id);
@@ -1607,14 +1726,22 @@ const swiperEl = document.getElementById('swiper');
 const listviewEl = document.getElementById('listview');
 const counterEl = document.getElementById('counter');
 
+function noteHaystack(n){
+  const parts = [
+    n.title, n.category, (n.tags||[]).join(' ')
+  ];
+  if(n.eq){
+    parts.push(n.eq.small?.title, n.eq.small?.content);
+    parts.push(n.eq.big?.title, n.eq.big?.content);
+  }
+  parts.push(Object.entries(n.fields||{}).map(([k,v])=>k+' '+v).join(' '));
+  parts.push(n.content);
+  return parts.join(' ').toLowerCase();
+}
 function matchKw(n, kw){
   if(!kw) return true;
-  const hay = [
-    n.title, n.category, (n.tags||[]).join(' '),
-    Object.entries(n.fields||{}).map(([k,v])=>k+' '+v).join(' '),
-    n.content
-  ].join(' ').toLowerCase();
-  return kw.split(/\s+/).every(w=>hay.includes(w));
+  const hay = noteHaystack(n);
+  return kw.split(/\s+/).filter(Boolean).every(w=>hay.includes(w));
 }
 
 function getFiltered(){
@@ -1663,11 +1790,39 @@ function getLocalImgs(n){
   return (n.images||[]).filter(src=>!isLink(src));
 }
 
+function eqBlockHTML(n, kw){
+  const eq = n.eq || emptyEQ();
+  const renderOne = (label, obj)=>{
+    const empty = !obj.title && !obj.content;
+    if(empty){
+      return `<div class="eq-block empty">
+        <div class="eq-head">${label}</div>
+        <div class="eq-text">（未填写）</div>
+      </div>`;
+    }
+    const titleHTML = obj.title
+      ? `<div class="eq-head">${hl(esc(obj.title), kw)}</div>`
+      : `<div class="eq-head">${label}</div>`;
+    const contentHTML = obj.content
+      ? `<div class="eq-text">${md(hl(obj.content, kw))}</div>`
+      : '';
+    return `<div class="eq-block">${titleHTML}${contentHTML}</div>`;
+  };
+  return `<div class="eq-wrap">
+    ${renderOne('小标题', eq.small)}
+    ${renderOne('大标题', eq.big)}
+  </div>`;
+}
+
 function cardHTML(n, kw){
   const isNote = n.type === 'note';
+  const isEQ = n.type === 'eq';
+
   const titleHTML = `<h3 class="card-title">${hl(esc(n.title||'（无标题）'), kw)}</h3>`;
   const catHTML = n.category ? `<span class="card-cat">${esc(n.category)}</span>` : '';
-  const typeHTML = isNote ? `<span class="card-type-note">📝 笔记</span>` : '';
+  const typeHTML = isNote
+    ? `<span class="card-type-note">📝 笔记</span>`
+    : (isEQ ? `<span class="card-type-eq">💡 情商</span>` : '');
   const tagsHTML = (n.tags||[]).map(t=>`<span class="card-tag">${esc(t)}</span>`).join('');
   const metaHTML = (catHTML || tagsHTML || typeHTML)
     ? `<div class="card-meta">${catHTML}${typeHTML}${tagsHTML}</div>` : '';
@@ -1682,14 +1837,14 @@ function cardHTML(n, kw){
     ? `<button class="card-imgs-badge" data-act="imgs" data-id="${n.id}" title="查看本地图片">🖼 ${localImgs.length}</button>`
     : '';
 
-  const fieldRows = isNote ? '' : Object.entries(n.fields||{})
+  const fieldRows = (!isNote && !isEQ) ? Object.entries(n.fields||{})
     .filter(([k,v])=>k||v)
     .map(([k,v])=>
       `<div class="field-row">
          <span class="fk">${esc(k)}</span>
          <span class="fv">${hl(esc(v), kw)}</span>
        </div>`
-    ).join('');
+    ).join('') : '';
   const hasFields = !!fieldRows;
   const fieldsHTML = hasFields ? `<div class="card-fields">${fieldRows}</div>` : '';
 
@@ -1717,10 +1872,15 @@ function cardHTML(n, kw){
     relationsHTML += `</div>`;
   }
 
-  // 笔记：不渲染 upper 和 split-handle，正文直接占满
-  const splitInner = isNote
-    ? `<div class="card-lower" style="flex:1;">${contentHTML}</div>`
-    : `<div class="card-upper">${fieldsHTML}</div>
+  let splitInner;
+  if(isNote){
+    splitInner = `<div class="card-lower" style="flex:1;">${contentHTML}</div>`;
+  }else if(isEQ){
+    splitInner = `<div class="card-lower" style="flex:1;">
+      <div class="content">${eqBlockHTML(n, kw)}</div>
+    </div>`;
+  }else{
+    splitInner = `<div class="card-upper">${fieldsHTML}</div>
        <div class="split-handle" data-split-handle title="上下拖动调整比例">
          <span class="sh-label">
            <span class="sh-grip"><i></i><i></i></span>
@@ -1730,6 +1890,7 @@ function cardHTML(n, kw){
          </span>
        </div>
        <div class="card-lower">${contentHTML}</div>`;
+  }
 
   return `
   <div class="card" data-id="${n.id}">
@@ -1752,26 +1913,35 @@ function cardHTML(n, kw){
       <button data-act="edit">编辑</button>
       <button data-act="copy">复制</button>
       <button data-act="del" class="danger">删除</button>
+      <button data-act="search" class="ops-search" title="搜索全部关键词">🔍</button>
     </div>
   </div>`;
 }
 
 function listItemHTML(n){
   const isNote = n.type === 'note';
+  const isEQ = n.type === 'eq';
   const cat = n.category ? `<span class="lc">${esc(n.category)}</span>` : '';
-  const typeTag = isNote ? `<span class="lc" style="background:#fdf3e0;color:#8a6d3b;">📝 笔记</span>` : '';
+  let typeTag = '';
+  if(isNote) typeTag = `<span class="lc" style="background:#fdf3e0;color:#8a6d3b;">📝 笔记</span>`;
+  else if(isEQ) typeTag = `<span class="lc" style="background:#f3eef8;color:#6b4a8a;">💡 情商</span>`;
   const tags = (n.tags||[]).slice(0,3).map(t=>`<span class="tag-mini">${esc(t)}</span>`).join('');
   const localCount = getLocalImgs(n).length;
   const hasLink = !!getLinkImg(n);
   let imgBadge = '';
   if(localCount) imgBadge += `<span class="img-badge">🖼 ${localCount}</span>`;
   if(hasLink) imgBadge += `<span class="img-badge">📋 链接</span>`;
+
   let summary = '';
-  if(!isNote){
+  if(isEQ){
+    const eq = n.eq || emptyEQ();
+    summary = eq.small.title || eq.small.content || eq.big.title || eq.big.content || '';
+  }else if(!isNote){
     const firstField = Object.entries(n.fields||{})[0];
     if(firstField) summary = `${firstField[0]} ${firstField[1]}`;
   }
   if(!summary && n.content) summary = String(n.content).replace(/\[\[|\]\]/g,'').slice(0,60);
+
   return `
   <div class="list-item" data-id="${n.id}">
     <div class="row1">
@@ -1779,7 +1949,7 @@ function listItemHTML(n){
       <span class="ls ${n.star?'on':''}">${n.star?'★':'☆'}</span>
     </div>
     <div class="row2">${cat}${typeTag}${tags}${imgBadge}
-      ${summary?`<span style="margin-left:6px;color:#888;">${esc(summary)}</span>`:''}
+      ${summary?`<span style="margin-left:6px;color:#888;">${esc(summary).slice(0,60)}</span>`:''}
     </div>
   </div>`;
 }
@@ -1837,6 +2007,7 @@ function updateCounter(){
   if(filter.star) catLabel = '★ 收藏';
   else if(filter.category) catLabel = filter.category;
   else if(filter.tag) catLabel = '#' + filter.tag;
+  if(filter.keyword) catLabel += ` · 「${filter.keyword}」`;
 
   if(!total){
     counterEl.innerHTML = `<span class="cat">${esc(catLabel)}</span>
@@ -1885,6 +2056,10 @@ document.addEventListener('keydown', e=>{
   if(document.getElementById('syncPanel').classList.contains('show')) return;
   if(document.getElementById('giteeSet').classList.contains('show')) return;
   if(document.getElementById('dlChoice').classList.contains('show')) return;
+  if(document.getElementById('searchBar').classList.contains('show')){
+    if(e.key === 'Escape') closeSearch();
+    return;
+  }
   if(document.getElementById('gallery').classList.contains('show')){
     if(e.key === 'Escape') closeGallery();
     if(e.key === 'ArrowLeft') galleryPrev();
@@ -1957,6 +2132,7 @@ function handleCardClick(e){
   const act = btn.dataset.act;
 
   if(act === 'jump'){ jumpToTitle(btn.dataset.title); return; }
+  if(act === 'search'){ openSearch(); return; }
   if(act === 'copyLink'){
     if(note){
       const link = getLinkImg(note);
@@ -2013,6 +2189,84 @@ document.getElementById('btnRefresh').onclick = ()=>{
     location.reload(true);
   }
 };
+
+/* ================= 搜索条 ================= */
+const searchBar = document.getElementById('searchBar');
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+const searchInfo = document.getElementById('searchInfo');
+
+function openSearch(){
+  searchBar.classList.add('show');
+  searchInfo.classList.remove('show');
+  searchInput.value = '';
+  setTimeout(()=>searchInput.focus(), 50);
+}
+function closeSearch(){
+  searchBar.classList.remove('show');
+  searchInfo.classList.remove('show');
+  searchInput.blur();
+  if(filter.keyword){
+    filter.keyword = '';
+    currentIndex = 0;
+    renderAll();
+  }
+}
+function updateSearchInfo(q){
+  q = q.trim();
+  if(!q){ searchInfo.classList.remove('show'); searchInfo.innerHTML=''; return; }
+  const kw = q.toLowerCase();
+  const hits = notes.filter(n=>matchKw(n, kw));
+  if(!hits.length){
+    searchInfo.innerHTML = `<div class="search-empty">没有匹配「${esc(q)}」的结果</div>`;
+    searchInfo.classList.add('show');
+    return;
+  }
+  searchInfo.innerHTML = hits.slice(0, 30).map(n=>{
+    const typeTag = n.type==='eq' ? '💡' : (n.type==='note' ? '📝' : '📄');
+    const meta = [n.category, (n.tags||[]).slice(0,3).join(' ')].filter(Boolean).join(' · ');
+    return `<div class="search-result" data-id="${n.id}">
+      <span class="sr-title">${typeTag} ${esc(n.title||'（无标题）')}</span>
+      <span class="sr-meta">${esc(meta) || '&nbsp;'}</span>
+    </div>`;
+  }).join('');
+  searchInfo.classList.add('show');
+}
+searchInput.addEventListener('input', ()=>{
+  updateSearchInfo(searchInput.value);
+  filter.keyword = searchInput.value.trim();
+  currentIndex = 0;
+  renderAll();
+});
+searchInput.addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    const first = searchInfo.querySelector('.search-result');
+    if(first) first.click();
+    else closeSearch();
+  }
+  if(e.key === 'Escape') closeSearch();
+});
+searchClear.onclick = closeSearch;
+searchInfo.addEventListener('click', e=>{
+  const item = e.target.closest('.search-result');
+  if(!item) return;
+  const id = item.dataset.id;
+  searchBar.classList.remove('show');
+  searchInfo.classList.remove('show');
+  const idx = currentData.findIndex(n=>n.id===id);
+  if(idx >= 0){
+    goTo(idx);
+  }else{
+    const idxAll = notes.findIndex(n=>n.id===id);
+    if(idxAll >= 0){
+      filter = {category:'',tag:'',keyword:'',star:false};
+      currentIndex = 0;
+      renderAll();
+      setTimeout(()=>goTo(idxAll), 60);
+    }
+  }
+  searchInput.blur();
+});
 
 /* ================= 拖动条 ================= */
 let dragState = null;
@@ -2085,7 +2339,21 @@ function copyNote(n){
   parts.push(`【${n.title || '（无标题）'}】`);
   if(n.category) parts.push(`分类：${n.category}`);
   if(n.tags && n.tags.length) parts.push(`标签：${n.tags.join(', ')}`);
-  if(n.type !== 'note'){
+  if(n.type === 'eq' && n.eq){
+    const eq = n.eq;
+    parts.push('');
+    if(eq.small.title || eq.small.content){
+      parts.push(`小标题：${eq.small.title || ''}`);
+      if(eq.small.content) parts.push(eq.small.content);
+    }
+    parts.push('');
+    parts.push('───────────');
+    parts.push('');
+    if(eq.big.title || eq.big.content){
+      parts.push(`大标题：${eq.big.title || ''}`);
+      if(eq.big.content) parts.push(eq.big.content);
+    }
+  }else if(n.type !== 'note'){
     const fields = Object.entries(n.fields||{}).filter(([k,v])=>k||v);
     if(fields.length){
       parts.push('');
@@ -2116,7 +2384,7 @@ function fallbackCopy(text, okMsg){
   document.body.removeChild(ta);
 }
 
-/* ================= 编辑面板（资料/笔记 Tab） ================= */
+/* ================= 编辑面板 ================= */
 const editor = document.getElementById('editor');
 let editingId = null;
 let editingImages = [];
@@ -2124,15 +2392,42 @@ let editingType = 'material';
 let pendingCategory = '';
 let pendingCategoryOld = '';
 
+function autoGrowTextarea(ta){
+  if(!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+function autoGrowEQTextareas(){
+  autoGrowTextarea(document.getElementById('eqSmallContent'));
+  autoGrowTextarea(document.getElementById('eqBigContent'));
+}
+
 function setEditorType(type){
-  editingType = type === 'note' ? 'note' : 'material';
+  editingType = (type === 'note' || type === 'eq') ? type : 'material';
   const tabs = document.querySelectorAll('#typeTabs .type-tab');
   tabs.forEach(t=>t.classList.toggle('active', t.dataset.type === editingType));
+
   const fieldBlock = document.getElementById('fieldBlock');
-  if(editingType === 'note'){
-    fieldBlock.classList.add('hide');
+  const eqBlock = document.getElementById('eqBlock');
+  const imgBlock = document.getElementById('imgBlock');
+  const contentBlock = document.getElementById('contentBlock');
+
+  if(editingType === 'material'){
+    fieldBlock.classList.remove('eq-hide');
+    eqBlock.classList.remove('show');
+    imgBlock.classList.remove('eq-hide');
+    contentBlock.classList.remove('eq-hide');
+  }else if(editingType === 'note'){
+    fieldBlock.classList.add('eq-hide');
+    eqBlock.classList.remove('show');
+    imgBlock.classList.remove('eq-hide');
+    contentBlock.classList.remove('eq-hide');
   }else{
-    fieldBlock.classList.remove('hide');
+    fieldBlock.classList.add('eq-hide');
+    eqBlock.classList.add('show');
+    imgBlock.classList.add('eq-hide');
+    contentBlock.classList.add('eq-hide');
+    setTimeout(autoGrowEQTextareas, 30);
   }
 }
 
@@ -2142,31 +2437,41 @@ document.getElementById('typeTabs').addEventListener('click', e=>{
   const newType = tab.dataset.type;
   if(newType === editingType) return;
 
-  // 资料→笔记：字段框可能有内容，确认
   if(editingType === 'material' && newType === 'note'){
-    if(fieldsHaveValues()){
-      if(!confirm('切换到「笔记」会清空当前结构化字段，继续？')){
-        return;
-      }
-    }
+    if(fieldsHaveValues() && !confirm('切换到「笔记」会清空当前结构化字段，继续？')) return;
     document.getElementById('fFields').value = '';
     setEditorType('note');
     return;
   }
-
-  // 笔记→资料：按当前分类填字段模板
+  if(editingType === 'material' && newType === 'eq'){
+    if(fieldsHaveValues() && !confirm('切换到「情商」会清空当前结构化字段，继续？')) return;
+    document.getElementById('fFields').value = '';
+    setEditorType('eq');
+    return;
+  }
   if(editingType === 'note' && newType === 'material'){
-    if(!confirm('切换为「资料」后将出现结构化字段，按分类模板填充，继续？')){
-      return;
-    }
+    if(!confirm('切换为「资料」后将出现结构化字段，按分类模板填充，继续？')) return;
     setEditorType('material');
     const cat = document.getElementById('fCategory').value;
     const tmpl = getCatFields(cat);
-    if(tmpl.length){
-      document.getElementById('fFields').value = tmpl.map(f=>`${f}=`).join('\n');
-    }else{
-      document.getElementById('fFields').value = '';
-    }
+    document.getElementById('fFields').value = tmpl.length
+      ? tmpl.map(f=>`${f}=`).join('\n') : '';
+    return;
+  }
+  if(editingType === 'note' && newType === 'eq'){
+    setEditorType('eq');
+    return;
+  }
+  if(editingType === 'eq' && newType === 'material'){
+    setEditorType('material');
+    const cat = document.getElementById('fCategory').value;
+    const tmpl = getCatFields(cat);
+    document.getElementById('fFields').value = tmpl.length
+      ? tmpl.map(f=>`${f}=`).join('\n') : '';
+    return;
+  }
+  if(editingType === 'eq' && newType === 'note'){
+    setEditorType('note');
     return;
   }
 });
@@ -2174,7 +2479,7 @@ document.getElementById('typeTabs').addEventListener('click', e=>{
 function openEditor(note){
   editingId = note ? note.id : null;
   editingImages = note && note.images ? note.images.slice() : [];
-  editingType = note && note.type === 'note' ? 'note' : 'material';
+  editingType = note && (note.type === 'note' || note.type === 'eq') ? note.type : 'material';
 
   document.getElementById('editorTitle').textContent = note ? '编辑' : '新建';
   document.getElementById('fTitle').value = note?.title || '';
@@ -2182,13 +2487,23 @@ function openEditor(note){
   document.getElementById('fFields').value = Object.entries(note?.fields||{})
       .map(([k,v])=>`${k}=${v}`).join('\n');
   document.getElementById('fContent').value = note?.content || '';
+
+  const eq = (note && note.eq) ? note.eq : emptyEQ();
+  document.getElementById('eqSmallTitle').value = eq.small.title || '';
+  document.getElementById('eqSmallContent').value = eq.small.content || '';
+  document.getElementById('eqBigTitle').value = eq.big.title || '';
+  document.getElementById('eqBigContent').value = eq.big.content || '';
+
   rebuildCategorySelect(note?.category || '');
   setEditorType(editingType);
   renderImgEdit();
 
   editor.classList.add('show');
   document.body.style.overflow = 'hidden';
-  setTimeout(()=>document.getElementById('fTitle').focus(), 100);
+  setTimeout(()=>{
+    document.getElementById('fTitle').focus();
+    autoGrowEQTextareas();
+  }, 100);
 }
 function closeEditor(){
   editor.classList.remove('show');
@@ -2259,8 +2574,7 @@ function applyTemplateReplace(catName){
 }
 
 document.getElementById('fCategory').addEventListener('change', e=>{
-  // 笔记模式不触发字段模板逻辑
-  if(editingType === 'note') return;
+  if(editingType === 'note' || editingType === 'eq') return;
 
   const newCat = e.target.value;
   const oldText = document.getElementById('fFields').value;
@@ -2312,6 +2626,13 @@ document.getElementById('switchReplace').onclick = ()=>{
 
 document.getElementById('fCategory').addEventListener('focus', e=>{
   pendingCategoryOld = e.target.value;
+});
+
+['eqSmallContent','eqBigContent'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el){
+    el.addEventListener('input', ()=>autoGrowTextarea(el));
+  }
 });
 
 /* ================= 分类管理窗口 ================= */
@@ -2659,7 +2980,7 @@ document.getElementById('btnSave').onclick = ()=>{
   if(!title){ alert('请填写标题'); return; }
 
   const fields = {};
-  if(editingType !== 'note'){
+  if(editingType !== 'note' && editingType !== 'eq'){
     document.getElementById('fFields').value.split('\n').forEach(line=>{
       const i = line.indexOf('=');
       if(i>0){
@@ -2670,9 +2991,22 @@ document.getElementById('btnSave').onclick = ()=>{
     });
   }
 
+  let eq = emptyEQ();
+  if(editingType === 'eq'){
+    eq.small.title = document.getElementById('eqSmallTitle').value.trim();
+    eq.small.content = document.getElementById('eqSmallContent').value;
+    eq.big.title = document.getElementById('eqBigTitle').value.trim();
+    eq.big.content = document.getElementById('eqBigContent').value;
+  }
+
   const tags = document.getElementById('fTags').value
       .split(/[,，]/).map(s=>s.trim()).filter(Boolean);
-  const content = document.getElementById('fContent').value;
+  let content = '';
+  let images = [];
+  if(editingType !== 'eq'){
+    content = document.getElementById('fContent').value;
+    images = editingImages.slice();
+  }
   const now = today();
   let category = document.getElementById('fCategory').value;
   if(category === '__add__' || category === '__manage__') category = '';
@@ -2704,8 +3038,9 @@ document.getElementById('btnSave').onclick = ()=>{
       n.category = category.trim();
       n.tags = tags;
       n.fields = fields;
+      n.eq = eq;
       n.content = content;
-      n.images = editingImages.slice();
+      n.images = images;
       n.updatedAt = now;
       delete n.history;
     }
@@ -2713,8 +3048,7 @@ document.getElementById('btnSave').onclick = ()=>{
     notes.unshift({
       id: uid(), type: editingType, title,
       category: category.trim(),
-      tags, fields, content,
-      images: editingImages.slice(),
+      tags, fields, eq, content, images,
       createdAt: now, updatedAt: now, star: false
     });
     currentIndex = 0;
@@ -2916,11 +3250,12 @@ function buildCleanNotes(){
   const arr = dedupeNotesByTitle(notes);
   return arr.map(n => ({
     id: n.id,
-    type: n.type === 'note' ? 'note' : 'material',
+    type: (n.type === 'note' || n.type === 'eq') ? n.type : 'material',
     title: n.title,
     category: n.category,
     tags: Array.isArray(n.tags) ? n.tags : [],
     fields: n.fields || {},
+    eq: n.eq || emptyEQ(),
     content: n.content || '',
     images: Array.isArray(n.images) ? n.images : [],
     createdAt: n.createdAt || '',
@@ -2932,7 +3267,7 @@ function buildCleanNotes(){
 function exportJSON(){
   const cleanNotes = buildCleanNotes();
   const payload = {
-    _version: 7,
+    _version: 8,
     _exportedAt: new Date().toISOString(),
     categories: categories,
     notes: cleanNotes
@@ -3048,7 +3383,7 @@ const SYNC_KEY = 'my_notes_gitee_cfg';
 
 function buildSyncPayload(){
   return {
-    _version: 7,
+    _version: 8,
     _exportedAt: new Date().toISOString(),
     categories: categories,
     notes: buildCleanNotes()
@@ -3669,6 +4004,7 @@ document.addEventListener('keydown', e=>{
     if(syncPanel.classList.contains('show')) closeSyncPanel();
     if(giteeSet.classList.contains('show')) closeGiteeSet();
     if(dlChoice.classList.contains('show')) closeDownloadChoice();
+    if(searchBar.classList.contains('show')) closeSearch();
     if(switchConfirm.classList.contains('show')){
       switchConfirm.classList.remove('show');
       rebuildCategorySelect(pendingCategoryOld);
