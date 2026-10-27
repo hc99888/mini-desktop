@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-24T14:26:34.957Z",
+  "updatedAt": "2026-10-27T12:56:29.685Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -71,6 +71,16 @@
         "apps/书签应用/style.css",
         "apps/书签应用/app.js",
         "apps/书签应用/logo.webp"
+      ]
+    },
+    "资料库": {
+      "version": 1793105790516,
+      "updatedAt": "2026-10-27T12:56:29.685Z",
+      "files": [
+        "apps/资料库/index.html",
+        "apps/资料库/style.css",
+        "apps/资料库/app.js",
+        "apps/资料库/logo.png"
       ]
     }
   }
