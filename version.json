@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-10-27T12:56:29.685Z",
+  "updatedAt": "2026-10-29T10:23:38.388Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -81,6 +81,16 @@
         "apps/资料库/style.css",
         "apps/资料库/app.js",
         "apps/资料库/logo.png"
+      ]
+    },
+    "情商版": {
+      "version": 1793269419156,
+      "updatedAt": "2026-10-29T10:23:38.388Z",
+      "files": [
+        "apps/情商版/index.html",
+        "apps/情商版/style.css",
+        "apps/情商版/app.js",
+        "apps/情商版/logo.webp"
       ]
     }
   }
