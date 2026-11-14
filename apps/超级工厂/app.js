@@ -164,7 +164,7 @@ ${splitHtml.value}
         if(previewIframe) previewIframe.srcdoc = htmlContent;
       }
 
-      // ========== 查找功能（紧凑型，底部一行） ==========
+      // ========== 查找功能 ==========
       const findPanel = document.getElementById('findPanel');
       const findToggleBtn = document.getElementById('findToggleBtn');
       const findInput = document.getElementById('findInput');
