@@ -1875,6 +1875,18 @@ async function doSyncDownload() {
     }
     const files = list.filter(x => x.type === 'file' && /\.json$/i.test(x.name)).sort((a, b) => (b.name || '').localeCompare(a.name || ''));
     if (!files.length) { syncMsg('ℹ️ 目录里还没有 JSON 文件'); btn.disabled = false; return; }
+     // 补齐缺失的 size（目录接口有时不返回真实大小）
+await Promise.all(files.map(async f => {
+  if (!f.size) {
+    try {
+      const r = await fetch(`${GITEE_API}/repos/${cfg.owner}/${cfg.repo}/contents/${encodeGiteePath(dir ? dir + '/' + f.name : f.name)}?access_token=${encodeURIComponent(cfg.token)}`);
+      if (r.ok) {
+        const d = await r.json();
+        if (d && d.size) f.size = d.size;
+      }
+    } catch (e) {}
+  }
+}));
     syncMsg(`📂 共 ${files.length} 个文件，点选要下载的：`);
     document.getElementById('syncFileListWrap').style.display = 'block';
     const listEl = document.getElementById('syncFileList');
@@ -2068,6 +2080,7 @@ function openClearData() {
   setTimeout(() => {
     const input = prompt(`⚠️ 清空全部数据？\n\n将删除：\n· ${records.length} 条记账\n· ${Object.keys(attendanceRecords).length} 条考勤\n· ${advances.length} 条预支\n· ${loanRecords.length} 条借贷\n\n此操作不可撤销！\n如果确定，请输入「清空」两个字：`);
     if (input === null) return;
+
     if (input.trim() !== '清空') { showToast('已取消'); return; }
     if (!confirm('最后确认：清空所有数据？\n\n确定后不可恢复。')) return;
     records = []; attendanceRecords = {}; crewAttendance = {}; advances = [];
@@ -2277,4 +2290,4 @@ updateAdvanceSelect();
 updateIncomeAdvanceSelect();
 </script>
 </body>
-</html>
+</html
