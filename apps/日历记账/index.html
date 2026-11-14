@@ -1350,7 +1350,7 @@ function openAttendance() {
   if (!selectedDate) return;
   document.getElementById('attendanceDateTitle').textContent = `出勤设置 - ${selectedDate}`;
   const cur = getAttendanceByDate(selectedDate);
-  selectedAttType = cur ? cur.type : full;
+  selectedAttType = cur ? cur.type : 'full';
   document.getElementById('attendanceProject').value = cur && cur.project ? cur.project : '';
   const projectForRule = document.getElementById('attendanceProject').value.trim() || '未分类';
   const rule = getOvertimeRule(projectForRule);
