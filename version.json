@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-14T11:56:21.364Z",
+  "updatedAt": "2026-11-14T13:23:51.159Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -91,6 +91,16 @@
         "apps/情商版/style.css",
         "apps/情商版/app.js",
         "apps/情商版/logo.webp"
+      ]
+    },
+    "超级工厂": {
+      "version": 1794662632058,
+      "updatedAt": "2026-11-14T13:23:51.159Z",
+      "files": [
+        "apps/超级工厂/index.html",
+        "apps/超级工厂/style.css",
+        "apps/超级工厂/app.js",
+        "apps/超级工厂/logo.png"
       ]
     }
   }
