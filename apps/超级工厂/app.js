@@ -2,6 +2,8 @@
 
 
     (function() {
+      'use strict';
+
       // ========== 页面切换 ==========
       const mainPage = document.getElementById('mainPage');
       const previewPage = document.getElementById('previewPage');
@@ -72,6 +74,8 @@
           parseBtn.style.display = 'none';
           mergeBtn.style.display = 'inline-block';
         }
+        closeFindPanel();
+        updateFindLocation();
       }
 
       if(modeToggleBtn) {
@@ -91,6 +95,8 @@
           if (target === 'html') document.getElementById('splitPaneHtml').classList.add('active-pane');
           else if (target === 'css') document.getElementById('splitPaneCss').classList.add('active-pane');
           else if (target === 'js') document.getElementById('splitPaneJs').classList.add('active-pane');
+          closeFindPanel();
+          updateFindLocation();
         });
       });
 
@@ -158,11 +164,280 @@ ${splitHtml.value}
         if(previewIframe) previewIframe.srcdoc = htmlContent;
       }
 
+      // ========== 查找功能（紧凑型，底部一行） ==========
+      const findPanel = document.getElementById('findPanel');
+      const findToggleBtn = document.getElementById('findToggleBtn');
+      const findInput = document.getElementById('findInput');
+      const findPrevBtn = document.getElementById('findPrevBtn');
+      const findNextBtn = document.getElementById('findNextBtn');
+      const findCountEl = document.getElementById('findCount');
+      const findLocationEl = document.getElementById('findLocation');
+      const closeFindBtn = document.getElementById('closeFindBtn');
+      const findDragHandle = document.getElementById('findDragHandle');
+      const clearFindInputBtn = document.getElementById('clearFindInput');
+
+      const findState = {
+        full: { matches: [], currentIndex: -1, textarea: fullTextarea },
+        html: { matches: [], currentIndex: -1, textarea: splitHtml },
+        css: { matches: [], currentIndex: -1, textarea: splitCss },
+        js: { matches: [], currentIndex: -1, textarea: splitJs }
+      };
+
+      function getActiveFindKey() {
+        if (currentMode === 'full') return 'full';
+        const activePane = document.querySelector('.split-pane.active-pane');
+        if (activePane) {
+          if (activePane.id === 'splitPaneHtml') return 'html';
+          if (activePane.id === 'splitPaneCss') return 'css';
+          if (activePane.id === 'splitPaneJs') return 'js';
+        }
+        return 'html';
+      }
+
+      function getActiveFindState() {
+        return findState[getActiveFindKey()];
+      }
+
+      function getLocationLabel(key) {
+        return { full: '完整HTML', html: 'HTML', css: 'CSS', js: 'JS' }[key] || '';
+      }
+
+      function updateFindLocation() {
+        const key = getActiveFindKey();
+        findLocationEl.textContent = getLocationLabel(key);
+      }
+
+      function performFind() {
+        const key = getActiveFindKey();
+        const state = findState[key];
+        const searchText = findInput.value;
+        const text = state.textarea.value;
+
+        state.matches = [];
+        state.currentIndex = -1;
+
+        if (!searchText) {
+          updateFindCountDisplay(key);
+          return;
+        }
+
+        const lowerText = text.toLowerCase();
+        const lowerSearch = searchText.toLowerCase();
+        let index = 0;
+        while ((index = lowerText.indexOf(lowerSearch, index)) !== -1) {
+          state.matches.push(index);
+          index += searchText.length || 1;
+        }
+
+        if (state.matches.length > 0) {
+          state.currentIndex = 0;
+          selectMatchInTextarea(state, 0);
+        }
+        updateFindCountDisplay(key);
+      }
+
+      function selectMatchInTextarea(state, matchIndex) {
+        const textarea = state.textarea;
+        const searchText = findInput.value;
+        if (!searchText) return;
+        const start = state.matches[matchIndex];
+        if (start === undefined) return;
+        const end = start + searchText.length;
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+
+        const text = textarea.value;
+        const before = text.substring(0, start);
+        const lineCount = before.split('\n').length;
+        const lineHeight = 20;
+        const scrollTop = (lineCount - 1) * lineHeight;
+        textarea.scrollTop = Math.max(0, scrollTop - textarea.clientHeight / 2);
+      }
+
+      function updateFindCountDisplay(key) {
+        const state = findState[key];
+        const total = state.matches.length;
+        const current = total > 0 && state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
+        findCountEl.textContent = `${current}/${total}`;
+      }
+
+      function closeFindPanel() {
+        findPanel.classList.remove('active');
+      }
+
+      function openFindPanel() {
+        findPanel.classList.add('active');
+        const savedX = localStorage.getItem('findPanelX');
+        const savedY = localStorage.getItem('findPanelY');
+        if (savedX !== null && savedY !== null) {
+          const x = parseFloat(savedX);
+          const y = parseFloat(savedY);
+          if (!isNaN(x) && !isNaN(y)) {
+            const w = findPanel.offsetWidth || 340;
+            const h = findPanel.offsetHeight || 160;
+            findPanel.style.left = Math.min(Math.max(0, x), window.innerWidth - w) + 'px';
+            findPanel.style.top = Math.min(Math.max(0, y), window.innerHeight - h) + 'px';
+            findPanel.style.right = 'auto';
+            findPanel.style.bottom = 'auto';
+          }
+        } else {
+          const w = findPanel.offsetWidth || 340;
+          findPanel.style.left = Math.max(8, window.innerWidth - w - 16) + 'px';
+          findPanel.style.top = '80px';
+          findPanel.style.right = 'auto';
+          findPanel.style.bottom = 'auto';
+        }
+        updateFindLocation();
+        findInput.focus();
+        if (findInput.value) performFind();
+        updateClearBtnVisibility();
+      }
+
+      if (findToggleBtn) {
+        findToggleBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (findPanel.classList.contains('active')) closeFindPanel();
+          else openFindPanel();
+        });
+      }
+      if (closeFindBtn) closeFindBtn.addEventListener('click', closeFindPanel);
+
+      function updateClearBtnVisibility() {
+        if (clearFindInputBtn) {
+          if (findInput.value.length > 0) clearFindInputBtn.classList.add('visible');
+          else clearFindInputBtn.classList.remove('visible');
+        }
+      }
+
+      if (clearFindInputBtn) {
+        clearFindInputBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          findInput.value = '';
+          findInput.focus();
+          updateClearBtnVisibility();
+          performFind();
+          enterPressed = false;
+        });
+      }
+
+      let enterPressed = false;
+      findInput.addEventListener('change', performFind);
+      findInput.addEventListener('input', function() {
+        enterPressed = false;
+        updateClearBtnVisibility();
+      });
+      findInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (!findInput.value) return;
+          if (!enterPressed) {
+            performFind();
+            enterPressed = true;
+          } else {
+            findNext();
+          }
+        }
+        if (e.key === 'Escape') closeFindPanel();
+      });
+
+      function findNext() {
+        const state = getActiveFindState();
+        if (state.matches.length === 0) {
+          performFind();
+          return;
+        }
+        state.currentIndex = (state.currentIndex + 1) % state.matches.length;
+        selectMatchInTextarea(state, state.currentIndex);
+        updateFindCountDisplay(getActiveFindKey());
+      }
+
+      function findPrev() {
+        const state = getActiveFindState();
+        if (state.matches.length === 0) {
+          performFind();
+          return;
+        }
+        state.currentIndex = (state.currentIndex - 1 + state.matches.length) % state.matches.length;
+        selectMatchInTextarea(state, state.currentIndex);
+        updateFindCountDisplay(getActiveFindKey());
+      }
+
+      if (findNextBtn) findNextBtn.addEventListener('click', findNext);
+      if (findPrevBtn) findPrevBtn.addEventListener('click', findPrev);
+
+      // 拖动
+      let dragState = null;
+      function onDragStart(e) {
+        if (e.target.closest('.close-find')) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = findPanel.getBoundingClientRect();
+        dragState = {
+          offsetX: clientX - rect.left,
+          offsetY: clientY - rect.top
+        };
+        findPanel.style.cursor = 'grabbing';
+        if (e.cancelable) e.preventDefault();
+      }
+      function onDragMove(e) {
+        if (!dragState) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let newLeft = clientX - dragState.offsetX;
+        let newTop = clientY - dragState.offsetY;
+        const w = findPanel.offsetWidth;
+        const h = findPanel.offsetHeight;
+        newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - w));
+        newTop = Math.max(0, Math.min(newTop, window.innerHeight - h));
+        findPanel.style.left = newLeft + 'px';
+        findPanel.style.top = newTop + 'px';
+        findPanel.style.right = 'auto';
+        findPanel.style.bottom = 'auto';
+        if (e.cancelable) e.preventDefault();
+      }
+      function onDragEnd() {
+        if (!dragState) return;
+        dragState = null;
+        findPanel.style.cursor = '';
+        const rect = findPanel.getBoundingClientRect();
+        localStorage.setItem('findPanelX', rect.left);
+        localStorage.setItem('findPanelY', rect.top);
+      }
+
+      findDragHandle.addEventListener('mousedown', onDragStart);
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', onDragEnd);
+      findDragHandle.addEventListener('touchstart', onDragStart, { passive: false });
+      document.addEventListener('touchmove', onDragMove, { passive: false });
+      document.addEventListener('touchend', onDragEnd);
+
+      window.addEventListener('resize', function() {
+        if (findPanel.classList.contains('active')) {
+          const rect = findPanel.getBoundingClientRect();
+          const w = findPanel.offsetWidth;
+          const h = findPanel.offsetHeight;
+          let newLeft = Math.max(0, Math.min(rect.left, window.innerWidth - w));
+          let newTop = Math.max(0, Math.min(rect.top, window.innerHeight - h));
+          findPanel.style.left = newLeft + 'px';
+          findPanel.style.top = newTop + 'px';
+        }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          e.preventDefault();
+          openFindPanel();
+        }
+        if (e.key === 'Escape') closeFindPanel();
+      });
+
+      // ========== 清空 / 复制 / 粘贴 / 删除 ==========
       document.getElementById('clearBtn').addEventListener('click', () => {
         if (currentMode === 'full') fullTextarea.value = '';
         else { splitHtml.value = ''; splitCss.value = ''; splitJs.value = ''; }
         updatePreview();
         autoSaveCode();
+        if (findPanel.classList.contains('active')) performFind();
       });
 
       document.getElementById('clearAllBtn').addEventListener('click', () => {
@@ -175,6 +450,7 @@ ${splitHtml.value}
         document.getElementById('autoUpload').checked = false;
         updatePreview();
         autoSaveCode();
+        if (findPanel.classList.contains('active')) performFind();
         console.log('🧹 已清空所有输入框');
       });
 
@@ -217,8 +493,10 @@ ${splitHtml.value}
         }
         updatePreview();
         autoSaveCode();
+        if (findPanel.classList.contains('active')) performFind();
       });
 
+      // 批量导入
       document.getElementById('batchImportBtn').addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -603,7 +881,6 @@ ${splitHtml.value}
         return new TextDecoder().decode(bytes);
       }
 
-      // base64 -> Blob（二进制安全）
       function base64ToBlob(base64, mime) {
         const byteChars = atob(base64);
         const byteNumbers = new Uint8Array(byteChars.length);
@@ -611,7 +888,6 @@ ${splitHtml.value}
         return new Blob([byteNumbers], { type: mime });
       }
 
-      // base64 -> File（用于回填 <input type="file">）
       function base64ToFile(base64, filename) {
         const ext = filename.split('.').pop().toLowerCase();
         const mimeMap = {
@@ -622,7 +898,6 @@ ${splitHtml.value}
         return new File([blob], filename, { type: blob.type });
       }
 
-      // 把 File 塞进 <input type="file">
       function setFileInput(inputEl, file) {
         try {
           const dt = new DataTransfer();
@@ -636,7 +911,6 @@ ${splitHtml.value}
         }
       }
 
-      // 在指定目录下探测 logo 文件
       async function findLogoInDir(gitUser, gitRepo, gitToken, basePath) {
         const exts = ['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'];
         for (const ext of exts) {
@@ -646,7 +920,6 @@ ${splitHtml.value}
             if (file?.content) return { content: file.content, filename: `logo.${ext}`, path };
           } catch (e) { /* 404 忽略 */ }
         }
-        // 兜底：无扩展名 logo
         try {
           const file = await githubGetFile({ user: gitUser, repo: gitRepo, token: gitToken, path: `${basePath}/logo` });
           if (file?.content) return { content: file.content, filename: 'logo', path: `${basePath}/logo` };
@@ -654,7 +927,6 @@ ${splitHtml.value}
         return null;
       }
 
-      // 回填图标到 input，带日志
       async function restoreIconFromRemote(gitUser, gitRepo, gitToken, basePath, label) {
         const iconInput = document.getElementById('iconFile');
         const iconRow = document.getElementById('iconFileRow');
@@ -667,7 +939,6 @@ ${splitHtml.value}
             return true;
           }
         }
-        // 没找到或回填失败：清空，避免残留上一个应用的图标
         iconInput.value = '';
         iconRow.classList.remove('highlight');
         log(`⚠️ 未找到图标 logo.*${label ? ' (' + label + ')' : ''}，请手动选择`);
@@ -743,8 +1014,6 @@ ${splitHtml.value}
         return res.json();
       }
 
-
-      // 每次应用代码上传后更新 version.json；桌面据此识别哪个 APP 有新版本。
       async function updateAppVersionManifest({ user, repo, token, appName, uploadedPaths }) {
         if (!uploadedPaths || !uploadedPaths.length) {
           log('⚠️ 没有成功上传的应用文件，跳过版本清单更新');
@@ -1175,7 +1444,6 @@ ${splitHtml.value}
                 updatePreview();
                 log(`✅ 已加载 ${name} 的代码文件`);
 
-                // 自动回填图标
                 await restoreIconFromRemote(gitUser, gitRepo, gitToken, `apps/${name}`, name);
               } catch (e) { log(`⚠️ 加载代码文件失败: ${e.message}`); }
             });
@@ -1282,7 +1550,6 @@ ${splitHtml.value}
                 updatePreview();
                 log(`✅ 已加载备份 ${folderName} 的代码文件`);
 
-                // 自动回填图标
                 await restoreIconFromRemote(gitUser, gitRepo, gitToken, path, folderName);
               } catch (e) {
                 log(`⚠️ 加载备份文件失败: ${e.message}`);
