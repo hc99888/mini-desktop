@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-14T13:59:27.383Z",
+  "updatedAt": "2026-11-19T03:57:56.094Z",
   "apps": {
     "年龄查询001": {
       "version": 1792838372505,
@@ -101,6 +101,16 @@
         "apps/超级工厂/style.css",
         "apps/超级工厂/app.js",
         "apps/超级工厂/logo.png"
+      ]
+    },
+    "情感顾问": {
+      "version": 1795060677054,
+      "updatedAt": "2026-11-19T03:57:56.094Z",
+      "files": [
+        "apps/情感顾问/index.html",
+        "apps/情感顾问/style.css",
+        "apps/情感顾问/app.js",
+        "apps/情感顾问/logo.webp"
       ]
     }
   }
