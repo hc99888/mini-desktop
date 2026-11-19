@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>社交聊天参谋 · DeepSeek + Gitee</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: grid; place-items: center; z-index: 99; padding: 16px; }
+.modal { width: 100%; max-width: 520px; background: #0f172a; border-radius: 14px; padding: 22px; border: 1px solid #334155; max-height: 90vh; overflow-y: auto; }
+.hidden { display: none !important; }
+button:active { opacity: 0.88; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.script-item { padding: 10px; border-radius: 10px; background: #1e293b; }
+.tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #334155; margin-right: 6px; color:#cbd5e1; }
+.copy-btn { font-size: 12px; color: #7dd3fc; cursor: pointer; background: none; border: none; white-space: nowrap; }
+.copy-btn:hover { color:#bae6fd; }
+.chip { font-size:12px; padding:4px 10px; border-radius:999px; background:#1e293b; border:1px solid #334155; color:#cbd5e1; cursor:pointer; }
+.chip:hover { background:#334155; }
+.result-card { background:#1e293b; border-radius:10px; padding:12px; }
+.result-card h4 { font-size:13px; color:#93c5fd; font-weight:600; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+.answer-text { white-space: pre-wrap; color:#e2e8f0; line-height:1.6; }
+.scroll-area { scrollbar-width: thin; }
+.dot { width:8px; height:8px; border-radius:50%; background:#64748b; display:inline-block; }
+.dot.on { background:#34d399; }
+.dot.err { background:#f87171; }
+@media (min-width: 1024px) {
+  .sticky-col { position: sticky; top: 16px; max-height: calc(100vh - 150px); overflow-y: auto; }
+}
+.bottom-bar-safe { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body class="bg-slate-900 text-gray-100 min-h-screen flex flex-col">
+  <div class="max-w-6xl w-full mx-auto p-4 pb-28 flex-1">
+    <header class="mb-4 flex justify-between items-center gap-3">
+      <div>
+        <h1 class="text-xl font-bold">私人社交聊天参谋</h1>
+        <p class="text-gray-400 text-sm mt-1">Gitee 话术库 + DeepSeek 智能回复</p>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <!-- 状态圆点 -->
+        <div class="relative" id="statusWrap">
+          <button id="statusBtn" class="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-slate-800" title="状态">
+            <span id="dotScript" class="dot"></span>
+            <span id="dotAI" class="dot"></span>
+          </button>
+          <div id="statusPop" class="hidden absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs space-y-1.5 z-20">
+            <div class="flex items-center gap-2"><span id="popDotScript" class="dot"></span>话术：<span id="popScript" class="text-gray-300">未加载</span></div>
+            <div class="flex items-center gap-2"><span id="popDotAI" class="dot"></span>AI：<span id="popAI" class="text-gray-300">未配置</span></div>
+          </div>
+        </div>
+        <button id="openSettingBtn" class="px-3 py-2 bg-slate-700 rounded text-sm hover:bg-slate-600">设置</button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
+      <!-- 左栏 -->
+      <div class="space-y-4">
+        <div class="bg-slate-800/60 rounded-xl p-4 space-y-3">
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">对方发来消息</label>
+            <textarea id="msgInput" rows="3" placeholder="粘贴对方消息…"
+              class="w-full bg-slate-800 border border-slate-700 rounded p-3 text-gray-100 resize-y"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">对方人设</label>
+              <input id="persona" placeholder="活泼 / 慢热 / 直爽"
+                class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">你的风格</label>
+              <input id="myStyle" placeholder="温柔 / 幽默 / 直球"
+                class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2" id="sceneChips"></div>
+        </div>
+
+        <!-- 话术库 -->
+        <div class="bg-slate-800/60 rounded-xl">
+          <div class="flex justify-between items-center px-4 py-3">
+            <button id="toggleScript" class="flex-1 text-left">
+              <span class="font-semibold">话术库 <span id="scriptCount" class="text-gray-400 text-sm font-normal"></span></span>
+            </button>
+            <div class="flex items-center gap-2">
+              <button id="loadScriptBtn" class="px-2.5 py-1.5 bg-blue-600 rounded text-xs hover:bg-blue-700">重新加载</button>
+              <button id="toggleScriptIcon" class="text-gray-400 text-sm px-1">展开 ▾</button>
+            </div>
+          </div>
+          <div id="scriptPanel" class="hidden px-4 pb-4 space-y-3">
+            <div class="flex gap-2">
+              <input id="scriptSearch" placeholder="搜索话术…"
+                class="flex-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+              <select id="styleFilter"
+                class="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-gray-100">
+                <option value="">全部风格</option>
+              </select>
+            </div>
+            <div id="sceneList" class="space-y-3 text-sm max-h-[420px] overflow-y-auto scroll-area pr-1">
+              <div class="text-gray-500 text-sm">点击「重新加载」从 Gitee 拉取</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右栏：结果 -->
+      <div class="space-y-3 lg:sticky-col">
+        <div class="bg-slate-800/60 rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3 gap-2">
+            <h2 class="text-lg font-semibold">AI 返回结果</h2>
+            <div class="flex gap-2">
+              <button id="retryBtn" class="hidden text-xs px-2.5 py-1.5 bg-slate-700 rounded hover:bg-slate-600">换一批</button>
+              <button id="copyResultBtn" class="hidden text-xs px-2.5 py-1.5 bg-slate-700 rounded hover:bg-slate-600">复制全部</button>
+            </div>
+          </div>
+          <div id="result" class="space-y-3">
+            <div class="text-gray-500 text-sm py-8 text-center">填入对方消息后，点击底部「生成回复」</div>
+          </div>
+          <div id="refineBar" class="hidden mt-3 flex flex-wrap gap-2">
+            <span class="text-xs text-gray-400 self-center">再调一下：</span>
+            <button class="chip" data-refine="更简短一点">更简短</button>
+            <button class="chip" data-refine="更暧昧一点">更暧昧</button>
+            <button class="chip" data-refine="更正式稳重一点">更正式</button>
+            <button class="chip" data-refine="更幽默一点">更幽默</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页脚状态 -->
+  <footer class="hidden lg:block text-center text-[11px] text-gray-600 pb-2">
+    话术：<span id="footScript">未加载</span> · AI：<span id="footAI">未配置</span>
+  </footer>
+
+  <!-- 全屏统一底部操作条 -->
+  <div class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-700 px-4 pt-3 bottom-bar-safe z-30">
+    <div class="max-w-6xl mx-auto flex gap-2">
+      <button id="askBtn" class="flex-1 py-3 bg-emerald-600 rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50">生成回复</button>
+      <button id="stopBtn" class="hidden px-4 py-3 bg-rose-700 rounded-lg text-sm hover:bg-rose-800">停止</button>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settingModal" class="modal-mask hidden">
+    <div class="modal">
+      <h3 class="text-lg font-bold mb-4">仓库与 AI 参数</h3>
+
+      <div class="text-xs text-gray-400 mb-2 font-medium tracking-wide">GITEE 仓库</div>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-gray-300 block mb-1">用户名</label>
+            <input id="cfgOwner" class="w-full bg-slate-800 border border-slate-700 rounded p-2">
+          </div>
+          <div>
+            <label class="text-xs text-gray-300 block mb-1">仓库名</label>
+            <input id="cfgRepo" class="w-full bg-slate-800 border border-slate-700 rounded p-2">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-gray-300 block mb-1">分支</label>
+            <input id="cfgBranch" value="master" class="w-full bg-slate-800 border border-slate-700 rounded p-2">
+          </div>
+          <div>
+            <label class="text-xs text-gray-300 block mb-1">文件路径</label>
+            <input id="cfgFilePath" value="talk.json" class="w-full bg-slate-800 border border-slate-700 rounded p-2">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-300 block mb-1">Access Token（私有仓库必填，需 projects 权限）</label>
+          <div class="relative">
+            <input id="cfgToken" type="password" class="w-full bg-slate-800 border border-slate-700 rounded p-2 pr-12">
+            <button type="button" class="eye-btn absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400" data-target="cfgToken">显示</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-700 my-4"></div>
+      <div class="text-xs text-gray-400 mb-2 font-medium tracking-wide">DEEPSEEK</div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-300 block mb-1">API Key（留空则只看话术）</label>
+          <div class="relative">
+            <input id="cfgDsKey" type="password" class="w-full bg-slate-800 border border-slate-700 rounded p-2 pr-12">
+            <button type="button" class="eye-btn absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400" data-target="cfgDsKey">显示</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-300 block mb-1">模型</label>
+          <select id="cfgDsModel" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-gray-100">
+            <option value="deepseek-chat">deepseek-chat（推荐）</option>
+            <option value="deepseek-reasoner">deepseek-reasoner（深度思考）</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-gray-500 mt-3 leading-relaxed">
+        配置仅保存在本机浏览器 localStorage，不会上传。公共设备用完请点「清除 Key」。
+      </p>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button id="testConnBtn" class="px-3 py-2 bg-slate-700 rounded text-sm hover:bg-slate-600">测试连接</button>
+        <button id="clearKeyBtn" class="px-3 py-2 bg-rose-800 rounded text-sm hover:bg-rose-700">清除 Key</button>
+        <button id="clearLocalBtn" class="px-3 py-2 bg-rose-800 rounded text-sm hover:bg-rose-700">清空本地缓存</button>
+      </div>
+      <div id="testResult" class="text-xs mt-2"></div>
+
+      <div class="flex gap-3 mt-4">
+        <button id="saveCfgBtn" class="flex-1 py-2.5 bg-emerald-600 rounded hover:bg-emerald-700">保存配置</button>
+        <button id="closeCfgBtn" class="flex-1 py-2.5 bg-slate-600 rounded hover:bg-slate-500">取消</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const DS_API_URL = "https://api.deepseek.com/chat/completions";
+const HISTORY_LIMIT = 6;
+
+let scriptData = null;
+let chatHistory = [];
+let currentAbort = null;
+
+/* ---------- 配置 ---------- */
+function loadConfig() {
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem("appConfig") || "{}"); } catch {}
+  $("cfgOwner").value    = cfg.owner    || "";
+  $("cfgRepo").value     = cfg.repo     || "";
+  $("cfgBranch").value   = cfg.branch   || "master";
+  $("cfgToken").value    = cfg.token    || "";
+  $("cfgFilePath").value = cfg.filePath || "talk.json";
+  $("cfgDsKey").value    = cfg.dsKey    || "";
+  $("cfgDsModel").value  = cfg.dsModel  || "deepseek-chat";
+  return cfg;
+}
+function saveConfig() {
+  const cfg = {
+    owner: $("cfgOwner").value.trim(), repo: $("cfgRepo").value.trim(),
+    branch: $("cfgBranch").value.trim() || "master",
+    token: $("cfgToken").value.trim(),
+    filePath: $("cfgFilePath").value.trim() || "talk.json",
+    dsKey: $("cfgDsKey").value.trim(), dsModel: $("cfgDsModel").value
+  };
+  localStorage.setItem("appConfig", JSON.stringify(cfg));
+  refreshStatus();
+  return cfg;
+}
+function openModal() { loadConfig(); $("settingModal").classList.remove("hidden"); }
+function closeModal(){ $("settingModal").classList.add("hidden"); $("testResult").innerText = ""; }
+
+/* ---------- 状态同步 ---------- */
+function refreshStatus() {
+  const cfg = JSON.parse(localStorage.getItem("appConfig") || "{}");
+  const aiText = cfg.dsKey ? (cfg.dsModel || "deepseek-chat") : "未配置";
+  const scriptText = scriptData ? "已加载" : "未加载";
+
+  $("dotAI").className = "dot" + (cfg.dsKey ? " on" : "");
+  $("popDotAI").className = "dot" + (cfg.dsKey ? " on" : "");
+  $("popAI").innerText = aiText;
+  $("footAI").innerText = aiText;
+
+  $("dotScript").className = "dot" + (scriptData ? " on" : "");
+  $("popDotScript").className = "dot" + (scriptData ? " on" : "");
+  $("popScript").innerText = scriptText;
+  $("footScript").innerText = scriptText;
+}
+
+/* ---------- base64 ---------- */
+function b64ToUtf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+/* ---------- Gitee ---------- */
+async function loadGiteeScript() {
+  const cfg = loadConfig();
+  if (!cfg.owner || !cfg.repo) { alert("请先填写 Gitee 用户名和仓库名"); openModal(); return; }
+  if (!cfg.token) { alert("私有仓库必须填写 Gitee Access Token（需 projects 权限）"); openModal(); return; }
+
+  const apiUrl = `https://gitee.com/api/v5/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.filePath}`
+    + `?access_token=${encodeURIComponent(cfg.token)}&ref=${encodeURIComponent(cfg.branch)}`;
+
+  $("loadScriptBtn").disabled = true;
+  $("loadScriptBtn").innerText = "加载中";
+  try {
+    const res = await fetch(apiUrl, { redirect: "follow" });
+    const text = await res.text();
+    if (!res.ok) {
+      let msg = "HTTP " + res.status;
+      try { const e = JSON.parse(text); if (e.message) msg += "：" + e.message; } catch {}
+      throw new Error(msg);
+    }
+    const info = JSON.parse(text);
+    if (Array.isArray(info)) throw new Error("该路径是目录，请指定具体文件");
+    if (!info.content) throw new Error("返回中没有 content 字段");
+    if (info.truncated) throw new Error("文件过大被截断，请控制在 1MB 以内");
+
+    scriptData = JSON.parse(b64ToUtf8(info.content));
+    localStorage.setItem("giteeScriptCache", JSON.stringify(scriptData));
+    renderSceneList();
+    openScriptPanel();
+    refreshStatus();
+  } catch (e) {
+    alert("话术拉取失败：" + e.message);
+  } finally {
+    $("loadScriptBtn").disabled = false;
+    $("loadScriptBtn").innerText = "重新加载";
+  }
+}
+
+/* ---------- 话术渲染 ---------- */
+let allScriptLines = [];
+function flattenScript() {
+  allScriptLines = [];
+  const scenes = (scriptData && scriptData.scenes) || {};
+  for (const [scene, content] of Object.entries(scenes)) {
+    if (Array.isArray(content)) {
+      content.forEach(line => allScriptLines.push({ scene, style: "", line }));
+    } else if (content && typeof content === "object") {
+      for (const [style, lines] of Object.entries(content)) {
+        if (Array.isArray(lines)) lines.forEach(line => allScriptLines.push({ scene, style, line }));
+      }
+    }
+  }
+}
+function renderSceneList() {
+  if (!scriptData) return;
+  flattenScript();
+  $("scriptCount").innerText = `(${allScriptLines.length})`;
+  const styles = [...new Set(allScriptLines.map(x => x.style).filter(Boolean))];
+  $("styleFilter").innerHTML = '<option value="">全部风格</option>' +
+    styles.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+  applyScriptFilter();
+  refreshStatus();
+}
+function applyScriptFilter() {
+  const el = $("sceneList");
+  const kw = ($("scriptSearch").value || "").trim().toLowerCase();
+  const styleF = $("styleFilter").value;
+  if (!allScriptLines.length) {
+    el.innerHTML = '<div class="text-gray-500 text-sm">暂无话术，点击「重新加载」</div>';
+    return;
+  }
+  const groups = {};
+  allScriptLines.forEach(item => {
+    if (styleF && item.style !== styleF) return;
+    if (kw && !item.line.toLowerCase().includes(kw) && !item.scene.toLowerCase().includes(kw)) return;
+    (groups[item.scene] = groups[item.scene] || []).push(item);
+  });
+  const scenes = Object.entries(groups);
+  if (!scenes.length) { el.innerHTML = '<div class="text-gray-500 text-sm">没有匹配的话术</div>'; return; }
+
+  el.innerHTML = "";
+  scenes.forEach(([scene, items]) => {
+    const wrap = document.createElement("div");
+    wrap.className = "script-item";
+    const title = document.createElement("div");
+    title.className = "text-gray-300 font-medium mb-2";
+    title.innerText = scene;
+    wrap.appendChild(title);
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "flex justify-between items-start gap-2 py-1";
+      const left = document.createElement("div");
+      left.className = "text-gray-400";
+      if (item.style) {
+        const tag = document.createElement("span");
+        tag.className = "tag"; tag.innerText = item.style;
+        left.appendChild(tag);
+      }
+      const text = document.createElement("span");
+      text.innerText = item.line;
+      left.appendChild(text);
+      const btn = document.createElement("button");
+      btn.className = "copy-btn shrink-0"; btn.innerText = "复制";
+      btn.onclick = () => copyText(item.line, btn);
+      row.appendChild(left); row.appendChild(btn);
+      wrap.appendChild(row);
+    });
+    el.appendChild(wrap);
+  });
+  if (scriptData.forbidden && scriptData.forbidden.length) {
+    const fb = document.createElement("div");
+    fb.className = "mt-2 text-gray-500 text-xs";
+    fb.innerText = "避坑：" + scriptData.forbidden.join("、");
+    el.appendChild(fb);
+  }
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function openScriptPanel() {
+  $("scriptPanel").classList.remove("hidden");
+  $("toggleScriptIcon").innerText = "收起 ▴";
+}
+
+/* ---------- DeepSeek ---------- */
+function buildSystemPrompt() {
+  let scriptRef = "";
+  if (scriptData && scriptData.scenes) scriptRef = JSON.stringify(scriptData.scenes, null, 2);
+  return `你是我的私人聊天参谋，只提供参考建议，不替我发消息。
+要求：话术自然真诚、有分寸，避免油腻、套路化和压迫感。
+参考下面的话术库风格，可借鉴但不要生硬照搬：
+${scriptRef || "（暂无话术库）"}
+
+请严格按以下标记输出，每个板块用【】标题：
+【情绪解读】一句话点出对方情绪/潜台词
+【避雷提醒】1~2 条不要说/不要做的事
+【调皮套路版】一条回复
+【温柔情话版】一条回复
+【稳重走心版】一条回复
+【简短直球版】一条回复
+【延伸话题】1~2 个可继续聊的方向`;
+}
+function buildUserPrompt(refine) {
+  const msg = $("msgInput").value.trim();
+  const persona = $("persona").value.trim();
+  const myStyle = $("myStyle").value.trim();
+  let p = `对方消息：${msg}\n对方人设：${persona || "未知"}\n我的聊天风格：${myStyle || "自然轻松"}`;
+  if (refine) p += `\n\n在保持原意的基础上，请把上面这版回复调整为：${refine}`;
+  return p;
+}
+async function askDeepSeek(refine = "") {
+  const msg = $("msgInput").value.trim();
+  const cfg = JSON.parse(localStorage.getItem("appConfig") || "{}");
+  if (!msg) return alert("请填入对方消息");
+  if (!cfg.dsKey) { alert("还没填 DeepSeek API Key；当前可直接浏览话术库"); openModal(); return; }
+
+  chatHistory.push({ role: "user", content: buildUserPrompt(refine) });
+  if (chatHistory.length > HISTORY_LIMIT * 2) chatHistory = chatHistory.slice(-HISTORY_LIMIT * 2);
+
+  setLoading(true);
+  $("result").innerHTML = '<div class="text-gray-400 text-sm py-8 text-center">思考中…</div>';
+  $("copyResultBtn").classList.add("hidden");
+  $("retryBtn").classList.add("hidden");
+  $("refineBar").classList.add("hidden");
+
+  currentAbort = new AbortController();
+  const timeout = setTimeout(() => currentAbort && currentAbort.abort(), 30000);
+
+  try {
+    const resp = await fetch(DS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.dsKey}` },
+      body: JSON.stringify({
+        model: cfg.dsModel || "deepseek-chat",
+        messages: [{ role: "system", content: buildSystemPrompt() }, ...chatHistory],
+        stream: false
+      }),
+      signal: currentAbort.signal
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) throw new Error(friendlyError(resp.status, await resp.text()));
+    const data = await resp.json();
+    const answer = data.choices?.[0]?.message?.content || "（无返回内容）";
+    chatHistory.push({ role: "assistant", content: answer });
+    renderAnswer(answer);
+    $("copyResultBtn").classList.remove("hidden");
+    $("refineBar").classList.remove("hidden");
+    $("retryBtn").classList.remove("hidden");
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") {
+      $("result").innerHTML = '<div class="text-amber-400 text-sm py-8 text-center">已停止生成</div>';
+    } else {
+      $("result").innerHTML = `<div class="text-rose-400 text-sm py-4">出错：${esc(err.message)}</div>`;
+    }
+  } finally {
+    setLoading(false);
+    currentAbort = null;
+  }
+}
+function friendlyError(status, text) {
+  if (status === 401) return "API Key 无效（401），请到设置检查";
+  if (status === 402) return "账户余额不足（402）";
+  if (status === 429) return "请求过于频繁（429），稍后再试";
+  if (status === 500 || status === 503) return "DeepSeek 服务暂不可用（" + status + "）";
+  return "API 返回 " + status + "：" + text.slice(0, 120);
+}
+function setLoading(on) {
+  $("askBtn").disabled = on;
+  $("askBtn").classList.toggle("hidden", on);
+  $("stopBtn").classList.toggle("hidden", !on);
+  $("retryBtn").classList.toggle("hidden", on || !$("result").querySelector(".result-card"));
+}
+
+/* ---------- 结果渲染 ---------- */
+const SECTION_KEYS = ["情绪解读","避雷提醒","延伸话题"];
+const REPLY_KEYS = ["调皮套路版","温柔情话版","稳重走心版","简短直球版"];
+
+function parseAnswer(text) {
+  const sections = {};
+  const regex = /【([^】]+)】\s*([\s\S]*?)(?=【[^】]+】|$)/g;
+  let m, matched = false;
+  while ((m = regex.exec(text)) !== null) {
+    matched = true;
+    sections[m[1].trim()] = m[2].trim();
+  }
+  if (!matched) sections["回复参考"] = text.trim();
+  return sections;
+}
+function renderAnswer(text) {
+  const sections = parseAnswer(text);
+  const el = $("result");
+  el.innerHTML = "";
+
+  SECTION_KEYS.forEach(k => {
+    if (!sections[k]) return;
+    const card = document.createElement("div");
+    card.className = "result-card";
+    card.innerHTML = `<h4>${esc(k)}</h4><div class="answer-text">${esc(sections[k])}</div>`;
+    el.appendChild(card);
+  });
+
+  const replyKeys = REPLY_KEYS.filter(k => sections[k]);
+  const others = Object.keys(sections).filter(k => !SECTION_KEYS.includes(k) && !REPLY_KEYS.includes(k));
+
+  [...replyKeys, ...others].forEach(k => {
+    const card = document.createElement("div");
+    card.className = "result-card";
+    const h = document.createElement("h4");
+    h.innerHTML = `<span>${esc(k)}</span>`;
+    h.appendChild(makeCopyBtn(sections[k]));
+    card.appendChild(h);
+    const body = document.createElement("div");
+    body.className = "answer-text";
+    body.innerText = sections[k];
+    card.appendChild(body);
+    el.appendChild(card);
+  });
+}
+function makeCopyBtn(text) {
+  const btn = document.createElement("button");
+  btn.className = "copy-btn"; btn.innerText = "复制";
+  btn.onclick = () => copyText(text, btn);
+  return btn;
+}
+
+/* ---------- 复制 ---------- */
+function copyText(text, btn) {
+  const done = () => {
+    if (btn) { const old = btn.innerText; btn.innerText = "已复制✓"; setTimeout(() => (btn.innerText = old), 1200); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch {}
+  document.body.removeChild(ta);
+}
+
+/* ---------- 清空 / 缓存 ---------- */
+function clearLocal() {
+  if (!confirm("将清空本地话术缓存、输入和对话上下文，确定？")) return;
+  localStorage.removeItem("giteeScriptCache");
+  localStorage.removeItem("persona");
+  localStorage.removeItem("myStyle");
+  localStorage.removeItem("msgInput");
+  scriptData = null; chatHistory = []; allScriptLines = [];
+  $("sceneList").innerHTML = '<div class="text-gray-500 text-sm">点击「重新加载」从 Gitee 拉取</div>';
+  $("result").innerHTML = '<div class="text-gray-500 text-sm py-8 text-center">填入对方消息后，点击底部「生成回复」</div>';
+  $("refineBar").classList.add("hidden");
+  $("retryBtn").classList.add("hidden");
+  $("copyResultBtn").classList.add("hidden");
+  $("scriptCount").innerText = "";
+  refreshStatus();
+  closeModal();
+}
+function loadUserCache() {
+  const cache = localStorage.getItem("giteeScriptCache");
+  if (cache) {
+    try { scriptData = JSON.parse(cache); renderSceneList(); } catch {}
+  }
+  $("persona").value = localStorage.getItem("persona") || "";
+  $("myStyle").value = localStorage.getItem("myStyle") || "";
+  $("msgInput").value = localStorage.getItem("msgInput") || "";
+  refreshStatus();
+}
+function saveUserInput() {
+  localStorage.setItem("persona", $("persona").value);
+  localStorage.setItem("myStyle", $("myStyle").value);
+  localStorage.setItem("msgInput", $("msgInput").value);
+}
+
+/* ---------- chips ---------- */
+const SCENE_CHIPS = [
+  { label: "冷场救场", msg: "对方突然不回了，怎么自然地重新开启话题？" },
+  { label: "邀约", msg: "想约对方周末出来，怎么说自然一点？" },
+  { label: "道歉", msg: "我回消息太慢让对方有点不开心，怎么真诚道歉？" },
+  { label: "表白", msg: "想试探性表白，怎么表达不尴尬？" },
+  { label: "拒绝", msg: "对方约我但我不想去，怎么委婉拒绝？" }
+];
+function renderChips() {
+  const wrap = $("sceneChips");
+  SCENE_CHIPS.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.innerText = c.label;
+    b.onclick = () => { $("msgInput").value = c.msg; saveUserInput(); };
+    wrap.appendChild(b);
+  });
+}
+
+/* ---------- 事件 ---------- */
+$("openSettingBtn").onclick = openModal;
+$("closeCfgBtn").onclick = closeModal;
+$("saveCfgBtn").onclick = () => { saveConfig(); closeModal(); };
+$("loadScriptBtn").onclick = loadGiteeScript;
+$("askBtn").onclick = async () => { saveUserInput(); await askDeepSeek(); };
+$("retryBtn").onclick = async () => {
+  if (chatHistory.length && chatHistory[chatHistory.length - 1].role === "assistant") chatHistory.pop();
+  await askDeepSeek();
+};
+$("stopBtn").onclick = () => { currentAbort && currentAbort.abort(); };
+$("clearLocalBtn").onclick = clearLocal;
+$("copyResultBtn").onclick = () => copyText($("result").innerText, $("copyResultBtn"));
+
+$("toggleScript").onclick = $("toggleScriptIcon").onclick = () => {
+  const hidden = $("scriptPanel").classList.toggle("hidden");
+  $("toggleScriptIcon").innerText = hidden ? "展开 ▾" : "收起 ▴";
+};
+$("scriptSearch").oninput = () => applyScriptFilter();
+$("styleFilter").onchange = () => applyScriptFilter();
+
+document.querySelectorAll("[data-refine]").forEach(b => {
+  b.onclick = () => askDeepSeek(b.dataset.refine);
+});
+document.querySelectorAll(".eye-btn").forEach(btn => {
+  btn.onclick = () => {
+    const input = $(btn.dataset.target);
+    const isPwd = input.type === "password";
+    input.type = isPwd ? "text" : "password";
+    btn.innerText = isPwd ? "隐藏" : "显示";
+  };
+});
+
+// 状态浮层
+$("statusBtn").onclick = (e) => { e.stopPropagation(); $("statusPop").classList.toggle("hidden"); };
+document.addEventListener("click", () => $("statusPop").classList.add("hidden"));
+
+// 测试连接
+$("testConnBtn").onclick = async () => {
+  const out = $("testResult");
+  out.className = "text-xs mt-2 text-gray-400";
+  out.innerText = "测试中…";
+  const cfg = {
+    owner: $("cfgOwner").value.trim(), repo: $("cfgRepo").value.trim(),
+    branch: $("cfgBranch").value.trim() || "master", token: $("cfgToken").value.trim(),
+    filePath: $("cfgFilePath").value.trim() || "talk.json",
+    dsKey: $("cfgDsKey").value.trim(), dsModel: $("cfgDsModel").value
+  };
+  const results = [];
+  if (cfg.owner && cfg.repo && cfg.token) {
+    try {
+      const url = `https://gitee.com/api/v5/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.filePath}?access_token=${encodeURIComponent(cfg.token)}&ref=${encodeURIComponent(cfg.branch)}`;
+      const r = await fetch(url);
+      results.push(r.ok ? "✅ Gitee 正常" : `❌ Gitee HTTP ${r.status}`);
+    } catch { results.push("❌ Gitee 网络错误"); }
+  } else results.push("⚠️ Gitee 信息不完整");
+
+  if (cfg.dsKey) {
+    try {
+      const r = await fetch(DS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.dsKey}` },
+        body: JSON.stringify({ model: cfg.dsModel, messages: [{ role: "user", content: "ping" }], max_tokens: 1 })
+      });
+      results.push(r.ok ? "✅ DeepSeek 正常" : `❌ DeepSeek ${friendlyError(r.status, "")}`);
+    } catch { results.push("❌ DeepSeek 网络错误"); }
+  } else results.push("⚠️ 未填 DeepSeek Key");
+
+  out.className = "text-xs mt-2 " + (results.every(r => r.startsWith("✅")) ? "text-emerald-400" : "text-amber-400");
+  out.innerText = results.join("　");
+};
+
+$("clearKeyBtn").onclick = () => {
+  $("cfgDsKey").value = ""; $("cfgToken").value = "";
+  const cfg = JSON.parse(localStorage.getItem("appConfig") || "{}");
+  delete cfg.dsKey; delete cfg.token;
+  localStorage.setItem("appConfig", JSON.stringify(cfg));
+  refreshStatus();
+  $("testResult").className = "text-xs mt-2 text-emerald-400";
+  $("testResult").innerText = "已清除 Key 和 Token";
+};
+
+/* ---------- 初始化 ---------- */
+renderChips();
+loadUserCache();
+</script>
+</body>
+</html>
