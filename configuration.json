@@ -63,5 +63,10 @@
     "name": "超级工厂",
     "icon": "apps/超级工厂/logo.png",
     "url": "apps/超级工厂/"
+  },
+  {
+    "name": "情感顾问",
+    "icon": "apps/情感顾问/logo.webp",
+    "url": "apps/情感顾问/"
   }
 ]
